@@ -1,0 +1,91 @@
+GIT QUICK REFERENCE
+
+
+--- PRE-COMMIT CHECKLIST ---
+[ ] Saved scenes in Unity (Ctrl+S)
+[ ] Ran `git status` to see what's actually changing
+[ ] Commit message describes what was done in past tense
+[ ] Not committing Library/, Temp/, or other generated cruft
+
+
+--- "WHERE AM I?" CHECK ---
+If you get "fatal: not a git repository" when running git commands:
+- Look at your PowerShell prompt
+- If it's not "PS C:\Unity Projects\RHWM Emergency Response v0.5>", 
+  you're in the wrong folder
+- Fix: cd "C:\Unity Projects\RHWM Emergency Response v0.5"
+- Better: Open PowerShell from inside the project folder via 
+  right-click → "Open in Terminal"
+
+
+--- STAGING SHORTCUTS ---
+git add .              Stage everything (new + modified files)
+git commit -am "msg"   Commit modified tracked files in one step
+                       (does NOT include new untracked files)
+
+
+--- DAILY WORKFLOW ---
+git status                              See what's changed since last commit
+git add .                               Stage all changes
+git commit -m "Message in past tense"   Save changes to history
+git push                                Send commits to GitLab
+git log --oneline                       Show commit history (one line each)
+
+
+--- OOPS BUTTONS ---
+git restore <file>                      Discard changes to a specific file
+git restore .                           Discard ALL unstaged changes
+git reset --hard <commit-hash>          Roll back entire project to a commit
+                                        (get hash from git log)
+git reset --hard HEAD                   Roll back to last commit, discard everything since
+
+
+--- INVESTIGATING ---
+git diff                                Show unstaged changes
+git diff --staged                       Show staged-but-not-committed changes
+git log                                 Full commit history with details
+git log --oneline -20                   Show only the last 20 commits (more readable than full log)
+git show <commit-hash>                  See what changed in a specific commit
+
+
+--- LFS ---
+git lfs ls-files                        List files tracked by LFS
+
+
+--- BRANCHES (later, when needed) ---
+git branch                              List branches
+git branch <name>                       Create a new branch
+git checkout <name>                     Switch to a branch
+git checkout -b <name>                  Create AND switch to new branch
+git merge <name>                        Merge a branch into current branch
+
+
+--- THINGS I LEARNED THE HARD WAY ---
+- .gitignore and .gitattributes must start with dot, no prefix
+- Library/ folder should NEVER be tracked (Unity regenerates it)
+- Commit often with small focused messages
+- "warning: LF will be replaced by CRLF" is fine, ignore it
+
+
+--- LLNL GITLAB ACCESS ---
+Remote: sd-git.llnl.gov (internal only)
+Must be on lab network (on-site) OR connected to VPN (work from home) before:
+- git push
+- git pull
+- git fetch
+- git clone
+
+Local commits work fine without VPN.
+
+To verify remote: git remote -v
+
+
+--- IN CASE OF DIRE EMERGENCY ---
+https://dangitgit.com (or the saltier https://ohshitgit.com)
+
+Common emergencies these cover:
+- Committed to the wrong branch
+- Need to undo a commit that was already pushed
+- Accidentally committed sensitive files
+- Lost work in a "detached HEAD" state
+- Made a mess and want to nuke everything and start over
