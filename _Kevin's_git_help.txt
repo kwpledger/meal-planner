@@ -11,11 +11,11 @@ GIT QUICK REFERENCE
 --- "WHERE AM I?" CHECK ---
 If you get "fatal: not a git repository" when running git commands:
 - Look at your PowerShell prompt
-- If it's not "PS C:\Unity Projects\RHWM Emergency Response v0.5>", 
-  you're in the wrong folder
-- Fix: cd "C:\Unity Projects\RHWM Emergency Response v0.5"
-- Better: Open PowerShell from inside the project folder via 
-  right-click → "Open in Terminal"
+- If it's not "PS C:\[Program] Projects\[Name of Project]>", you're in the wrong 
+  folder
+- Fix: cd "C:\[Program] Projects\[Name of Project]"
+- Better: Open PowerShell from inside the project folder via right-click → "Open
+  in Terminal"
 
 
 --- STAGING SHORTCUTS ---
@@ -24,11 +24,23 @@ git commit -am "msg"   Commit modified tracked files in one step
                        (does NOT include new untracked files)
 
 
---- DAILY WORKFLOW ---
+--- DAILY WORKFLOW (WORK / GOING TO GITLAB) ---
 git status                              See what's changed since last commit
 git add .                               Stage all changes
 git commit -m "Message in past tense"   Save changes to history
 git push                                Send commits to GitLab
+git log --oneline                       Show commit history (one line each)
+
+
+--- DAILY WORKFLOW (HOME / GOING TO GITHUB) ---
+git status                              See what's changed since last commit
+git add .                               Stage all changes
+git commit -m "Message in past tense"   Save changes to history
+git pull --rebase                       Avoids merge commits by fetching the
+                                        latest changes from the remote
+                                        repository and replays your unpushed,
+                                        local commits on top of them
+git push                                Send commits to GitHub
 git log --oneline                       Show commit history (one line each)
 
 
@@ -65,6 +77,9 @@ git merge <name>                        Merge a branch into current branch
 - Library/ folder should NEVER be tracked (Unity regenerates it)
 - Commit often with small focused messages
 - "warning: LF will be replaced by CRLF" is fine, ignore it
+- Because rebasing (git pull --rebase) alters the original parent commits, it
+  changes commit hashes. Never rebase commits that you have already pushed to a
+  shared public branch, as it will disrupt work for everyone else.
 
 
 --- LLNL GITLAB ACCESS ---
