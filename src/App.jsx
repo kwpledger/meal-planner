@@ -152,8 +152,24 @@ export default function MealPlanBoard() {
   const [proteinFilter, setProteinFilter] = useState('All');
   const [swapMode, setSwapMode] = useState(false);
   const [selectedSwapMeal, setSelectedSwapMeal] = useState(null);
+  const [editingMeal, setEditingMeal] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    calories: 0,
+    carbs: 0,
+    protein: 0,
+    fat: 0,
+    details: [],
+  });
 
-  useEffect(() => {
+  function handleEditField(field, value) {
+    setEditForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(days));
   }, [days]);
 
@@ -712,6 +728,178 @@ export default function MealPlanBoard() {
         </div>
       </div>
 
+      {editingMeal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+      
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-slate-800">
+                Edit Meal
+              </h2>
+      
+              <button
+                onClick={() => setEditingMeal(null)}
+                className="text-slate-500 hover:text-slate-700 text-xl"
+              >
+                ✕
+              </button>
+            </div>
+      
+            <div className="space-y-4">
+      
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1">
+                  Meal Name
+                </label>
+      
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => handleEditField("name", e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 p-3"
+                />
+              </div>
+      
+              <div className="grid grid-cols-4 gap-4">
+      
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">
+                    Calories
+                  </label>
+      
+                  <input
+                    type="number"
+                    value={editForm.calories}
+                    onChange={(e) =>
+                      handleEditField("calories", Number(e.target.value))
+                    }
+                    className="w-full rounded-xl border border-slate-300 p-3"
+                  />
+                </div>
+      
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">
+                    Carbs
+                  </label>
+      
+                  <input
+                    type="number"
+                    value={editForm.carbs}
+                    onChange={(e) =>
+                      handleEditField("carbs", Number(e.target.value))
+                    }
+                    className="w-full rounded-xl border border-slate-300 p-3"
+                  />
+                </div>
+      
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">
+                    Protein
+                  </label>
+      
+                  <input
+                    type="number"
+                    value={editForm.protein}
+                    onChange={(e) =>
+                      handleEditField("protein", Number(e.target.value))
+                    }
+                    className="w-full rounded-xl border border-slate-300 p-3"
+                  />
+                </div>
+      
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">
+                    Fat
+                  </label>
+      
+                  <input
+                    type="number"
+                    value={editForm.fat}
+                    onChange={(e) =>
+                      handleEditField("fat", Number(e.target.value))
+                    }
+                    className="w-full rounded-xl border border-slate-300 p-3"
+                  />
+                </div>
+      
+              </div>
+      
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1">
+                  Ingredients (one per line)
+                </label>
+      
+                <textarea
+                  rows={8}
+                  value={editForm.details.join("\n")}
+                  onChange={(e) =>
+                    handleEditField(
+                      "details",
+                      e.target.value
+                        .split("\n")
+                        .filter((line) => line.trim() !== "")
+                    )
+                  }
+                  className="w-full rounded-xl border border-slate-300 p-3"
+                />
+              </div>
+      
+            </div>
+      
+            <div className="flex justify-end gap-3 mt-6">
+      
+              <button
+                onClick={() => setEditingMeal(null)}
+                className="px-4 py-2 rounded-xl border border-slate-300"
+              >
+                Cancel
+              </button>
+      
+              <button
+                onClick={() => {
+                  setDays((currentDays) =>
+                    currentDays.map((day) => ({
+                      ...day,
+                      meals: day.meals.map((meal) => {
+                        if (meal.id !== editingMeal.id) {
+                          return meal;
+                        }
+
+                        return {
+                          ...meal,
+                          name: editForm.name,
+                          calories: Number(editForm.calories),
+                          macros: {
+                            carbs: Number(editForm.carbs),
+                            protein: Number(editForm.protein),
+                            fat: Number(editForm.fat),
+                          },
+                          details: editForm.details,
+                          items: editForm.details.map((detail) => {
+                            const parsed = parseIngredient(detail);
+                            return parsed.ingredient
+                              .split(" ")
+                              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                              .join(" ");
+                          }),
+                        };
+                      }),
+                    }))
+                  );
+
+                  setEditingMeal(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-slate-800 text-white"
+              >
+                Save
+              </button>
+      
+            </div>
+      
+          </div>
+        </div>
+      )}
+
       {selectedMeal && (
         <div
           className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-6"
@@ -749,6 +937,28 @@ export default function MealPlanBoard() {
                   </li>
                 ))}
               </ul>
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <button
+                onClick={() => {
+                  setEditingMeal(selectedMeal);
+
+                  setEditForm({
+                    name: selectedMeal.name,
+                    calories: selectedMeal.calories,
+                    carbs: selectedMeal.macros.carbs,
+                    protein: selectedMeal.macros.protein,
+                    fat: selectedMeal.macros.fat,
+                    details: [...selectedMeal.details],
+                  });
+
+                  setSelectedMeal(null);
+                }}
+                className="rounded-2xl bg-slate-800 text-white px-4 py-2 font-semibold shadow hover:bg-slate-700 transition"
+              >
+                Edit meal
+              </button>
             </div>
 
             <div className="mt-5 text-sm text-slate-500">
