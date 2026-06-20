@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { searchUsdaFoods, searchOpenFoodFacts } from './nutritionApi';
 
 const initialDays = [
   {
@@ -161,6 +162,9 @@ export default function MealPlanBoard() {
     fat: 0,
     details: [],
   });
+  const [nutritionQuery, setNutritionQuery] = useState("");
+  const [nutritionResults, setNutritionResults] = useState([]);
+  const [nutritionLookupStatus, setNutritionLookupStatus] = useState("");
 
   function handleEditField(field, value) {
     setEditForm((current) => ({
@@ -339,6 +343,58 @@ useEffect(() => {
     setDragOverDayId(null);
   }
 
+  async function handleNutritionLookup(source = "usda") {
+    const query = nutritionQuery.trim();
+
+    if (!query) {
+      setNutritionLookupStatus("Enter a food to search first.");
+      return;
+    }
+
+    setNutritionLookupStatus(`Searching ${source === "usda" ? "USDA" : "Open Food Facts"}...`);
+    setNutritionResults([]);
+
+    try {
+      if (source === "usda") {
+        const data = await searchUsdaFoods(query);
+        setNutritionResults(
+          (data.foods || []).map((food) => ({
+            source: "USDA",
+            id: food.fdcId,
+            name: food.description,
+            brand: food.brandOwner || food.brandName || "",
+            calories:
+              food.foodNutrients?.find((n) => n.nutrientName === "Energy")?.value ?? null,
+            protein:
+              food.foodNutrients?.find((n) => n.nutrientName === "Protein")?.value ?? null,
+            carbs:
+              food.foodNutrients?.find((n) => n.nutrientName === "Carbohydrate, by difference")?.value ?? null,
+            fat:
+              food.foodNutrients?.find((n) => n.nutrientName === "Total lipid (fat)")?.value ?? null,
+          }))
+        );
+      } else {
+        const data = await searchOpenFoodFacts(query);
+        setNutritionResults(
+          (data.products || []).map((product) => ({
+            source: "Open Food Facts",
+            id: product.code,
+            name: product.product_name || "Unnamed product",
+            brand: product.brands || "",
+            calories: product.nutriments?.["energy-kcal_100g"] ?? null,
+            protein: product.nutriments?.proteins_100g ?? null,
+            carbs: product.nutriments?.carbohydrates_100g ?? null,
+            fat: product.nutriments?.fat_100g ?? null,
+          }))
+        );
+      }
+
+      setNutritionLookupStatus("Lookup complete. Values are usually per 100g unless otherwise noted.");
+    } catch (error) {
+      setNutritionLookupStatus(error.message);
+    }
+  }
+  
   function toggleCollapsed(dayId) {
     setCollapsedDays((current) => {
       if (current.includes(dayId)) {
@@ -846,6 +902,70 @@ useEffect(() => {
       
             </div>
       
+            <div className="border-t border-slate-200 pt-4">
+              <h3 className="font-bold text-slate-800 mb-2">Nutrition Lookup</h3>
+
+              <p className="text-sm text-slate-500 mb-3">
+                Search for a food, then manually copy values into the meal fields if they look useful.
+                These results are estimates and may be per 100g.
+              </p>
+
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  value={nutritionQuery}
+                  onChange={(e) => setNutritionQuery(e.target.value)}
+                  placeholder="Search food, e.g. chicken breast or Dave's Killer Thin"
+                  className="flex-1 rounded-xl border border-slate-300 p-3"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => handleNutritionLookup("usda")}
+                  className="rounded-xl bg-slate-800 text-white px-4 py-2 font-semibold"
+                >
+                  USDA
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleNutritionLookup("off")}
+                  className="rounded-xl bg-white border border-slate-300 text-slate-800 px-4 py-2 font-semibold"
+                >
+                  Open Food Facts
+                </button>
+              </div>
+
+              {nutritionLookupStatus && (
+                <div className="text-sm text-slate-500 mb-3">{nutritionLookupStatus}</div>
+              )}
+
+              {nutritionResults.length > 0 && (
+                <div className="max-h-64 overflow-y-auto space-y-2">
+                  {nutritionResults.map((result) => (
+                    <div
+                      key={`${result.source}-${result.id}`}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <div className="font-bold text-slate-800">{result.name}</div>
+                      {result.brand && (
+                        <div className="text-xs text-slate-500">{result.brand}</div>
+                      )}
+
+                      <div className="text-sm text-slate-600 mt-2">
+                        {result.calories ?? "?"} kcal • C {result.carbs ?? "?"}g • P{" "}
+                        {result.protein ?? "?"}g • F {result.fat ?? "?"}g
+                      </div>
+
+                      <div className="text-xs text-slate-400 mt-1">
+                        Source: {result.source}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-3 mt-6">
       
               <button
