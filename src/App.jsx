@@ -7,7 +7,7 @@ const initialDays = [
     day: 'Day 1',
     protein: 'Chicken',
     meals: [
-      { id: 'd1-breakfast', type: 'Breakfast', name: 'Oatmeal Power Bowl', calories: 610, macros: { carbs: 78, protein: 22, fat: 22 }, details: ['¾ cup oats cooked in 1 cup 2% milk', '1 banana', '1 Tbsp chia', '1 Tbsp peanut butter'], items: ['Oats + milk', 'Banana', 'Chia', 'Peanut butter'] },
+      { id: 'd1-breakfast', type: 'Breakfast', name: 'Oatmeal Power Bowl', calories: 610, macros: { carbs: 78, protein: 22, fat: 22 }, details: ['0.75 cup oats cooked in 1 cup 2% milk', '1 banana', '1 Tbsp chia', '1 Tbsp peanut butter'], items: ['Oats + milk', 'Banana', 'Chia', 'Peanut butter'] },
       { id: 'd1-lunch', type: 'Lunch', name: 'Chicken Quinoa Bowl', calories: 650, macros: { carbs: 55, protein: 48, fat: 22 }, details: ['6 oz grilled chicken', '1 cup quinoa', '1 cup broccoli', '1 Tbsp olive oil'], items: ['Chicken', 'Quinoa', 'Broccoli', 'Olive oil'] },
       { id: 'd1-snack', type: 'Snack', name: 'Orange + Almonds', calories: 330, macros: { carbs: 32, protein: 7, fat: 18 }, details: ['1 orange', '1 oz almonds', '1 slice Dave\'s Killer Thin'], items: ['Orange', 'Almonds', 'Dave\'s Killer Thin'] },
       { id: 'd1-dinner', type: 'Dinner', name: 'Chicken + Sweet Potato', calories: 670, macros: { carbs: 60, protein: 45, fat: 16 }, details: ['6 oz chicken', '1 large sweet potato', '1 cup green beans', '1 tsp olive oil'], items: ['Chicken', 'Sweet potato', 'Green beans'] },
@@ -18,7 +18,7 @@ const initialDays = [
     day: 'Day 2',
     protein: 'Fish',
     meals: [
-      { id: 'd2-breakfast', type: 'Breakfast', name: 'Coconut Yogurt Bowl', calories: 520, macros: { carbs: 60, protein: 8, fat: 24 }, details: ['1 cup coconut yogurt', '½ cup granola', '½ cup strawberries', '1 Tbsp chia'], items: ['Coconut yogurt', 'Granola', 'Strawberries', 'Chia'] },
+      { id: 'd2-breakfast', type: 'Breakfast', name: 'Coconut Yogurt Bowl', calories: 520, macros: { carbs: 60, protein: 8, fat: 24 }, details: ['1 cup coconut yogurt', '0.5 cup granola', '0.5 cup strawberries', '1 Tbsp chia'], items: ['Coconut yogurt', 'Granola', 'Strawberries', 'Chia'] },
       { id: 'd2-lunch', type: 'Lunch', name: 'Cod + Brown Rice', calories: 640, macros: { carbs: 70, protein: 42, fat: 18 }, details: ['6 oz cod', '1.25 cups brown rice', '1 cup spinach', '1 Tbsp olive oil'], items: ['Cod', 'Brown rice', 'Spinach'] },
       { id: 'd2-snack', type: 'Snack', name: 'Banana + PB Toast', calories: 330, macros: { carbs: 40, protein: 8, fat: 14 }, details: ['1 banana', '1 Dave\'s Killer Thin', '1 Tbsp peanut butter'], items: ['Banana', 'Dave\'s Killer Thin', 'Peanut butter'] },
       { id: 'd2-dinner', type: 'Dinner', name: 'Salmon + Veggies', calories: 740, macros: { carbs: 48, protein: 40, fat: 38 }, details: ['6 oz salmon', '1 cup roasted sweet potato', '1 cup zucchini', '1 tsp olive oil'], items: ['Salmon', 'Sweet potato', 'Zucchini'] },
@@ -40,7 +40,7 @@ const initialDays = [
     day: 'Day 4',
     protein: 'Ground Turkey',
     meals: [
-      { id: 'd4-breakfast', type: 'Breakfast', name: 'Oatmeal Bowl', calories: 520, macros: { carbs: 65, protein: 18, fat: 14 }, details: ['¾ cup oats', '1 cup 2% milk', '1 Tbsp chia', '½ cup strawberries'], items: ['Oats', 'Milk', 'Chia', 'Strawberries'] },
+      { id: 'd4-breakfast', type: 'Breakfast', name: 'Oatmeal Bowl', calories: 520, macros: { carbs: 65, protein: 18, fat: 14 }, details: ['0.75 cup oats', '1 cup 2% milk', '1 Tbsp chia', '0.5 cup strawberries'], items: ['Oats', 'Milk', 'Chia', 'Strawberries'] },
       { id: 'd4-lunch', type: 'Lunch', name: 'Turkey Quinoa Bowl', calories: 720, macros: { carbs: 65, protein: 48, fat: 22 }, details: ['6 oz ground turkey', '1.25 cups quinoa', '1 cup spinach', '1 Tbsp olive oil'], items: ['Ground turkey', 'Quinoa', 'Spinach'] },
       { id: 'd4-snack', type: 'Snack', name: 'Banana + Almonds', calories: 330, macros: { carbs: 38, protein: 7, fat: 16 }, details: ['1 banana', '1 oz almonds', '1 Dave\'s Killer Thin'], items: ['Banana', 'Almonds', 'Dave\'s Killer Thin'] },
       { id: 'd4-dinner', type: 'Dinner', name: 'Turkey + Sweet Potato', calories: 680, macros: { carbs: 60, protein: 45, fat: 16 }, details: ['6 oz turkey', '1 large sweet potato', '1 cup green beans'], items: ['Turkey', 'Sweet potato', 'Green beans'] },
@@ -51,7 +51,7 @@ const initialDays = [
     day: 'Day 5',
     protein: 'Chicken',
     meals: [
-      { id: 'd5-breakfast', type: 'Breakfast', name: 'Coconut Yogurt Bowl', calories: 480, macros: { carbs: 55, protein: 7, fat: 20 }, details: ['1 cup coconut yogurt', '½ cup granola', '½ cup strawberries'], items: ['Coconut yogurt', 'Granola', 'Strawberries'] },
+      { id: 'd5-breakfast', type: 'Breakfast', name: 'Coconut Yogurt Bowl', calories: 480, macros: { carbs: 55, protein: 7, fat: 20 }, details: ['1 cup coconut yogurt', '0.5 cup granola', '0.5 cup strawberries'], items: ['Coconut yogurt', 'Granola', 'Strawberries'] },
       { id: 'd5-lunch', type: 'Lunch', name: 'Chicken + Brown Rice', calories: 700, macros: { carbs: 75, protein: 45, fat: 18 }, details: ['6 oz chicken', '1.25 cups brown rice', '1 cup broccoli'], items: ['Chicken', 'Brown rice', 'Broccoli'] },
       { id: 'd5-snack', type: 'Snack', name: 'Orange + PB Toast', calories: 300, macros: { carbs: 30, protein: 7, fat: 14 }, details: ['1 orange', '1 Dave\'s Killer Thin', '1 Tbsp peanut butter'], items: ['Orange', 'Dave\'s Killer Thin', 'Peanut butter'] },
       { id: 'd5-dinner', type: 'Dinner', name: 'Chicken + Sweet Potato', calories: 740, macros: { carbs: 60, protein: 45, fat: 22 }, details: ['6 oz chicken', '1 large sweet potato', '1 cup spinach'], items: ['Chicken', 'Sweet potato', 'Spinach'] },
@@ -73,7 +73,7 @@ const initialDays = [
     day: 'Day 7',
     protein: 'Red Meat',
     meals: [
-      { id: 'd7-breakfast', type: 'Breakfast', name: 'Oatmeal Bowl', calories: 520, macros: { carbs: 65, protein: 18, fat: 14 }, details: ['¾ cup oats', '1 cup 2% milk', '1 Tbsp chia', '½ cup strawberries'], items: ['Oats', 'Milk', 'Chia', 'Strawberries'] },
+      { id: 'd7-breakfast', type: 'Breakfast', name: 'Oatmeal Bowl', calories: 520, macros: { carbs: 65, protein: 18, fat: 14 }, details: ['0.75 cup oats', '1 cup 2% milk', '1 Tbsp chia', '0.5 cup strawberries'], items: ['Oats', 'Milk', 'Chia', 'Strawberries'] },
       { id: 'd7-lunch', type: 'Lunch', name: 'Chicken Wrap', calories: 620, macros: { carbs: 45, protein: 45, fat: 24 }, details: ['6 oz chicken', '1 whole-grain wrap', 'Spinach', '1 Tbsp olive oil'], items: ['Chicken', 'Wrap', 'Spinach'] },
       { id: 'd7-snack', type: 'Snack', name: 'Orange + Almonds', calories: 260, macros: { carbs: 22, protein: 6, fat: 14 }, details: ['1 orange', '1 oz almonds'], items: ['Orange', 'Almonds'] },
       { id: 'd7-dinner', type: 'Dinner', name: 'Lean Beef Plate', calories: 840, macros: { carbs: 60, protein: 45, fat: 30 }, details: ['6 oz lean beef', '1.25 cups sweet potato', '1 cup broccoli'], items: ['Lean beef', 'Sweet potato', 'Broccoli'] },
@@ -406,6 +406,29 @@ useEffect(() => {
     });
   }
 
+  function exportMealPlan() {
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      appVersion: "1.3-export-json",
+      days,
+    };
+
+    const json = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `kevin-meal-plan-${dateStamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
   function handleReset() {
     localStorage.removeItem(STORAGE_KEY);
     setDays(initialDays);
@@ -457,6 +480,13 @@ useEffect(() => {
                 className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition"
               >
                 Print prep sheet
+              </button>
+
+              <button
+                onClick={exportMealPlan}
+                className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition"
+              >
+                Export JSON
               </button>
 
               <button
