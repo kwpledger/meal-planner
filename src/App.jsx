@@ -406,6 +406,44 @@ useEffect(() => {
     });
   }
 
+  function importMealPlan(event) {
+    const file = event.target.files?.[0];
+  
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = (loadEvent) => {
+      try {
+        const importedData = JSON.parse(loadEvent.target.result);
+
+        const importedDays = Array.isArray(importedData)
+          ? importedData
+          : importedData.days;
+
+        if (!Array.isArray(importedDays)) {
+          throw new Error("Imported file does not contain a valid days array.");
+        }
+
+        setDays(importedDays);
+        setSelectedMeal(null);
+        setEditingMeal(null);
+        setDraggedMeal(null);
+        setDragOverDayId(null);
+        setSelectedSwapMeal(null);
+      } catch (error) {
+        console.error("Failed to import meal plan:", error);
+        alert("That file could not be imported. Please choose a valid meal plan JSON export.");
+      } finally {
+        event.target.value = "";
+      }
+   };
+
+    reader.readAsText(file);
+  }
+
   function exportMealPlan() {
     const exportData = {
       exportedAt: new Date().toISOString(),
@@ -488,6 +526,16 @@ useEffect(() => {
               >
                 Export JSON
               </button>
+
+              <label className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition cursor-pointer">
+                Import JSON
+                <input
+                  type="file"
+                  accept="application/json,.json"
+                  onChange={importMealPlan}
+                  className="hidden"
+                />
+              </label>
 
               <button
                 onClick={handleReset}
