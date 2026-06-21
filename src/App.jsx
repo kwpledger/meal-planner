@@ -161,6 +161,7 @@ export default function MealPlanBoard() {
     protein: 0,
     fat: 0,
     details: [],
+    items: [],
   });
   const [nutritionQuery, setNutritionQuery] = useState("");
   const [nutritionResults, setNutritionResults] = useState([]);
@@ -901,6 +902,31 @@ useEffect(() => {
               </div>
       
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-1">
+                Display Tags (one per line)
+              </label>
+
+              <textarea
+                rows={4}
+                value={editForm.items.join("\n")}
+                onChange={(e) =>
+                  handleEditField(
+                    "items",
+                    e.target.value
+                      .split("\n")
+                      .map((line) => line.trim())
+                      .filter((line) => line !== "")
+                  )
+                }
+                className="w-full rounded-xl border border-slate-300 p-3"
+              />
+
+              <p className="text-xs text-slate-500 mt-1">
+                These are the short labels shown on the meal card. They do not affect grocery aggregation.
+              </p>
+            </div>
       
             <div className="border-t border-slate-200 pt-4">
               <h3 className="font-bold text-slate-800 mb-2">Nutrition Lookup</h3>
@@ -995,13 +1021,7 @@ useEffect(() => {
                             fat: Number(editForm.fat),
                           },
                           details: editForm.details,
-                          items: editForm.details.map((detail) => {
-                            const parsed = parseIngredient(detail);
-                            return parsed.ingredient
-                              .split(" ")
-                              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                              .join(" ");
-                          }),
+                          items: editForm.items,
                         };
                       }),
                     }))
@@ -1071,6 +1091,7 @@ useEffect(() => {
                     protein: selectedMeal.macros.protein,
                     fat: selectedMeal.macros.fat,
                     details: [...selectedMeal.details],
+                    items: [...selectedMeal.items],
                   });
 
                   setSelectedMeal(null);
