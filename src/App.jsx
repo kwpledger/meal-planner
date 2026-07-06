@@ -1653,11 +1653,11 @@ useEffect(() => {
                   </button>
                 </div>
 
-                <div className="mt-3">
+                <div className="mt-3 flex justify-end">
                   <button
                     type="button"
                     onClick={handleRecomputeFromIngredients}
-                    className="text-xs rounded-lg bg-white border border-slate-300 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-100"
+                    className="text-xs rounded-lg bg-indigo-600 text-white px-3 py-2 font-semibold hover:bg-indigo-500"
                   >
                     Recompute calories/macros from ingredients
                   </button>
