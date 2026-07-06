@@ -478,9 +478,8 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-slate-100 p-6 print:bg-white print:p-0">
-      <div className="w-full overflow-x-auto print:hidden">
-        <div className="min-w-[1750px]">
-          <div className="mb-6 flex items-start justify-between gap-6">
+      <div className="print:hidden">
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-6">
             <div>
               <h1 className="text-4xl font-bold text-slate-800">Kevin’s Visual Meal Planner</h1>
               <p className="text-slate-600 mt-2 max-w-3xl">
@@ -765,7 +764,7 @@ useEffect(() => {
             <div className="bg-white rounded-3xl shadow-lg p-6 border border-slate-200">
               <h2 className="text-2xl font-bold text-slate-800 mb-4">Quick Visual Rules</h2>
 
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-amber-100 rounded-2xl p-4 border border-amber-300">
                 <div className="text-sm text-slate-500">Breakfast</div>
                 <div className="font-bold text-slate-800">8:30 AM</div>
@@ -795,7 +794,6 @@ useEffect(() => {
             </div>
             </div>
           </div>
-        </div>
       </div>
       <div className="hidden print:block bg-white text-slate-900 p-8">
         <div className="border-b border-slate-300 pb-4 mb-6">
@@ -895,8 +893,8 @@ useEffect(() => {
                 />
               </div>
       
-              <div className="grid grid-cols-4 gap-4">
-      
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+
                 <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1">
                     Calories
