@@ -94,10 +94,27 @@ export function setCachedMatch(library, normalizedName, entry) {
 // Energy=31 KCAL as separate array entries with no guaranteed order).
 // A plain nutrientName match can silently grab the kJ figure and treat it
 // as calories, overstating everything by roughly 4x.
+//
+// "Foundation" type records (USDA's most detailed/most-preferred data
+// type) can skip plain "Energy" (nutrient 208) entirely and only report
+// "Energy (Atwater General/Specific Factors)" instead - confirmed live on
+// "Chicken, breast, boneless, skinless, raw" (fdcId 2646170), which has no
+// 208 entry at all. Missing this silently defaulted calories to 0 while
+// protein/carbs/fat (unaffected by this naming quirk) came through fine -
+// exactly the "39g protein but 28 total calories" bug a user caught live.
+const ENERGY_NUTRIENT_NAMES = ['Energy', 'Energy (Atwater General Factors)', 'Energy (Atwater Specific Factors)'];
+
 function energyOf(food) {
-  return food.foodNutrients?.find(
-    (item) => item.nutrientName === 'Energy' && (item.unitName || '').toUpperCase() === 'KCAL'
-  )?.value;
+  for (const name of ENERGY_NUTRIENT_NAMES) {
+    const match = food.foodNutrients?.find(
+      (item) => item.nutrientName === name && (item.unitName || '').toUpperCase() === 'KCAL'
+    );
+    if (match) {
+      return match.value;
+    }
+  }
+
+  return undefined;
 }
 
 function extractUsdaNutrients(food) {
