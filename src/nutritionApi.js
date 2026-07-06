@@ -22,6 +22,25 @@ export async function searchUsdaFoods(query) {
   return response.json();
 }
 
+// The /foods/search endpoint only returns per-100g nutrients - portion/gram
+// weight data (foodPortions[]) requires this separate detail call.
+export async function getUsdaFoodDetail(fdcId) {
+  if (!USDA_API_KEY) {
+    throw new Error('Missing USDA API key. Add VITE_USDA_API_KEY to your .env file.');
+  }
+
+  const url = new URL(`${USDA_BASE_URL}/food/${fdcId}`);
+  url.searchParams.set('api_key', USDA_API_KEY);
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`USDA food detail lookup failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 export async function searchOpenFoodFacts(query) {
   const url = new URL(`${OPEN_FOOD_FACTS_BASE_URL}/cgi/search.pl`);
   url.searchParams.set('search_terms', query);

@@ -1,5 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { searchUsdaFoods, searchOpenFoodFacts } from './nutritionApi';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { searchUsdaFoods, searchOpenFoodFacts, getUsdaFoodDetail } from './nutritionApi';
+import { migrateDaysToIngredients, mergeIngredientsFromLines, formatIngredientAmount, parseIngredientLine } from './ingredientParser';
+import { resolvePortionToGrams, computeNutrientsForIngredient, recomputeMealFromIngredients } from './portionResolver';
+import { loadLibrary, matchIngredient } from './ingredientLibrary';
 
 const initialDays = [
   {
@@ -96,38 +99,83 @@ const macroTargets = {
   fat: 30,
 };
 
-function getMealSortValue(meal) {
-  return mealOrder.indexOf(meal.type);
+const CONFIDENCE_LABELS = {
+  'exact-weight': { label: 'exact weight', className: 'bg-green-100 text-green-800' },
+  'food-portion': { label: 'matched portion', className: 'bg-green-100 text-green-800' },
+  'generic-fallback': { label: 'rough estimate', className: 'bg-yellow-100 text-yellow-800' },
+  unresolved: { label: 'unresolved', className: 'bg-red-100 text-red-800' },
+};
+
+function PortionResolutionPreview({ resolution }) {
+  if (resolution.status === 'loading') {
+    return <div className="mt-2 text-xs text-slate-500">Resolving portion...</div>;
+  }
+
+  if (resolution.status === 'error') {
+    return <div className="mt-2 text-xs text-red-600">{resolution.message}</div>;
+  }
+
+  const confidence = CONFIDENCE_LABELS[resolution.confidence] || CONFIDENCE_LABELS.unresolved;
+
+  return (
+    <div className="mt-2 rounded-lg bg-white border border-slate-200 p-2 text-xs">
+      <div className="flex items-center gap-2">
+        <span className={`px-2 py-0.5 rounded-full font-semibold ${confidence.className}`}>
+          {confidence.label}
+        </span>
+        <span className="text-slate-600">
+          {resolution.grams != null ? `${Math.round(resolution.grams)} g` : 'no grams resolved'}
+        </span>
+      </div>
+
+      {resolution.nutrients && (
+        <div className="mt-1 text-slate-600">
+          {resolution.nutrients.calories} cal • C {resolution.nutrients.carbs}g • P{' '}
+          {resolution.nutrients.protein}g • F {resolution.nutrients.fat}g
+        </div>
+      )}
+    </div>
+  );
 }
 
-function parseIngredient(detail) {
-  const units = ['cup', 'cups', 'tbsp', 'tsp', 'oz', 'slice', 'slices', 'large'];
-  const parts = detail.split(' ');
-
-  if (parts.length < 2) {
-    return { ingredient: detail.toLowerCase(), amount: detail };
+function AutoMatchPreview({ result }) {
+  if (result.status === 'loading') {
+    return <div className="mb-3 text-xs text-slate-500">Matching...</div>;
   }
 
-  const first = parts[0];
-  const second = parts[1]?.toLowerCase();
-  const hasUnit = units.includes(second);
-  const startsWithAmount = !Number.isNaN(Number(first)) || ['¼', '½', '¾'].includes(first) || first.includes('/');
-
-  if (startsWithAmount && hasUnit) {
-    return {
-      amount: `${first} ${parts[1]}`,
-      ingredient: parts.slice(2).join(' ').toLowerCase(),
-    };
+  if (result.status === 'error') {
+    return <div className="mb-3 text-xs text-red-600">{result.message}</div>;
   }
 
-  if (startsWithAmount) {
-    return {
-      amount: first,
-      ingredient: parts.slice(1).join(' ').toLowerCase(),
-    };
-  }
+  const confidence = CONFIDENCE_LABELS[result.confidence] || CONFIDENCE_LABELS.unresolved;
 
-  return { ingredient: detail.toLowerCase(), amount: detail };
+  return (
+    <div className="mb-3 rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-bold text-slate-800">{result.entry.matchedFoodName}</span>
+        <span className="text-slate-500">{result.fromCache ? 'from cache' : 'newly matched'}</span>
+      </div>
+
+      <div className="text-slate-500 mt-1">
+        Source: {result.entry.source === 'usda' ? `USDA${result.entry.dataType ? ` • ${result.entry.dataType}` : ''}` : 'Open Food Facts'}
+      </div>
+
+      <div className="flex items-center gap-2 mt-2">
+        <span className={`px-2 py-0.5 rounded-full font-semibold ${confidence.className}`}>{confidence.label}</span>
+        <span className="text-slate-600">{result.grams != null ? `${Math.round(result.grams)} g` : 'no grams resolved'}</span>
+      </div>
+
+      {result.nutrients && (
+        <div className="mt-1 text-slate-600">
+          {result.nutrients.calories} cal • C {result.nutrients.carbs}g • P {result.nutrients.protein}g • F {result.nutrients.fat}g
+        </div>
+      )}
+    </div>
+  );
+}
+
+function getMealSortValue(meal) {
+  return mealOrder.indexOf(meal.type);
 }
 
 const STORAGE_KEY = 'kevin-meal-planner-state-v2';
@@ -138,13 +186,13 @@ export default function MealPlanBoard() {
 
     if (saved) {
       try {
-        return JSON.parse(saved);
+        return migrateDaysToIngredients(JSON.parse(saved));
       } catch (error) {
         console.error('Failed to load saved meal plan:', error);
       }
     }
 
-    return initialDays;
+    return migrateDaysToIngredients(initialDays);
   });
   const [draggedMeal, setDraggedMeal] = useState(null);
   const [dragOverDayId, setDragOverDayId] = useState(null);
@@ -160,18 +208,356 @@ export default function MealPlanBoard() {
     carbs: 0,
     protein: 0,
     fat: 0,
-    details: [],
+    ingredients: [],
     items: [],
   });
   const [nutritionQuery, setNutritionQuery] = useState("");
   const [nutritionResults, setNutritionResults] = useState([]);
   const [nutritionLookupStatus, setNutritionLookupStatus] = useState("");
+  const [portionResolutions, setPortionResolutions] = useState({});
+  const [ingredientLibrary, setIngredientLibrary] = useState(() => loadLibrary());
+  const [autoMatchResult, setAutoMatchResult] = useState(null);
+  const [recomputePreview, setRecomputePreview] = useState(null);
+  const [pastedIngredients, setPastedIngredients] = useState("");
+  const [normalizeState, setNormalizeState] = useState(null);
+  const normalizeCancelRef = useRef(false);
 
   function handleEditField(field, value) {
     setEditForm((current) => ({
       ...current,
       [field]: value,
     }));
+  }
+
+  function updateIngredientRow(index, updates) {
+    setEditForm((current) => {
+      const ingredients = [...current.ingredients];
+      const existing = ingredients[index];
+      const updated = { ...existing, ...updates };
+
+      // Editing amount/unit/name means the row no longer describes the
+      // portion its match was resolved for - clear stale match data rather
+      // than silently keep showing grams/macros for the old text.
+      if ('amount' in updates || 'unit' in updates || 'name' in updates) {
+        updated.raw = [formatIngredientAmount(updated), updated.name].filter(Boolean).join(' ').trim();
+        updated.grams = null;
+        updated.gramsConfidence = 'unresolved';
+        updated.nutrientsPer100g = null;
+        updated.source = null;
+        updated.matchedFoodId = null;
+        updated.matchedFoodName = null;
+        updated.verified = false;
+      }
+
+      ingredients[index] = updated;
+      return { ...current, ingredients };
+    });
+  }
+
+  function addIngredientRow() {
+    setEditForm((current) => ({
+      ...current,
+      ingredients: [
+        ...current.ingredients,
+        {
+          id: `${editingMeal?.id || 'meal'}-ing-new-${Date.now()}`,
+          raw: '',
+          amount: null,
+          unit: null,
+          name: '',
+          prepNote: null,
+          grams: null,
+          gramsConfidence: 'unresolved',
+          nutrientsPer100g: null,
+          source: null,
+          matchedFoodId: null,
+          matchedFoodName: null,
+          verified: false,
+        },
+      ],
+    }));
+  }
+
+  function removeIngredientRow(index) {
+    setEditForm((current) => ({
+      ...current,
+      ingredients: current.ingredients.filter((_, i) => i !== index),
+    }));
+  }
+
+  function applyPastedIngredients() {
+    const lines = pastedIngredients.split('\n');
+
+    setEditForm((current) => ({
+      ...current,
+      ingredients: mergeIngredientsFromLines(lines, current.ingredients, editingMeal?.id || 'meal'),
+    }));
+
+    setPastedIngredients('');
+  }
+
+  async function handleMatchRow(index) {
+    const ingredient = editForm.ingredients[index];
+
+    if (!ingredient.name) {
+      return;
+    }
+
+    const { entry, library } = await matchIngredient(ingredient.raw || ingredient.name, ingredientLibrary);
+    setIngredientLibrary(library);
+
+    if (!entry) {
+      return;
+    }
+
+    const matchedFood = entry.source === 'usda'
+      ? { source: 'usda', foodPortions: entry.foodPortions }
+      : { source: 'off', servingQuantity: entry.servingQuantity };
+
+    const { grams, confidence } = resolvePortionToGrams({
+      amount: ingredient.amount,
+      unit: ingredient.unit,
+      name: ingredient.name,
+      matchedFood,
+    });
+
+    updateIngredientRow(index, {
+      grams,
+      gramsConfidence: confidence,
+      nutrientsPer100g: entry.nutrientsPer100g,
+      source: entry.source,
+      matchedFoodId: entry.matchedFoodId,
+      matchedFoodName: entry.matchedFoodName,
+      // Auto-match, flag for review: always land unverified so Kevin knows
+      // to spot-check it, regardless of how confident the resolution was.
+      verified: false,
+    });
+  }
+
+  async function handleMatchAllRows() {
+    let library = ingredientLibrary;
+
+    for (let index = 0; index < editForm.ingredients.length; index += 1) {
+      const ingredient = editForm.ingredients[index];
+
+      if (!ingredient.name || ingredient.gramsConfidence !== 'unresolved') {
+        continue;
+      }
+
+      const { entry, library: nextLibrary } = await matchIngredient(ingredient.raw || ingredient.name, library);
+      library = nextLibrary;
+
+      if (!entry) {
+        continue;
+      }
+
+      const matchedFood = entry.source === 'usda'
+        ? { source: 'usda', foodPortions: entry.foodPortions }
+        : { source: 'off', servingQuantity: entry.servingQuantity };
+
+      const { grams, confidence } = resolvePortionToGrams({
+        amount: ingredient.amount,
+        unit: ingredient.unit,
+        name: ingredient.name,
+        matchedFood,
+      });
+
+      updateIngredientRow(index, {
+        grams,
+        gramsConfidence: confidence,
+        nutrientsPer100g: entry.nutrientsPer100g,
+        source: entry.source,
+        matchedFoodId: entry.matchedFoodId,
+        matchedFoodName: entry.matchedFoodName,
+        verified: false,
+      });
+    }
+
+    setIngredientLibrary(library);
+  }
+
+  function handleRecomputeFromIngredients() {
+    setRecomputePreview(recomputeMealFromIngredients({ ingredients: editForm.ingredients }));
+  }
+
+  function applyRecomputedTotals() {
+    if (!recomputePreview) {
+      return;
+    }
+
+    setEditForm((current) => ({
+      ...current,
+      calories: recomputePreview.calories,
+      carbs: recomputePreview.macros.carbs,
+      protein: recomputePreview.macros.protein,
+      fat: recomputePreview.macros.fat,
+    }));
+
+    setRecomputePreview(null);
+  }
+
+  // Resolves grams/matches for every not-yet-resolved ingredient across the
+  // whole board in one pass, reusing the ingredient library cache (so a
+  // repeated ingredient like "chicken" only hits the network once). This
+  // writes ingredient match data immediately - that part is safe, since it
+  // doesn't change any calorie/macro number currently on screen. It does
+  // NOT touch meal.calories/macros itself; those go through the review step
+  // below so nothing changes without an explicit apply.
+  async function handleNormalizeBoard() {
+    const targets = [];
+
+    days.forEach((day) => {
+      day.meals.forEach((meal) => {
+        meal.ingredients.forEach((ingredient) => {
+          if (ingredient.name && ingredient.gramsConfidence === 'unresolved') {
+            targets.push({ dayId: day.id, mealId: meal.id, ingredientId: ingredient.id });
+          }
+        });
+      });
+    });
+
+    if (targets.length === 0) {
+      setNormalizeState({ status: 'no-targets' });
+      return;
+    }
+
+    normalizeCancelRef.current = false;
+    setNormalizeState({ status: 'running', current: 0, total: targets.length });
+
+    let library = ingredientLibrary;
+    const workingDays = structuredClone(days);
+
+    for (let i = 0; i < targets.length; i += 1) {
+      if (normalizeCancelRef.current) {
+        break;
+      }
+
+      const target = targets[i];
+      const day = workingDays.find((d) => d.id === target.dayId);
+      const meal = day.meals.find((m) => m.id === target.mealId);
+      const ingredient = meal.ingredients.find((ing) => ing.id === target.ingredientId);
+
+      // eslint-disable-next-line no-await-in-loop
+      const { entry, library: nextLibrary } = await matchIngredient(ingredient.raw, library);
+      library = nextLibrary;
+
+      if (entry) {
+        const matchedFood = entry.source === 'usda'
+          ? { source: 'usda', foodPortions: entry.foodPortions }
+          : { source: 'off', servingQuantity: entry.servingQuantity };
+
+        const { grams, confidence } = resolvePortionToGrams({
+          amount: ingredient.amount,
+          unit: ingredient.unit,
+          name: ingredient.name,
+          matchedFood,
+        });
+
+        ingredient.grams = grams;
+        ingredient.gramsConfidence = confidence;
+        ingredient.nutrientsPer100g = entry.nutrientsPer100g;
+        ingredient.source = entry.source;
+        ingredient.matchedFoodId = entry.matchedFoodId;
+        ingredient.matchedFoodName = entry.matchedFoodName;
+        ingredient.verified = false;
+      }
+
+      setNormalizeState({ status: 'running', current: i + 1, total: targets.length });
+
+      // Sequential with a short delay - a good API citizen, and safer
+      // against transient failures than firing requests in parallel.
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+
+    setIngredientLibrary(library);
+    setDays(workingDays);
+
+    // Only compare meals where every ingredient actually resolved. A
+    // partially-matched meal (e.g. a cancelled run, or one ingredient with
+    // no match at all) would otherwise "compute" to a near-zero total that
+    // looks like a real, applicable number - it isn't, it's just missing
+    // data, and applying it would wipe out that meal's calories.
+    const comparisons = [];
+    let skippedCount = 0;
+
+    workingDays.forEach((day) => {
+      day.meals.forEach((meal) => {
+        const allResolved = meal.ingredients.length > 0
+          && meal.ingredients.every((ingredient) => ingredient.gramsConfidence !== 'unresolved');
+
+        if (!allResolved) {
+          skippedCount += 1;
+          return;
+        }
+
+        const computed = recomputeMealFromIngredients(meal);
+        const delta = computed.calories - meal.calories;
+
+        if (Math.abs(delta) >= 1) {
+          comparisons.push({
+            dayId: day.id,
+            dayName: day.day,
+            mealId: meal.id,
+            mealName: meal.name,
+            mealType: meal.type,
+            stored: { calories: meal.calories, macros: meal.macros },
+            computed,
+            delta,
+          });
+        }
+      });
+    });
+
+    comparisons.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+
+    setNormalizeState({ status: 'review', comparisons, cancelled: normalizeCancelRef.current, skippedCount });
+  }
+
+  function cancelNormalizeBoard() {
+    normalizeCancelRef.current = true;
+  }
+
+  function applyNormalizeComparison(comparison) {
+    setDays((currentDays) => currentDays.map((day) => {
+      if (day.id !== comparison.dayId) {
+        return day;
+      }
+
+      return {
+        ...day,
+        meals: day.meals.map((meal) => (
+          meal.id === comparison.mealId
+            ? { ...meal, calories: comparison.computed.calories, macros: comparison.computed.macros }
+            : meal
+        )),
+      };
+    }));
+
+    setNormalizeState((current) => current && {
+      ...current,
+      comparisons: current.comparisons.filter((c) => c.mealId !== comparison.mealId),
+    });
+  }
+
+  function applyAllNormalizeComparisons() {
+    if (!normalizeState?.comparisons) {
+      return;
+    }
+
+    const byMealId = new Map(normalizeState.comparisons.map((c) => [c.mealId, c]));
+
+    setDays((currentDays) => currentDays.map((day) => ({
+      ...day,
+      meals: day.meals.map((meal) => {
+        const comparison = byMealId.get(meal.id);
+        return comparison
+          ? { ...meal, calories: comparison.computed.calories, macros: comparison.computed.macros }
+          : meal;
+      }),
+    })));
+
+    setNormalizeState((current) => current && { ...current, comparisons: [] });
   }
 
 useEffect(() => {
@@ -197,18 +583,17 @@ useEffect(() => {
 
     days.forEach((day) => {
       day.meals.forEach((meal) => {
-        meal.details.forEach((detail) => {
-          const parsed = parseIngredient(detail);
-          const existingUses = groceryMap.get(parsed.ingredient) || [];
+        meal.ingredients.forEach((ingredient) => {
+          const existingUses = groceryMap.get(ingredient.name) || [];
 
-          groceryMap.set(parsed.ingredient, [
+          groceryMap.set(ingredient.name, [
             ...existingUses,
             {
               day: day.day,
               mealType: meal.type,
               mealName: meal.name,
-              amount: parsed.amount,
-              original: detail,
+              amount: formatIngredientAmount(ingredient),
+              original: ingredient.raw,
             },
           ]);
         });
@@ -254,8 +639,8 @@ useEffect(() => {
     return days
       .map((day) => {
         const mealLines = day.meals.map((meal) => {
-          const ingredients = meal.details
-            .map((detail) => `    - ${detail}`)
+          const ingredients = meal.ingredients
+            .map((ingredient) => `    - ${ingredient.raw}`)
             .join('\n');
 
           return `  ${meal.type}: ${meal.name}\n${ingredients}\n    Planner estimate: ${meal.calories} cal | C ${meal.macros.carbs}g | P ${meal.macros.protein}g | F ${meal.macros.fat}g`;
@@ -363,6 +748,7 @@ useEffect(() => {
             source: "USDA",
             id: food.fdcId,
             name: food.description,
+            dataType: food.dataType,
             brand: food.brandOwner || food.brandName || "",
             calories:
               food.foodNutrients?.find((n) => n.nutrientName === "Energy")?.value ?? null,
@@ -382,6 +768,8 @@ useEffect(() => {
             id: product.code,
             name: product.product_name || "Unnamed product",
             brand: product.brands || "",
+            servingSize: product.serving_size || "",
+            servingQuantity: product.serving_quantity ?? null,
             calories: product.nutriments?.["energy-kcal_100g"] ?? null,
             protein: product.nutriments?.proteins_100g ?? null,
             carbs: product.nutriments?.carbohydrates_100g ?? null,
@@ -395,7 +783,98 @@ useEffect(() => {
       setNutritionLookupStatus(error.message);
     }
   }
-  
+
+  // Type an ingredient line into the search box (e.g. "0.75 cup oats") and
+  // resolve it against a specific search result - proves the portion/gram
+  // pipeline against real API data before it's wired into full ingredient
+  // rows. Not applied to any meal yet; informational only.
+  async function handleResolvePortion(result) {
+    const key = `${result.source}-${result.id}`;
+    const parsedLine = parseIngredientLine(nutritionQuery.trim() || result.name);
+
+    setPortionResolutions((current) => ({ ...current, [key]: { status: 'loading' } }));
+
+    try {
+      let matchedFood;
+
+      if (result.source === 'USDA') {
+        const detail = await getUsdaFoodDetail(result.id);
+        matchedFood = { source: 'usda', foodPortions: detail.foodPortions || [] };
+      } else {
+        matchedFood = { source: 'off', servingQuantity: result.servingQuantity };
+      }
+
+      const { grams, confidence } = resolvePortionToGrams({
+        amount: parsedLine.amount,
+        unit: parsedLine.unit,
+        name: parsedLine.name || result.name,
+        matchedFood,
+      });
+
+      const nutrients = grams == null
+        ? null
+        : computeNutrientsForIngredient({
+            grams,
+            nutrientsPer100g: {
+              calories: result.calories,
+              carbs: result.carbs,
+              protein: result.protein,
+              fat: result.fat,
+            },
+          });
+
+      setPortionResolutions((current) => ({
+        ...current,
+        [key]: { status: 'done', grams, confidence, nutrients, parsedLine },
+      }));
+    } catch (error) {
+      setPortionResolutions((current) => ({
+        ...current,
+        [key]: { status: 'error', message: error.message },
+      }));
+    }
+  }
+
+  // Auto-picks the best USDA/OFF match for a plain ingredient name (no
+  // manual result-clicking), reusing the ingredient library cache. This is
+  // the same orchestrator the future per-row editor and bulk-normalize
+  // action will call - exercising it here first proves cache reuse works
+  // before it's wired into meal data.
+  async function handleAutoMatch() {
+    const query = nutritionQuery.trim();
+
+    if (!query) {
+      setAutoMatchResult({ status: 'error', message: 'Enter an ingredient line first.' });
+      return;
+    }
+
+    setAutoMatchResult({ status: 'loading' });
+
+    const { entry, library, fromCache } = await matchIngredient(query, ingredientLibrary);
+    setIngredientLibrary(library);
+
+    if (!entry) {
+      setAutoMatchResult({ status: 'error', message: 'No USDA or Open Food Facts match found.' });
+      return;
+    }
+
+    const parsedLine = parseIngredientLine(query);
+    const matchedFood = entry.source === 'usda'
+      ? { source: 'usda', foodPortions: entry.foodPortions }
+      : { source: 'off', servingQuantity: entry.servingQuantity };
+
+    const { grams, confidence } = resolvePortionToGrams({
+      amount: parsedLine.amount,
+      unit: parsedLine.unit,
+      name: parsedLine.name,
+      matchedFood,
+    });
+
+    const nutrients = grams == null ? null : computeNutrientsForIngredient({ grams, nutrientsPer100g: entry.nutrientsPer100g });
+
+    setAutoMatchResult({ status: 'done', entry, fromCache, grams, confidence, nutrients });
+  }
+
   function toggleCollapsed(dayId) {
     setCollapsedDays((current) => {
       if (current.includes(dayId)) {
@@ -427,7 +906,7 @@ useEffect(() => {
           throw new Error("Imported file does not contain a valid days array.");
         }
 
-        setDays(importedDays);
+        setDays(migrateDaysToIngredients(importedDays));
         setSelectedMeal(null);
         setEditingMeal(null);
         setDraggedMeal(null);
@@ -447,7 +926,8 @@ useEffect(() => {
   function exportMealPlan() {
     const exportData = {
       exportedAt: new Date().toISOString(),
-      appVersion: "1.3-export-json",
+      appVersion: "2.0-structured-ingredients",
+      schemaVersion: 2,
       days,
     };
 
@@ -469,7 +949,7 @@ useEffect(() => {
 
   function handleReset() {
     localStorage.removeItem(STORAGE_KEY);
-    setDays(initialDays);
+    setDays(migrateDaysToIngredients(initialDays));
     setDraggedMeal(null);
     setDragOverDayId(null);
     setSelectedMeal(null);
@@ -535,6 +1015,13 @@ useEffect(() => {
                   className="hidden"
                 />
               </label>
+
+              <button
+                onClick={handleNormalizeBoard}
+                className="rounded-2xl bg-indigo-600 text-white px-5 py-3 font-semibold shadow hover:bg-indigo-500 active:scale-95 transition"
+              >
+                Normalize portions (beta)
+              </button>
 
               <button
                 onClick={handleReset}
@@ -958,25 +1445,158 @@ useEffect(() => {
               </div>
       
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">
-                  Ingredients (one per line)
-                </label>
-      
-                <textarea
-                  rows={8}
-                  value={editForm.details.join("\n")}
-                  onChange={(e) =>
-                    handleEditField(
-                      "details",
-                      e.target.value
-                        .split("\n")
-                        .filter((line) => line.trim() !== "")
-                    )
-                  }
-                  className="w-full rounded-xl border border-slate-300 p-3"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-slate-600">Ingredients</label>
+                  <button
+                    type="button"
+                    onClick={handleMatchAllRows}
+                    className="text-xs rounded-lg bg-indigo-600 text-white px-3 py-1 font-semibold hover:bg-indigo-500"
+                  >
+                    Match all unresolved
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {editForm.ingredients.map((ingredient, index) => {
+                    const confidence = CONFIDENCE_LABELS[ingredient.gramsConfidence] || CONFIDENCE_LABELS.unresolved;
+
+                    return (
+                      <div key={ingredient.id} className="rounded-xl border border-slate-300 p-2">
+                        <div className="flex gap-2 items-start">
+                          <input
+                            type="number"
+                            step="any"
+                            value={ingredient.amount ?? ''}
+                            onChange={(e) => updateIngredientRow(index, { amount: e.target.value === '' ? null : Number(e.target.value) })}
+                            placeholder="amt"
+                            className="w-16 rounded-lg border border-slate-300 p-2 text-sm"
+                          />
+                          <input
+                            type="text"
+                            value={ingredient.unit ?? ''}
+                            onChange={(e) => updateIngredientRow(index, { unit: e.target.value || null })}
+                            placeholder="unit"
+                            className="w-20 rounded-lg border border-slate-300 p-2 text-sm"
+                          />
+                          <input
+                            type="text"
+                            value={ingredient.name}
+                            onChange={(e) => updateIngredientRow(index, { name: e.target.value })}
+                            placeholder="ingredient name"
+                            className="flex-1 rounded-lg border border-slate-300 p-2 text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeIngredientRow(index)}
+                            className="text-slate-400 hover:text-red-600 px-2"
+                            aria-label="Remove ingredient"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${confidence.className}`}>
+                            {confidence.label}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {ingredient.grams != null ? `${Math.round(ingredient.grams)} g` : 'no grams yet'}
+                          </span>
+                          {ingredient.matchedFoodName && (
+                            <span className="text-xs text-slate-400">· {ingredient.matchedFoodName}</span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleMatchRow(index)}
+                            className="text-xs rounded-lg bg-white border border-slate-300 px-2 py-1 font-semibold text-slate-700 hover:bg-slate-100"
+                          >
+                            Match
+                          </button>
+                          <label className="flex items-center gap-1 text-xs text-slate-500 ml-auto">
+                            <input
+                              type="checkbox"
+                              checked={ingredient.verified}
+                              onChange={(e) => updateIngredientRow(index, { verified: e.target.checked })}
+                            />
+                            verified
+                          </label>
+                        </div>
+
+                        {ingredient.prepNote && (
+                          <div className="text-[11px] text-slate-400 mt-1">note: {ingredient.prepNote}</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={addIngredientRow}
+                  className="mt-2 text-xs rounded-lg border border-dashed border-slate-300 px-3 py-2 text-slate-500 hover:bg-slate-50 w-full"
+                >
+                  + Add ingredient
+                </button>
+
+                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-2">
+                  <label className="block text-xs font-medium text-slate-500 mb-1">
+                    Or paste ingredients as text (one per line, replaces the list above)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={pastedIngredients}
+                    onChange={(e) => setPastedIngredients(e.target.value)}
+                    placeholder={"0.75 cup oats\n1 banana"}
+                    className="w-full rounded-lg border border-slate-300 p-2 text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={applyPastedIngredients}
+                    className="mt-1 text-xs rounded-lg bg-slate-800 text-white px-3 py-1 font-semibold"
+                  >
+                    Replace ingredients from text
+                  </button>
+                </div>
+
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={handleRecomputeFromIngredients}
+                    className="text-xs rounded-lg bg-white border border-slate-300 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    Recompute calories/macros from ingredients
+                  </button>
+                </div>
+
+                {recomputePreview && (
+                  <div className="mt-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs">
+                    <div className="text-slate-600">
+                      Stored: {editForm.calories} cal · C {editForm.carbs}g P {editForm.protein}g F {editForm.fat}g
+                    </div>
+                    <div className="text-slate-800 font-semibold mt-1">
+                      Computed: {recomputePreview.calories} cal · C {recomputePreview.macros.carbs}g P{' '}
+                      {recomputePreview.macros.protein}g F {recomputePreview.macros.fat}g
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={applyRecomputedTotals}
+                        className="rounded-lg bg-indigo-600 text-white px-3 py-1 font-semibold hover:bg-indigo-500"
+                      >
+                        Apply to form
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRecomputePreview(null)}
+                        className="rounded-lg border border-slate-300 px-3 py-1 font-semibold text-slate-700"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-      
+
             </div>
 
             <div>
@@ -1036,7 +1656,17 @@ useEffect(() => {
                 >
                   Open Food Facts
                 </button>
+
+                <button
+                  type="button"
+                  onClick={handleAutoMatch}
+                  className="rounded-xl bg-indigo-600 text-white px-4 py-2 font-semibold hover:bg-indigo-500"
+                >
+                  Auto-match & cache
+                </button>
               </div>
+
+              {autoMatchResult && <AutoMatchPreview result={autoMatchResult} />}
 
               {nutritionLookupStatus && (
                 <div className="text-sm text-slate-500 mb-3">{nutritionLookupStatus}</div>
@@ -1057,11 +1687,28 @@ useEffect(() => {
                       <div className="text-sm text-slate-600 mt-2">
                         {result.calories ?? "?"} kcal • C {result.carbs ?? "?"}g • P{" "}
                         {result.protein ?? "?"}g • F {result.fat ?? "?"}g
+                        <span className="text-slate-400"> (per 100g)</span>
                       </div>
 
                       <div className="text-xs text-slate-400 mt-1">
                         Source: {result.source}
+                        {result.dataType && ` • ${result.dataType}`}
+                        {result.servingSize && ` • serving: ${result.servingSize}`}
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleResolvePortion(result)}
+                        className="mt-2 text-xs rounded-lg bg-white border border-slate-300 px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-100"
+                      >
+                        Resolve portion for "{nutritionQuery || result.name}"
+                      </button>
+
+                      {portionResolutions[`${result.source}-${result.id}`] && (
+                        <PortionResolutionPreview
+                          resolution={portionResolutions[`${result.source}-${result.id}`]}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1096,7 +1743,7 @@ useEffect(() => {
                             protein: Number(editForm.protein),
                             fat: Number(editForm.fat),
                           },
-                          details: editForm.details,
+                          ingredients: editForm.ingredients.filter((ingredient) => ingredient.name.trim() !== ''),
                           items: editForm.items,
                         };
                       }),
@@ -1104,6 +1751,8 @@ useEffect(() => {
                   );
 
                   setEditingMeal(null);
+                  setRecomputePreview(null);
+                  setPastedIngredients('');
                 }}
                 className="px-4 py-2 rounded-xl bg-slate-800 text-white"
               >
@@ -1112,6 +1761,113 @@ useEffect(() => {
       
             </div>
       
+          </div>
+        </div>
+      )}
+
+      {normalizeState && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-slate-800">Normalize portions</h2>
+              <button
+                onClick={() => setNormalizeState(null)}
+                className="text-slate-500 hover:text-slate-700 text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            {normalizeState.status === 'no-targets' && (
+              <p className="text-sm text-slate-600">
+                Every ingredient on the board already has a resolved match. Edit a meal and use "Match" again
+                if you want to re-resolve a specific ingredient.
+              </p>
+            )}
+
+            {normalizeState.status === 'running' && (
+              <div>
+                <p className="text-sm text-slate-600 mb-3">
+                  Matching ingredients against USDA / Open Food Facts... {normalizeState.current}/{normalizeState.total}
+                </p>
+                <div className="h-2 rounded-full bg-slate-200 overflow-hidden mb-4">
+                  <div
+                    className="h-full bg-indigo-500 rounded-full transition-all"
+                    style={{ width: `${Math.round((normalizeState.current / normalizeState.total) * 100)}%` }}
+                  />
+                </div>
+                <button
+                  onClick={cancelNormalizeBoard}
+                  className="rounded-xl border border-slate-300 px-4 py-2 font-semibold text-slate-700"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {normalizeState.status === 'review' && (
+              <div>
+                <p className="text-sm text-slate-600 mb-4">
+                  {normalizeState.cancelled && 'Stopped early - '}
+                  Ingredient grams/matches for the board have been saved. These are the fully-resolved meals where
+                  computed calories differ from the stored value - nothing here has been applied to the visible
+                  cards yet.
+                </p>
+
+                {normalizeState.skippedCount > 0 && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-4">
+                    {normalizeState.skippedCount} meal{normalizeState.skippedCount === 1 ? '' : 's'} skipped -
+                    still {normalizeState.cancelled ? 'unmatched from the cancelled run' : 'have at least one unresolved ingredient'}.
+                    Run Normalize again{normalizeState.cancelled ? '' : ', or resolve them from the meal edit modal,'} to include them here.
+                  </p>
+                )}
+
+                {normalizeState.comparisons.length === 0 ? (
+                  <p className="text-sm text-slate-500 mb-4">No meaningful differences found.</p>
+                ) : (
+                  <>
+                    <button
+                      onClick={applyAllNormalizeComparisons}
+                      className="mb-3 rounded-xl bg-indigo-600 text-white px-4 py-2 font-semibold hover:bg-indigo-500"
+                    >
+                      Apply all to meal cards
+                    </button>
+
+                    <div className="space-y-2">
+                      {normalizeState.comparisons.map((comparison) => (
+                        <div key={comparison.mealId} className="rounded-xl border border-slate-200 p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <div className="font-bold text-slate-800">{comparison.mealName}</div>
+                              <div className="text-xs text-slate-500">{comparison.dayName} • {comparison.mealType}</div>
+                            </div>
+                            <div className={`text-sm font-semibold ${comparison.delta > 0 ? 'text-amber-600' : 'text-sky-600'}`}>
+                              {comparison.delta > 0 ? '+' : ''}{comparison.delta} cal
+                            </div>
+                          </div>
+
+                          <div className="text-xs text-slate-500 mt-2">
+                            Stored: {comparison.stored.calories} cal · C {comparison.stored.macros.carbs}g P{' '}
+                            {comparison.stored.macros.protein}g F {comparison.stored.macros.fat}g
+                          </div>
+                          <div className="text-xs text-slate-700 font-semibold mt-1">
+                            Computed: {comparison.computed.calories} cal · C {comparison.computed.macros.carbs}g P{' '}
+                            {comparison.computed.macros.protein}g F {comparison.computed.macros.fat}g
+                          </div>
+
+                          <button
+                            onClick={() => applyNormalizeComparison(comparison)}
+                            className="mt-2 text-xs rounded-lg bg-white border border-slate-300 px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-100"
+                          >
+                            Apply this meal
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1146,10 +1902,10 @@ useEffect(() => {
             <div className={`rounded-2xl border-2 p-4 ${colorMap[selectedMeal.type]}`}>
               <h3 className="font-bold text-slate-800 mb-3">Ingredient amounts</h3>
               <ul className="space-y-2">
-                {selectedMeal.details.map((detail) => (
-                  <li key={detail} className="flex items-start gap-2 text-slate-700">
+                {selectedMeal.ingredients.map((ingredient) => (
+                  <li key={ingredient.id} className="flex items-start gap-2 text-slate-700">
                     <span className="mt-1.5 h-2 w-2 rounded-full bg-slate-600 shrink-0" />
-                    <span>{detail}</span>
+                    <span>{ingredient.raw}</span>
                   </li>
                 ))}
               </ul>
@@ -1166,10 +1922,12 @@ useEffect(() => {
                     carbs: selectedMeal.macros.carbs,
                     protein: selectedMeal.macros.protein,
                     fat: selectedMeal.macros.fat,
-                    details: [...selectedMeal.details],
+                    ingredients: selectedMeal.ingredients.map((ingredient) => ({ ...ingredient })),
                     items: [...selectedMeal.items],
                   });
 
+                  setRecomputePreview(null);
+                  setPastedIngredients('');
                   setSelectedMeal(null);
                 }}
                 className="rounded-2xl bg-slate-800 text-white px-4 py-2 font-semibold shadow hover:bg-slate-700 transition"
