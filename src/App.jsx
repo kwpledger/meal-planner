@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { searchUsdaFoods, searchOpenFoodFacts, getUsdaFoodDetail } from './nutritionApi';
-import { migrateDaysToIngredients, mergeIngredientsFromLines, formatIngredientAmount, parseIngredientLine } from './ingredientParser';
+import { migrateDaysToIngredients, mergeIngredientsFromLines, formatIngredientAmount, parseIngredientLine, SCHEMA_VERSION } from './ingredientParser';
 import { resolvePortionToGrams, computeNutrientsForIngredient, recomputeMealFromIngredients } from './portionResolver';
 import { loadLibrary, matchIngredient } from './ingredientLibrary';
+import { pushToCloud, pullFromCloud } from './cloudSync';
 
 const initialDays = [
   {
@@ -179,6 +180,7 @@ function getMealSortValue(meal) {
 }
 
 const STORAGE_KEY = 'kevin-meal-planner-state-v2';
+const STORAGE_UPDATED_AT_KEY = 'kevin-meal-planner-state-v2-updated-at';
 
 export default function MealPlanBoard() {
   const [days, setDays] = useState(() => {
@@ -221,6 +223,9 @@ export default function MealPlanBoard() {
   const [pastedIngredients, setPastedIngredients] = useState("");
   const [normalizeState, setNormalizeState] = useState(null);
   const normalizeCancelRef = useRef(false);
+  const [syncBusy, setSyncBusy] = useState(null);
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [pullPreview, setPullPreview] = useState(null);
 
   function handleEditField(field, value) {
     setEditForm((current) => ({
@@ -560,8 +565,68 @@ export default function MealPlanBoard() {
     setNormalizeState((current) => current && { ...current, comparisons: [] });
   }
 
+  async function handleSyncToCloud() {
+    setSyncBusy('push');
+    setSyncStatus(null);
+
+    try {
+      const { pushedAt } = await pushToCloud(days);
+      setSyncStatus({ type: 'success', message: `Synced to cloud at ${new Date(pushedAt).toLocaleString()}.` });
+    } catch (error) {
+      setSyncStatus({ type: 'error', message: `Sync to cloud failed: ${error.message}` });
+    } finally {
+      setSyncBusy(null);
+    }
+  }
+
+  // Pull is two-step: fetch what's in the cloud and show it alongside the
+  // local last-saved time first, rather than immediately overwriting the
+  // board - the only sync direction that can destroy unsaved local work.
+  async function handleSyncFromCloud() {
+    setSyncBusy('pull');
+    setSyncStatus(null);
+
+    try {
+      const result = await pullFromCloud();
+
+      if (result.status === 'empty') {
+        setSyncStatus({ type: 'info', message: 'No cloud backup yet - use "Sync to Cloud" first.' });
+        return;
+      }
+
+      if (result.status === 'incompatible') {
+        setSyncStatus({
+          type: 'error',
+          message: `Cloud data uses a newer format (schema v${result.cloudSchemaVersion}) than this app version supports. Update the app before pulling.`,
+        });
+        return;
+      }
+
+      setPullPreview({
+        days: result.days,
+        cloudUpdatedAt: result.updatedAt,
+        localUpdatedAt: localStorage.getItem(STORAGE_UPDATED_AT_KEY),
+      });
+    } catch (error) {
+      setSyncStatus({ type: 'error', message: `Sync from cloud failed: ${error.message}` });
+    } finally {
+      setSyncBusy(null);
+    }
+  }
+
+  function confirmPullFromCloud() {
+    if (!pullPreview) {
+      return;
+    }
+
+    setDays(migrateDaysToIngredients(pullPreview.days));
+    setSyncStatus({ type: 'success', message: `Pulled cloud data from ${new Date(pullPreview.cloudUpdatedAt).toLocaleString()}.` });
+    setPullPreview(null);
+  }
+
 useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(days));
+    localStorage.setItem(STORAGE_UPDATED_AT_KEY, new Date().toISOString());
   }, [days]);
 
   const filteredDays = useMemo(() => {
@@ -927,7 +992,7 @@ useEffect(() => {
     const exportData = {
       exportedAt: new Date().toISOString(),
       appVersion: "2.0-structured-ingredients",
-      schemaVersion: 2,
+      schemaVersion: SCHEMA_VERSION,
       days,
     };
 
@@ -1017,6 +1082,22 @@ useEffect(() => {
               </label>
 
               <button
+                onClick={handleSyncToCloud}
+                disabled={syncBusy !== null}
+                className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition disabled:opacity-50"
+              >
+                {syncBusy === 'push' ? 'Syncing...' : 'Sync to Cloud'}
+              </button>
+
+              <button
+                onClick={handleSyncFromCloud}
+                disabled={syncBusy !== null}
+                className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition disabled:opacity-50"
+              >
+                {syncBusy === 'pull' ? 'Syncing...' : 'Sync from Cloud'}
+              </button>
+
+              <button
                 onClick={handleNormalizeBoard}
                 className="rounded-2xl bg-indigo-600 text-white px-5 py-3 font-semibold shadow hover:bg-indigo-500 active:scale-95 transition"
               >
@@ -1031,6 +1112,20 @@ useEffect(() => {
               </button>
             </div>
           </div>
+
+          {syncStatus && (
+            <div
+              className={`mb-6 -mt-2 text-sm rounded-2xl px-4 py-2 border ${
+                syncStatus.type === 'error'
+                  ? 'bg-red-50 border-red-200 text-red-700'
+                  : syncStatus.type === 'info'
+                  ? 'bg-amber-50 border-amber-200 text-amber-700'
+                  : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+              }`}
+            >
+              {syncStatus.message}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7 gap-4">
             {filteredDays.map((day) => {
@@ -1868,6 +1963,48 @@ useEffect(() => {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {pullPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6">
+            <h2 className="text-2xl font-bold text-slate-800 mb-4">Pull from cloud?</h2>
+
+            <p className="text-sm text-slate-600 mb-4">
+              This will replace your current board with the cloud copy. Nothing has been changed yet.
+            </p>
+
+            <div className="space-y-2 text-sm mb-6">
+              <div className="rounded-xl border border-slate-200 p-3">
+                <div className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Cloud copy</div>
+                <div className="text-slate-800">
+                  {pullPreview.cloudUpdatedAt ? new Date(pullPreview.cloudUpdatedAt).toLocaleString() : 'Unknown'}
+                </div>
+              </div>
+              <div className="rounded-xl border border-slate-200 p-3">
+                <div className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Your local copy</div>
+                <div className="text-slate-800">
+                  {pullPreview.localUpdatedAt ? new Date(pullPreview.localUpdatedAt).toLocaleString() : 'Unknown'}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setPullPreview(null)}
+                className="px-4 py-2 rounded-xl border border-slate-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmPullFromCloud}
+                className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-500"
+              >
+                Replace board with cloud copy
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,3 +1,7 @@
+// Shared by Export JSON and cloud sync so the two can't silently drift
+// apart on what shape of `days` they claim to be writing.
+export const SCHEMA_VERSION = 2;
+
 const UNITS = ['cup', 'cups', 'tbsp', 'tsp', 'oz', 'slice', 'slices', 'large'];
 
 // Trailing clauses like "cooked in 1 cup 2% milk" describe a second
