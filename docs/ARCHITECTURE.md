@@ -87,13 +87,15 @@ Nothing about Supabase access lives in committed code except the table name/colu
 
 ### Known operational gotcha: free-tier auto-pause
 
-**This is very likely why sync is currently broken** (`Sync from cloud failed: TypeError: Failed to fetch` per the bug report - see `docs/ROADMAP.md`). Verified live while writing this doc: the project's status is currently `INACTIVE`, and even server-side SQL access via the Supabase MCP tools timed out against it. Supabase free-tier projects auto-pause after a period of API inactivity. A paused project doesn't serve requests at all, which surfaces client-side as a generic `TypeError: Failed to fetch` - no CORS error, no 4xx/5xx, just a failed network request, because there's nothing listening.
+Supabase free-tier projects auto-pause after ~7 days of API inactivity. A paused project doesn't serve requests at all, which surfaces client-side as a generic `TypeError: Failed to fetch` - no CORS error, no 4xx/5xx, just a failed network request, because there's nothing listening. This caused a real outage once (see `docs/ROADMAP.md`); it was confirmed live at the time, with the project reading `INACTIVE` and even server-side SQL access via the Supabase MCP tools timing out against it.
 
-**Fix**: open the Supabase dashboard for project `ulqudbxgctecuiiiihqt` and resume/restore it (same manual step Kevin did once already this project). There's no code fix for this - it's an infrastructure state issue. If this keeps recurring, options are: periodically touch the project (any query) to reset the inactivity clock, or move to a paid tier.
+**If it happens again**: open the Supabase dashboard for project `ulqudbxgctecuiiiihqt` and resume/restore it. There's no code fix - it's an infrastructure state issue, and the symptom is indistinguishable from a network failure from inside the app.
+
+**Mitigation now in place**: `.github/workflows/supabase-keepalive.yml` (the only workflow in this repo - see Deployment below) makes one trivial REST request twice a week to keep the inactivity clock from running out. It is a *read* by design - `select=id&limit=1` - so it can never modify the single synced row. It requires the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` repository secrets, and fails loudly rather than silently passing if they're absent. Note the residual gap: GitHub disables scheduled workflows after 60 days of repo inactivity, so a long-dormant repo can still let the project pause.
 
 ## Deployment
 
-**Not part of this repo.** There is no GitHub Actions workflow, no `wrangler.toml`, no deploy config file anywhere in the tree - an earlier GitHub Pages Actions workflow (`.github/workflows/main.yml`) existed and was deliberately deleted (see git history, "Remove obsolete GitHub Pages deploy workflow") once hosting moved to Cloudflare Pages.
+**Not part of this repo.** There is no deploy workflow, no `wrangler.toml`, no deploy config file anywhere in the tree - an earlier GitHub Pages Actions workflow (`.github/workflows/main.yml`) existed and was deliberately deleted (see git history, "Remove obsolete GitHub Pages deploy workflow") once hosting moved to Cloudflare Pages. The one workflow that does exist, `.github/workflows/supabase-keepalive.yml`, has nothing to do with deployment - it only pings Supabase on a schedule (see the auto-pause section above).
 
 - **Host**: Cloudflare Pages, project name `meal-planner`.
 - **How it deploys**: Cloudflare's own GitHub App integration watches `kwpledger/meal-planner` on GitHub directly and rebuilds automatically on every push to `main` - there's nothing in this repo that triggers it. Build command is Cloudflare's default for a Vite project (`npm install` + `npm run build`, serving `dist/`).

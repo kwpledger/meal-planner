@@ -13,15 +13,17 @@ Context: an earlier version of these exact symptoms was caused by the whole page
 
 Next step for whoever picks this up: actually resize/test at phone width (or use browser devtools device emulation) to see what's happening now, rather than assuming the original bug is still the cause.
 
-## Cloud sync is currently broken
+## Cloud sync: working (was broken - free-tier auto-pause)
 
-Symptom: UI shows `Sync from cloud failed: TypeError: Failed to fetch`.
+**Resolved.** Sync to/from cloud was failing with `TypeError: Failed to fetch`, caused by the Supabase project (`ulqudbxgctecuiiiihqt`) having auto-paused - free-tier projects pause after ~7 days without API activity, and a paused project doesn't respond at all, which surfaces in the browser as a generic fetch failure rather than a CORS error or a 4xx/5xx. The project was resumed from the Supabase dashboard and both sync directions were verified working.
 
-**Root cause, confirmed live**: the Supabase project (`ulqudbxgctecuiiiihqt`) is currently `INACTIVE` - free-tier Supabase projects auto-pause after a period of inactivity, and a paused project doesn't respond to any request, which surfaces in the browser as a generic fetch failure (not a CORS error, not a 4xx/5xx). Confirmed by checking the project status directly and by the Supabase MCP tools themselves timing out running SQL against it.
+**Preventing the recurrence**: `.github/workflows/supabase-keepalive.yml` now pings the REST API twice a week (Mon/Thu, max 4-day gap) to keep the inactivity clock from running out. It's a read of one column of one row - deliberately never a write, so it can't touch the synced data. The alternative considered was a recurring manual "go sync it once a week" reminder; that was rejected because a weekly ritual that's easy to dismiss-without-doing is worse than nothing (it *looks* handled), whereas the residual manual task under this setup is much rarer - see below.
 
-**Fix**: resume the project from the Supabase dashboard (same manual step already done once this project - see `docs/ARCHITECTURE.md` for the full writeup). This is an infrastructure state issue, not a code bug - no code change fixes it.
+**Still needs a one-time manual step**: the workflow requires two repository secrets, `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` (GitHub → Settings → Secrets and variables → Actions), matching the `VITE_`-prefixed values. Until those exist the scheduled job fails deliberately and loudly rather than passing silently. Neither value is genuinely confidential - both already ship in the public client bundle - but they stay out of the repo anyway.
 
-**Worth deciding before it recurs again**: how often is this project actually used? If sync gets used often enough, this auto-pause cycle will keep happening on the free tier. Options: a periodic keep-alive ping (e.g. a scheduled task that just runs a trivial query), or accept the manual resume-when-needed workflow, or move to a paid tier if this becomes annoying enough.
+**The one remaining human task**: GitHub disables scheduled workflows after 60 days of repository inactivity. Any commit resets that. This is the accepted residual risk - a ~50-day nudge is infrequent enough to still register as novel, unlike a weekly one.
+
+Escalation path if this ever stops being enough: move the project to a paid tier, which doesn't auto-pause at all.
 
 ## Portion-size normalization needs real implementation
 
