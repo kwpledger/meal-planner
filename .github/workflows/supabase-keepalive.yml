@@ -1,0 +1,76 @@
+# Keeps the free-tier Supabase project from auto-pausing.
+#
+# Supabase pauses free-tier projects after ~7 days with no API activity, and a
+# paused project surfaces in the app as a bare "TypeError: Failed to fetch" -
+# no CORS error, no 4xx/5xx, because nothing is listening. Resuming is a manual
+# dashboard click. This workflow makes one trivial API request on a schedule so
+# the inactivity clock never runs out.
+#
+# Deliberately a READ, not a write: this must never be able to touch the single
+# synced row. It selects one column of at most one row and discards the result.
+#
+# Requires two repository secrets (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_URL                 same value as VITE_SUPABASE_URL
+#   SUPABASE_PUBLISHABLE_KEY     same value as VITE_SUPABASE_PUBLISHABLE_KEY
+# Neither is truly confidential - both already ship inside the public client
+# bundle (see docs/ARCHITECTURE.md) - but they stay out of the repo regardless.
+
+name: Supabase keep-alive
+
+on:
+  schedule:
+    # Mondays and Thursdays at 12:00 UTC. Max gap between runs is 4 days, which
+    # leaves real margin under the ~7-day pause window even if a run is skipped
+    # or GitHub delays it (scheduled runs are best-effort, not guaranteed).
+    - cron: '0 12 * * 1,4'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+
+          # Fail loudly on missing secrets. Without this the curl would run
+          # against an empty URL and the job could still look green - the exact
+          # failure mode this workflow exists to prevent, where the keep-alive
+          # is silently dead but appears handled.
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_PUBLISHABLE_KEY}" ]; then
+            echo "::error::SUPABASE_URL and/or SUPABASE_PUBLISHABLE_KEY repository secrets are not set."
+            exit 1
+          fi
+
+          # curl's own exit code has to be captured rather than left to `set -e`:
+          # an already-paused project refuses the connection, so curl exits
+          # non-zero with no HTTP status at all. Letting that abort the script
+          # would lose the diagnostic below - which is the single most useful
+          # thing this job can tell you.
+          curl_rc=0
+          status=$(curl --silent --show-error --location \
+            --max-time 30 \
+            --output /dev/null \
+            --write-out '%{http_code}' \
+            --header "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_PUBLISHABLE_KEY}" \
+            "${SUPABASE_URL}/rest/v1/meal_plan_sync?select=id&limit=1") || curl_rc=$?
+
+          if [ "${curl_rc}" -ne 0 ]; then
+            echo "::error::Could not reach Supabase at all (curl exit ${curl_rc}). The project is most likely already paused - resume it from the Supabase dashboard."
+            exit 1
+          fi
+
+          echo "HTTP ${status}"
+
+          # 200 is the healthy case. A 401/404 here means the key or the table
+          # name changed, not that the project is down - different fix entirely.
+          if [ "${status}" != "200" ]; then
+            echo "::error::Reached Supabase but got HTTP ${status}. The project is up, so check the SUPABASE_PUBLISHABLE_KEY secret and that the meal_plan_sync table still exists."
+            exit 1
+          fi
+
+          echo "Supabase project responded normally; inactivity clock reset."
