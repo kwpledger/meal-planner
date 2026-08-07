@@ -1,0 +1,158 @@
+/*
+ * kwp design tokens — the shared layer.
+ *
+ * This file is deliberately standalone so it can travel. Every front-end
+ * surface under *.kwpledger.com should consume these same tokens: the portal,
+ * the apps on subdomains, and any MCP or project page. See BACKLOG KWP-15 for
+ * the intended shape — a single source of truth consumed as a dependency,
+ * rather than each property keeping its own divergent copy.
+ *
+ * It contains ONLY tokens and the @font-face declarations they depend on. No
+ * reset, no element styles, no utilities — those live in global.css and are
+ * this site's business, not a shared concern.
+ *
+ * CONSUMERS: the @font-face rules below expect the woff2 files to be served
+ * from /fonts/. Copy public/fonts/ across too, including OFL-NOTICE.txt — the
+ * licence travels with the fonts — or override the src paths.
+ *
+ * Parent identity for kwpledger.com.
+ *
+ * Deliberately not derived from either YouTube channel's brand — the portal
+ * needs an identity both channels can sit inside without either dominating.
+ * See docs/SITE-POSITIONING.md, "Brand guidelines are channel-scoped".
+ *
+ * TWO LAYERS, AND THE RULE THAT MAKES THEM WORTH HAVING:
+ *
+ *   1. Palette — raw color values, named for what they are (--teal-700).
+ *   2. Semantic — what components actually use (--accent, --surface, --fg).
+ *
+ * **Components reference semantic tokens only, never raw palette values.**
+ *
+ * That is what lets a future section — fiction, speaking, a channel-specific
+ * page — drop in with its own colors by remapping the semantic layer on one
+ * wrapper, without touching a single component. Reach past it to a --teal-700
+ * in a component and that section silently keeps the portal's colors.
+ *
+ * All text pairs below meet WCAG AA at their intended sizes.
+ */
+
+
+/*
+ * Self-hosted, latin subset only, ~56KB total. Not loaded from Google Fonts:
+ * no third-party request, no dependency on an external host staying up.
+ * Licences and provenance in public/fonts/OFL-NOTICE.txt.
+ *
+ * The pairing is the one already settled for both YouTube channels, which is
+ * what makes the portal read as the same family. Note the two files differ in
+ * kind — Lora is a STATIC SemiBold, Hanken Grotesk is VARIABLE (100–900). Ask
+ * Lora for any weight other than 600 and the browser fakes it.
+ */
+@font-face {
+  font-family: 'Lora';
+  src: url('/fonts/lora-latin.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Hanken Grotesk';
+  src: url('/fonts/hanken-grotesk-latin.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+
+  /* ---- 1. Palette — raw values. Do not use these in components. ---- */
+
+  /* Warm neutrals — the light surface family */
+  --paper-0: #ffffff;
+  --paper-50: #fbfaf8;
+  --sand-200: #e3e0da;
+  --ink-900: #1a1917;
+  --ink-500: #5c5a57;
+
+  /* Teal — the thread. Both channels accent in teal (KPLS #4aa3ac,
+     MPSAS #2f8079); the portal sits in the same family without copying
+     either, which is what makes it read as the parent rather than a third
+     sibling. */
+  --teal-800: #0a4a47;
+  --teal-700: #0d5c58;
+  --teal-300: #5fbdb4;
+  --teal-200: #8ad8d0;
+
+  /* Navy-slate — the dark surface family, hue ~206 */
+  --navy-900: #0a1420;
+  --navy-800: #10202f;
+  --navy-600: #1e3245;
+  --navy-200: #9aabbb;
+  --navy-50: #e6ecf2;
+
+  /* ---- 2. Semantic — what components use. Light is the default. ---- */
+  --surface: var(--paper-50);
+  --surface-card: var(--paper-0);
+  --fg: var(--ink-900);
+  --fg-muted: var(--ink-500);
+  --accent: var(--teal-700);
+  --accent-hover: var(--teal-800);
+  --border: var(--sand-200);
+
+  /* Type */
+  /* Lora is available at 600 only — see the @font-face note above. */
+  --font-display: 'Lora', Georgia, 'Iowan Old Style', 'Palatino Linotype', Palatino, serif;
+  --font-body: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+  --fw-display: 600;
+
+  --step--1: clamp(0.83rem, 0.79rem + 0.19vw, 0.94rem);
+  --step-0: clamp(1rem, 0.95rem + 0.24vw, 1.13rem);
+  --step-1: clamp(1.2rem, 1.13rem + 0.36vw, 1.42rem);
+  --step-2: clamp(1.44rem, 1.33rem + 0.55vw, 1.8rem);
+  --step-3: clamp(1.73rem, 1.56rem + 0.83vw, 2.27rem);
+  --step-4: clamp(2.07rem, 1.83rem + 1.22vw, 2.86rem);
+
+  /* Spacing — a 4px-derived scale */
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-s: 1rem;
+  --space-m: 1.5rem;
+  --space-l: 2.5rem;
+  --space-xl: 4rem;
+  --space-2xl: 6rem;
+
+  --measure: 34rem;
+  --page: 68rem;
+}
+
+/*
+ * Dark mode remaps the semantic layer only — the palette above is unchanged.
+ * Deep navy-slate rather than neutral black, from an analogous family around
+ * hue 206 (#072A46), accent at the teal end of that family (#084541,
+ * lightened to clear AA here). The source swatches were all ~15% lightness,
+ * which makes them surfaces rather than accents: side by side they read as
+ * four near-identical dark blues.
+ *
+ * This switch is USER PREFERENCE, and it is deliberately not the same switch
+ * as brand identity. A future channel- or section-scoped block sets its own
+ * fixed colors and must NOT invert with this — dark mode should never make
+ * the portal silently wear KPLS's uniform, and light mode should never put
+ * MPSAS cream on a page that isn't MPSAS.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: var(--navy-900);
+    --surface-card: var(--navy-800);
+    --fg: var(--navy-50);
+    --fg-muted: var(--navy-200);
+    --accent: var(--teal-300);
+    --accent-hover: var(--teal-200);
+    --border: var(--navy-600);
+  }
+}
