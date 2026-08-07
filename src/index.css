@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+/*
+ * .addedbykevin/ is a drop-box for reference material, not source. Tailwind v4
+ * auto-scans every tracked file for anything shaped like a utility name, and
+ * plain English collides with the utility namespace - the prose "Lora is a
+ * static SemiBold" in the style docs was enough to emit a .static rule nothing
+ * uses. Excluded so documentation can't mutate the production stylesheet.
+ */
+@source not "../.addedbykevin";
