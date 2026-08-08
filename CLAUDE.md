@@ -38,6 +38,11 @@ src/
 
 State lives in `App.jsx`'s `days` array (7 days -> meals -> structured `ingredients`), persisted to `localStorage` on every change. There is no server-side source of truth by default - see "Design decisions" below.
 
+Two directories outside `src/` matter:
+
+- **`.github/workflows/supabase-keepalive.yml`** - the repo's only workflow. Nothing to do with deployment; it writes to Supabase daily so the free-tier project doesn't auto-pause. See `docs/ARCHITECTURE.md` for why it writes rather than reads (the read-only version did not work).
+- **`.addedbykevin/`** - a drop-box for binaries and reference material Kevin passes in (logos, fonts, design-token snapshots). Tracked deliberately - gitignoring it would defeat the purpose. **It is not source.** `src/index.css` carries an `@source not "../.addedbykevin"` rule because Tailwind v4 auto-scans every tracked file for utility-shaped strings, and ordinary English collides with the utility namespace - the prose "Lora is a *static* SemiBold" in a doc there was enough to emit a `.static` rule into production CSS. Don't remove that exclusion.
+
 ## Design decisions and why
 
 - **Visual board over a text/spreadsheet view.** The whole point of this project was turning a dietician PDF into something Kevin could actually look at and rearrange, not just read. Color-coded meal-type cards, drag/drop, and swap mode all serve that.
@@ -46,8 +51,20 @@ State lives in `App.jsx`'s `days` array (7 days -> meals -> structured `ingredie
 - **Manual, explicit sync direction (push/pull buttons), not automatic/continuous sync.** Automatic sync needs real conflict resolution (what happens when two devices both have unsynced edits?). Manual push/pull with a visible before-you-overwrite confirmation was chosen instead - simpler, and matches the mental model of the pre-existing Export/Import JSON feature.
 - **Nutrition-database lookups (USDA/Open Food Facts) are advisory, never authoritative.** The dietician's numbers are the baseline; auto-matched ingredient data is deliberately never silently written over calories/macros - there's always an explicit "Recompute" -> preview diff -> "Apply" step. This shows up repeatedly: the bulk Normalize action writes ingredient match data automatically (safe - doesn't change what's visible) but requires explicit per-meal or apply-all confirmation before touching calories/macros.
 - **"Auto-match, flag for review" over "block until confirmed."** When ingredient matching can't find a clean match, it picks its best guess and marks it unverified rather than stopping to ask - matching data gets populated automatically, verification is a separate, later, optional step (the `verified` checkbox per ingredient).
+- **The board grid is moving from breakpoint-declared column counts to `auto-fit` with a pixel floor.** Agreed with Kevin, not yet implemented - this is the next work item. The current `grid-cols-1 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7` declares the *column count* at fixed pixel thresholds while card *width* is fluid; the intent was the opposite. `repeat(auto-fit, minmax(220px, 1fr))` expresses what was actually wanted. Full diagnosis and numbers in `docs/ROADMAP.md`.
+- **The app will be reconciled with the shared `kwpledger.com` design system, but not by flattening its colors.** Strategy agreed, deliberately deferred. Three token layers: palette -> semantic (from the shared system) -> *domain* (this app's own `--meal-breakfast`, `--macro-carbs`), where domain tokens map onto a shared neutral categorical scale (`--data-1..n`) rather than reaching past the semantic layer to raw palette values. Tailwind v4's `@theme` bridges CSS custom properties into utilities, so the inline-utility convention survives. Typography (Lora display / Hanken Grotesk body) is higher leverage than color and goes first. Kevin's constraint: colors should be *compatible*, not *harmonized* - distinct enough to stay categorical, stately rather than neon. Pick them in OKLCH, not HSB, so equal lightness actually means equal perceived lightness, and choose dark-mode values at the same time. Source material is in `.addedbykevin/style-docs/`.
+- **Color in this app is reinforcement, never the sole carrier.** All three color-coded axes - meal types, macro bars, ingredient-match confidence - already have text labels beside them. This was checked directly, correcting an earlier assumption that the macro bars were an unlabeled stacked chart; they are three separately labeled rows. It means the palette can change more freely than it looks, and it means any future color work must keep those labels.
 - **Full-page forced-width layout was tried and rejected.** An earlier version wrapped the whole board (including the header) in a `min-w-[1750px]` + `overflow-x-auto` container, meant to let the 7-day row scroll horizontally on narrow screens. In practice it forced the *entire page* - header included - to never be narrower than 1750px, breaking mobile and normal window resizing entirely. Removed in favor of the existing Tailwind responsive grid breakpoints doing their job unobstructed. (Mobile-friendliness is still an open issue for other reasons - see `docs/ROADMAP.md`.)
 - **Open RLS on the Supabase sync table, no auth.** Deliberate, not an oversight - see `docs/ARCHITECTURE.md`.
+
+## How to work with Kevin
+
+**Read `docs/WORKING-PREFERENCES.md` before the first substantial reply.** The two rules that matter most, because sessions get them wrong by default:
+
+1. **Surface one next step, never a menu.** Kevin is AuDHD; a list of open items causes decision paralysis, and "what would you like to tackle next?" hands him the one task he's least equipped to do. Bring the ordered list; don't ask him to generate it.
+2. **Instructions get numbered steps. Explanations can be prose.** That's his own distinction - he parses prose explanations fine, but instructions buried in paragraphs fail.
+
+Also: narrate your reasoning back to him, including routine results like a green CI run - he asked for that explicitly and values the *why* over the outcome.
 
 ## Conventions to follow
 
@@ -61,7 +78,15 @@ State lives in `App.jsx`'s `days` array (7 days -> meals -> structured `ingredie
 
 ## Current state
 
-Working end-to-end: the 7-day board, drag/drop + swap mode, print sheet, grocery aggregation, Cronometer text export, Export/Import JSON, structured per-ingredient editing with USDA/OFF matching (single and bulk), and optional Supabase cloud sync. See `docs/ROADMAP.md` for what's known-broken or unfinished right now (cloud sync is currently non-functional pending a manual step - read that file before assuming it works).
+Working end-to-end: the 7-day board, drag/drop + swap mode, print sheet, grocery aggregation, Cronometer text export, Export/Import JSON, structured per-ingredient editing with USDA/OFF matching (single and bulk), and Supabase cloud sync. **Cloud sync works** - it was broken by a free-tier auto-pause, the project was resumed, and a daily keep-alive now guards against a repeat.
+
+Deployed favicon and page title are the real kwp logo mark, not Vite defaults.
+
+**Next work item**: the board grid layout fix (`auto-fit` with a pixel floor - see Design decisions above and `docs/ROADMAP.md` for the full diagnosis). Kevin has confirmed the approach; it is not yet implemented.
+
+Two things blocked on Kevin, neither urgent: live-testing the nutrition matching needs the environment's network policy widened to allow `api.nal.usda.gov` and `world.openfoodfacts.org` (the API key alone is not enough - the hosts are currently refused by egress policy), and the dietician's July 31 plan revision hasn't been supplied yet to diff against the June 19 text hard-coded in `App.jsx`.
+
+See `docs/ROADMAP.md` for everything known-broken or unfinished.
 
 ### Running it
 
