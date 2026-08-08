@@ -50,6 +50,10 @@ One table, `public.meal_plan_sync`, designed to hold exactly one row (a JSON blo
 
 Created via migration `create_meal_plan_sync` (applied through the Supabase MCP `apply_migration` tool, not a file in this repo - there is no local migrations directory).
 
+### Second table: `public.keepalive`
+
+Unrelated to sync - it exists only so the scheduled keep-alive has something to write that isn't the board. Also a single row, `id = 'ping'`, with a `pinged_at timestamptz`. Created via migration `create_keepalive_table`. RLS enabled with `select` and `update` policies only; no insert or delete policy, so the anon key can bump the timestamp and nothing else. See "Known operational gotcha" below for why the keep-alive writes at all.
+
 ### Auth: there is none
 
 The publishable key (`VITE_SUPABASE_PUBLISHABLE_KEY`) is baked into the public client JS bundle at build time - anyone who loads the site has it. Row Level Security is **enabled but intentionally fully open**:
@@ -91,7 +95,11 @@ Supabase free-tier projects auto-pause after ~7 days of API inactivity. A paused
 
 **If it happens again**: open the Supabase dashboard for project `ulqudbxgctecuiiiihqt` and resume/restore it. There's no code fix - it's an infrastructure state issue, and the symptom is indistinguishable from a network failure from inside the app.
 
-**Mitigation now in place**: `.github/workflows/supabase-keepalive.yml` (the only workflow in this repo - see Deployment below) makes one trivial REST request twice a week to keep the inactivity clock from running out. It is a *read* by design - `select=id&limit=1` - so it can never modify the single synced row. It requires the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` repository secrets, and fails loudly rather than silently passing if they're absent. Note the residual gap: GitHub disables scheduled workflows after 60 days of repo inactivity, so a long-dormant repo can still let the project pause.
+**Mitigation now in place**: `.github/workflows/supabase-keepalive.yml` (the only workflow in this repo - see Deployment below) makes one small REST request daily. It requires the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` repository secrets, and fails loudly rather than silently passing if they're absent. Note the residual gap: GitHub disables scheduled workflows after 60 days of repo inactivity, so a long-dormant repo can still let the project pause.
+
+**Why the ping writes rather than reads** - this changed once, and the reasoning matters if it's ever revisited. The first version was deliberately read-only (`select=id&limit=1`) so it could never touch the synced board. It ran successfully three times over five days and Supabase still sent a scheduled-for-pause warning. That warning was investigated rather than assumed wrong: Supabase's own API log showed the requests arriving and returning 200, so they were not failing silently, and the project had been resumed only five days before an email claiming seven days of inactivity - arithmetic that cannot be literally true. Whatever their pause metric watches, HTTP reads did not appear to move it, and writes are the common thread in the workarounds other users report. That points at data change (WAL, storage) rather than request count. **This is inference from one experiment, not a documented rule** - Supabase does not publish the threshold.
+
+The read-only safety property was preserved by *target* rather than by verb: the ping writes to a dedicated `keepalive` table and never to `meal_plan_sync`. It updates one pre-existing row rather than inserting, because in Postgres an `UPDATE` writes a new tuple and marks the old one dead - the same physical churn as insert-then-delete, with no table growth to manage. The anon role has `select` and `update` on that table and deliberately **no insert or delete policy**, so the publishable key cannot add rows or remove the one that exists (verified directly by attempting both as `anon`; both were rejected).
 
 ## Deployment
 
