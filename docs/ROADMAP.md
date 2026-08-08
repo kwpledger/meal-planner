@@ -7,11 +7,33 @@
 - **The header doesn't scroll with the content.**
 - **Not mobile-friendly** (confirmed by showing it to Kevin's daughter).
 
-Context: an earlier version of these exact symptoms was caused by the whole page (header included) being wrapped in a forced `min-w-[1750px]` + `overflow-x-auto` container, which was removed (see `CLAUDE.md` → "Design decisions" and git history: "Fix responsive layout: remove forced min-width causing horizontal scroll"). That fix addressed the page-level forced-scroll problem specifically. If these symptoms are still showing up, the likely remaining culprits (not yet investigated in depth) are more local:
-- The main toolbar now has ~9 controls in a row (weekly total, protein filter, swap mode, print, export, import, sync ×2, normalize, reset) - functional via flex-wrap, but likely cramped/busy on a phone-width screen.
-- The edit-meal modal's ingredient row editor (amount/unit/name/match-badge/verified per row) is fairly wide and hasn't been checked at mobile widths at all.
+**Diagnosed, fix agreed, not yet implemented.** This is the next work item.
 
-Next step for whoever picks this up: actually resize/test at phone width (or use browser devtools device emulation) to see what's happening now, rather than assuming the original bug is still the cause.
+The whole desktop behaviour comes from one line, `src/App.jsx:1130`:
+
+```jsx
+<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7 gap-4">
+```
+
+The number of day columns is declared at four fixed pixel thresholds and nothing else. Under 768px: one column, all seven days stacked. 768–1279: two. 1280–1535: four. Only at **1536px and up** do you get the seven-across week the board was designed around. That fully explains "doesn't size correctly unless the browser is full-screen" — maximized on a 1080p monitor you're past 1536, and any non-maximized window usually isn't, so the layout doesn't narrow gracefully, it *reconfigures* into 4+3 and stops reading as a week.
+
+Half of the original intuition was right: within any one band the cards genuinely are fluid percentages of the window (no `max-width` on the wrapper, each card takes an equal fraction). What's missing is a floor — Tailwind's columns compile to `minmax(0, 1fr)`, so cards shrink without limit until a breakpoint changes the column count out from under them. The numbers are stark: at 1535px each card is ~360px; one pixel wider crosses into seven columns and each card is ~199px. A 45% collapse from a 1px change.
+
+So the roles are inverted from what was intended. Card *width* is percentage-based; column *count* is pixel-triggered. The fix wants those swapped.
+
+**Agreed fix** (confirmed by Kevin): replace the breakpoint ladder with
+
+```css
+grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+```
+
+— as many columns as fit without any card dropping below ~220px, sharing leftover space equally. Seven across on a wide screen, degrading to six/five/four as the window narrows, no thresholds to hand-tune and no sudden reconfigurations. Same model for mobile: percentage of viewport with a pixel floor, not iPhone-specific pixel widths.
+
+Two things still unexamined at narrow widths, worth checking during the same pass:
+- The main toolbar has ~9 controls in a row - functional via flex-wrap, but likely cramped on a phone.
+- The edit-meal modal's ingredient row editor (amount/unit/name/match-badge/verified per row) has never been checked at mobile widths at all.
+
+Historical note so nobody re-diagnoses the old bug: an earlier version wrapped the whole page in a forced `min-w-[1750px]` + `overflow-x-auto` container and was removed (git history: "Fix responsive layout: remove forced min-width causing horizontal scroll"). That is **not** the current cause.
 
 ## Cloud sync: working (was broken - free-tier auto-pause)
 
