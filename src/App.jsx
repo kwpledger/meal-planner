@@ -219,6 +219,14 @@ export default function MealPlanBoard() {
   const [portionResolutions, setPortionResolutions] = useState({});
   const [ingredientLibrary, setIngredientLibrary] = useState(() => loadLibrary());
   const [autoMatchResult, setAutoMatchResult] = useState(null);
+  /*
+   * Match/Match-all previously reported nothing at all: both bailed out through
+   * silent early returns, so "no match found", "already matched, rewrote the
+   * same values" and "still waiting on the network" were indistinguishable from
+   * a dead button - which is exactly how they were reported. This carries the
+   * outcome of the last match action so every path says something.
+   */
+  const [matchStatus, setMatchStatus] = useState(null);
   const [recomputePreview, setRecomputePreview] = useState(null);
   const [pastedIngredients, setPastedIngredients] = useState("");
   const [normalizeState, setNormalizeState] = useState(null);
@@ -305,13 +313,26 @@ export default function MealPlanBoard() {
     const ingredient = editForm.ingredients[index];
 
     if (!ingredient.name) {
+      setMatchStatus({ type: 'error', message: 'Enter an ingredient name first.' });
       return;
     }
 
-    const { entry, library } = await matchIngredient(ingredient.raw || ingredient.name, ingredientLibrary);
+    setMatchStatus({ type: 'busy', message: `Matching "${ingredient.name}"...` });
+
+    const { entry, library, failure } = await matchIngredient(
+      ingredient.raw || ingredient.name,
+      ingredientLibrary
+    );
+
     setIngredientLibrary(library);
 
     if (!entry) {
+      // A provider outage and a genuine miss are different problems with
+      // different fixes; say which one happened.
+      setMatchStatus({
+        type: 'error',
+        message: failure || `No USDA or Open Food Facts match found for "${ingredient.name}".`,
+      });
       return;
     }
 
@@ -337,10 +358,37 @@ export default function MealPlanBoard() {
       // to spot-check it, regardless of how confident the resolution was.
       verified: false,
     });
+
+    setMatchStatus({
+      type: 'ok',
+      message: `"${ingredient.name}" matched ${entry.matchedFoodName}${
+        grams != null ? ` - ${Math.round(grams)} g` : ' (no gram weight resolved)'
+      }.`,
+    });
   }
 
   async function handleMatchAllRows() {
     let library = ingredientLibrary;
+    // "Unresolved" is the only state this button acts on, which is correct but
+    // was invisible: on a meal whose rows had all already matched it skipped
+    // every row and reported nothing, which reads exactly like a dead button.
+    const candidates = editForm.ingredients.filter(
+      (ingredient) => ingredient.name && ingredient.gramsConfidence === 'unresolved'
+    );
+
+    if (candidates.length === 0) {
+      setMatchStatus({
+        type: 'info',
+        message: 'Nothing to match - every row already has a match. Use a row’s own Match button to redo one.',
+      });
+      return;
+    }
+
+    setMatchStatus({ type: 'busy', message: `Matching ${candidates.length} unresolved ingredient(s)...` });
+
+    let matched = 0;
+    let failed = 0;
+    let firstFailure = null;
 
     for (let index = 0; index < editForm.ingredients.length; index += 1) {
       const ingredient = editForm.ingredients[index];
@@ -349,12 +397,21 @@ export default function MealPlanBoard() {
         continue;
       }
 
-      const { entry, library: nextLibrary } = await matchIngredient(ingredient.raw || ingredient.name, library);
+      // Sequential on purpose: each call feeds the growing cache, so a repeated
+      // ingredient later in the list resolves without another network round.
+      const { entry, library: nextLibrary, failure } = await matchIngredient(
+        ingredient.raw || ingredient.name,
+        library
+      );
       library = nextLibrary;
 
       if (!entry) {
+        failed += 1;
+        firstFailure = firstFailure || failure;
         continue;
       }
+
+      matched += 1;
 
       const matchedFood = entry.source === 'usda'
         ? { source: 'usda', foodPortions: entry.foodPortions }
@@ -379,6 +436,21 @@ export default function MealPlanBoard() {
     }
 
     setIngredientLibrary(library);
+
+    if (failed === 0) {
+      setMatchStatus({ type: 'ok', message: `Matched ${matched} of ${candidates.length} ingredient(s).` });
+    } else if (firstFailure) {
+      // Every row failing with a provider error is an outage, not 8 bad names.
+      setMatchStatus({
+        type: 'error',
+        message: `Matched ${matched} of ${candidates.length}. ${firstFailure}`,
+      });
+    } else {
+      setMatchStatus({
+        type: 'info',
+        message: `Matched ${matched} of ${candidates.length}; ${failed} found no match and stayed unresolved.`,
+      });
+    }
   }
 
   function handleRecomputeFromIngredients() {
@@ -1560,6 +1632,22 @@ useEffect(() => {
                   </button>
                 </div>
 
+                {matchStatus && (
+                  <div
+                    className={`mb-2 text-xs rounded-lg px-3 py-2 border ${
+                      matchStatus.type === 'error'
+                        ? 'bg-red-50 border-red-200 text-red-700'
+                        : matchStatus.type === 'busy'
+                        ? 'bg-slate-50 border-slate-200 text-slate-600'
+                        : matchStatus.type === 'info'
+                        ? 'bg-amber-50 border-amber-200 text-amber-700'
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                    }`}
+                  >
+                    {matchStatus.message}
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   {editForm.ingredients.map((ingredient, index) => {
                     const confidence = CONFIDENCE_LABELS[ingredient.gramsConfidence] || CONFIDENCE_LABELS.unresolved;
@@ -1743,13 +1831,19 @@ useEffect(() => {
                 These results are estimates and may be per 100g.
               </p>
 
-              <div className="flex gap-2 mb-3">
+              {/*
+                Wraps for the same reason the ingredient rows do: an input plus
+                three buttons on one unwrapped line pushed "Open Food Facts" and
+                "Auto-match & cache" off the right edge of a phone viewport,
+                where they were unreachable rather than merely cramped.
+              */}
+              <div className="flex flex-wrap gap-2 mb-3">
                 <input
                   type="text"
                   value={nutritionQuery}
                   onChange={(e) => setNutritionQuery(e.target.value)}
                   placeholder="Search food, e.g. chicken breast or Dave's Killer Thin"
-                  className="flex-1 rounded-xl border border-slate-300 p-3"
+                  className="flex-1 min-w-48 rounded-xl border border-slate-300 p-3"
                 />
 
                 <button

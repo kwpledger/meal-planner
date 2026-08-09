@@ -10,32 +10,54 @@ about **order**.
 
 ---
 
-## 0. Confirm `VITE_USDA_API_KEY` is set in Cloudflare Pages — BLOCKED ON KEVIN
+## 0. Widen the sandbox egress policy — BLOCKED ON KEVIN
 
-**Highest priority, and it may already be done — nobody has verified it.**
+**Highest priority.** The environment's network policy refuses
+`api.nal.usda.gov`, `world.openfoodfacts.org` and `meal-planner.kwpledger.com`
+with a `403` on `CONNECT`. Three consequences, and the third is the expensive
+one:
 
-A local `.env` only affects builds run on Kevin's machine. Cloudflare Pages
-builds on its own runners and never sees that file, and Vite inlines `VITE_*`
-vars at **build time**, so a var added to the dashboard does nothing until a
-fresh build. `docs/ARCHITECTURE.md` records that this has already bitten Kevin
-twice — once for this exact key.
+1. The matching pipeline has never been exercised against the real APIs from a
+   session — every heuristic in `ingredientLibrary.js` and `portionResolver.js`
+   is untested against live data.
+2. The deployed bundle can't be read, so questions about production
+   configuration have to be bounced back to Kevin as dashboard instructions.
+3. **Nothing can be verified against the real deployment.** Bugs get found by
+   Kevin on his phone and described back, instead of being reproduced directly.
+   Both mobile defects fixed so far were found that way.
 
-Sessions cannot check this: the sandbox's egress policy refuses
-`meal-planner.kwpledger.com`, so the deployed bundle can't be read from here.
-The check is in `docs/ARCHITECTURE.md` under "configured outside this repo";
-the tell is that a live **Match** on an ingredient returns real gram values
-rather than "Missing USDA API key".
+Fix is per-environment, in the claude.ai/code UI, not in this repo: set the
+network access to a custom allowlist containing `api.nal.usda.gov`,
+`world.openfoodfacts.org`, `meal-planner.kwpledger.com` and `*.pages.dev` (that
+last one covers per-PR preview deployments, which would let a session test a
+change on the real deployment before it merges). The policy is read at container
+start, so it needs a **new session** to take effect.
 
-**Worth being explicit about the thing that makes this question confusing:**
-there is no way to hold a secret in a browser-only SPA. `VITE_*` values are
-inlined as literal strings into the bundle every visitor downloads, so
-"accessible to the web app" and "secret" are mutually exclusive without a
-server in between. This repo already accepts that trade for both the USDA key
-and the Supabase publishable key. If the exposure ever stops being acceptable,
-the fix is a proxy — a Supabase Edge Function or a Cloudflare Pages Function
-holding the key server-side — **not** a different way of shipping the key to
-the browser. That would also give the Supabase project a second job; today it
-does cross-device sync and nothing else.
+## 0b. USDA key in Cloudflare Pages — RESOLVED
+
+Kevin confirmed `VITE_USDA_API_KEY` was already present in the Cloudflare Pages
+dashboard alongside the two Supabase vars, retried the deployment, and a live
+lookup on `meal-planner.kwpledger.com` returned real USDA Branded results. **The
+production nutrition path works.**
+
+Two things worth keeping from the way this was originally set up. The dashboard
+variable names **do** need the `VITE_` prefix — Vite only exposes `VITE_*` to
+client code, so a differently-named secret would be invisible to the app; the
+names in the dashboard are correct. And a local `.env` never reaches
+Cloudflare's build runners, while `VITE_*` values are inlined at **build time**,
+so a dashboard edit does nothing until a fresh deploy. `ARCHITECTURE.md` records
+this having bitten Kevin twice.
+
+**On the key being public, settled and not to be relitigated:**
+a browser-only SPA cannot hold a secret at all — `VITE_*` values ship inlined as
+literal strings in the bundle every visitor downloads. Kevin has considered the
+exposure and accepted it, on the reasoning that the key is free, trivially
+replaceable, and worth almost nothing to a thief: the worst case is someone
+vandalising a personal meal board, which is recoverable from Export JSON and
+answered by rotating a key that was a known liability anyway. **Don't re-raise
+this as a security finding.** If it ever does need changing, the fix is a proxy
+holding the key server-side (a Supabase Edge Function or a Cloudflare Pages
+Function), not a different way of shipping the key to the browser.
 
 ## 1. Toolbar at phone widths — approved, ready to build
 
@@ -67,6 +89,21 @@ ahead. Colour, spacing, typography and token work waits. `CLAUDE.md`'s design
 reconciliation notes — three token layers, OKLCH, typography before colour —
 stay deferred until the system exists to reconcile *against*.
 
+## 2b. Matching quality — first real-world evidence, from the live site
+
+Kevin's first live run produced two data points worth keeping, both from the
+Oatmeal Power Bowl:
+
+- `0.5 cup oats` resolved to **95 g**, flagged "rough estimate". Half a cup of
+  rolled oats is roughly 40–45 g, so this is about 2x high — the generic
+  gram-weight fallback table (item 5) is the likely culprit.
+- `1 medium banana` matched **"Banana, baked"**. Plausible text relevance,
+  wrong food; baked banana is not what anyone means by "medium banana".
+
+Both are exactly the failure modes `ROADMAP.md` predicted for a best-effort
+estimator, now with concrete numbers instead of speculation. Feed them into
+item 5 rather than fixing them one at a time.
+
 ## 3. Supabase failures don't name Supabase
 
 Cheap insurance, not urgent — do it next time sync code is open anyway.
@@ -82,6 +119,14 @@ missing-credentials case only. The remaining gap is the failure *during* a sync
 call: catch the fetch-level failure in `handleSyncToCloud` / `handleSyncFromCloud`
 and say something like "couldn't reach Supabase — the project may have
 auto-paused, check the dashboard" rather than surfacing the raw browser error.
+
+**The nutrition half of this pattern is now fixed**, and it turned out to be
+worse than the Supabase half. `matchIngredient` caught its USDA and OFF errors,
+logged them to the console and returned an empty result, so a missing API key or
+a blocked host was reported to the user as *"no match found for oats"* — a
+message that actively points at the wrong cause. It now returns a `failure`
+reason alongside the empty result and the UI shows it. Same medicine is what
+item 3 wants for sync.
 
 Placed below the toolbar work because it improves diagnosis of a problem the
 daily keep-alive is already meant to prevent.
