@@ -238,14 +238,72 @@ weakest link and the highest-value single improvement. Compound ingredient lines
 Realistically blocked on item 6 — hardening a matcher that can't be live-tested
 is guesswork.
 
-## 6. Widen sandbox egress for live nutrition testing — BLOCKED ON KEVIN
+## 6. Separate display name from search name — NEXT UP
 
-`api.nal.usda.gov` and `world.openfoodfacts.org` are refused by the
-environment's network policy, so the matching pipeline has never been exercised
-against the real APIs from a session. The API key alone does not fix this; the
-hosts themselves are blocked. Same policy that blocks item 0's verification.
+Kevin's idea, and the evidence for it keeps accumulating. USDA's search is poor
+at generic whole foods: "sweet potato" returns *Sweet potato tots, school*, and
+he only got a usable result after trying "sweet potato, raw", "sweet potato,
+cubed", "whole sweet potato" and "peeled sweet potato" — the winner was
+`1 large "sweet potatoes"`. "banana" gives *Banana, baked* or *Banana chips*
+where "banana, raw" is clean.
 
-## 7. Diff the dietician's July 31 plan revision — BLOCKED ON KEVIN
+Today the only way to feed the lookup better words is to overwrite the
+ingredient's display name, corrupting what the board shows to fix what the
+matcher sees. A second field — `name` for display, `searchName` for the query —
+lets the human supply the magic words without touching the dietician's wording.
 
-The June 19 plan text is hard-coded in `App.jsx`. The revision hasn't been
-supplied yet.
+Two things make it cheap. `matchIngredient` already takes a separate string
+(`ingredient.raw || ingredient.name`), so there is a slot to thread it through.
+And because the match cache is keyed on the searched name, editing `searchName`
+is a natural cache miss — which is exactly how Kevin unstuck the cached "Banana
+chips" match, by renaming to "banana, raw". A dedicated field gets that
+re-match behaviour without the collateral damage.
+
+**Check `migrateDaysToIngredients` before starting** — this adds a field to the
+ingredient shape, which is precisely what that function exists to absorb.
+
+The plan import (item 7) added more candidates: "1 cup fruit" and
+"0.5 large sweet potato" are both unresolvable as written but trivially fixable
+with a search override.
+
+## 7. The dietician's 2026-07-31 revision — DONE
+
+Transcribed from the PDF and now the hard-coded seed in `App.jsx`. Kevin
+imported the same data into his live board via **Import JSON** and synced it to
+the cloud, so no code change was needed to get his own board current — the
+seed update only governs "Reset board" and any browser that has never loaded the
+app.
+
+Every day is 2,000 kcal in her plan (weekly 14,000, down from 15,740). The day
+and protein rotation is unchanged.
+
+Decisions taken while transcribing, all reversible in the UI:
+
+- **Bullets are authoritative, titles are not.** Kevin's instruction — she was
+  editing ingredients live during the call and never revised the headings. Day
+  4's dinner was titled "Turkey + Sweet Potato Plate" over bullets listing
+  lentils and green beans, so the meal is named **Turkey + Lentil Plate**.
+- **Snacks got descriptive names**; her document labels all four simply "Snack".
+- **"(reduced)" marks stripped** from ingredient lines. They are her pointers to
+  what she cut rather than part of the food name, and "2% milk (reduced)" would
+  have gone into the parsed name and poisoned the lookup.
+- **Graintastic bread → Dave's Killer Thin everywhere.** Kevin: Graintastic is an
+  artifact of her draft and is not stocked anywhere he shops. Every bread in the
+  plan is Dave's Killer Thin.
+- **Fiber preserved** in `macros.fiber`. Nothing renders it, but her per-meal
+  fiber numbers would otherwise be lost, and the field is inert until something
+  reads it. A fiber row on the macro bars is a plausible small feature.
+- **Three lines carry no quantity** — "Spinach" and "Mustard" on Day 3 lunch,
+  "Spinach" on Day 7 lunch. Her bullets give no amount, so they stay unresolved.
+  Faithful, not a parser failure.
+
+**Her arithmetic is wrong on two days, and the board now shows it.** Day 1
+states Protein 144g against meals summing to 104g; Day 2 states 132g against
+102g. Days 3–7 are internally consistent, as are every day's calories, carbs,
+fat and fiber. The meals are transcribed as written, so the board displays the
+sums — which is the whole argument for measured values over recalled ones.
+
+## 8. Widen sandbox egress for live nutrition testing — RESOLVED
+
+Folded into item 0. `api.nal.usda.gov` and `world.openfoodfacts.org` are
+reachable from a session now.
