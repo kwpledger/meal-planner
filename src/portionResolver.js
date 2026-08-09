@@ -9,7 +9,10 @@ const POUND_TO_GRAMS = 453.592;
 // data of its own - deliberately crude, and always flagged 'generic-fallback'
 // so it never gets confused with a real per-food measurement.
 const GENERIC_UNIT_TO_GRAMS = {
-  cup: { default: 150, grain: 190, liquid: 240, leafy: 30, fruit: 150 },
+  // flaked: 81 is USDA's own "1 cup" portion for oats, raw, and it agrees with
+  // the 40g half-cup printed on a Quaker canister - two independent sources
+  // rather than a guess, which the rest of this table could use more of.
+  cup: { default: 150, grain: 190, flaked: 81, granola: 115, liquid: 240, leafy: 30, fruit: 150 },
   tbsp: { default: 15 },
   tsp: { default: 5 },
   slice: { default: 30 },
@@ -20,9 +23,27 @@ const GENERIC_UNIT_TO_GRAMS = {
   each: { default: 100, egg: 50, fruit: 118 },
 };
 
+/*
+ * Order matters - categoryOf() returns the first category whose keyword appears
+ * in the name, so the more specific buckets have to come first.
+ *
+ * `liquid` leads because a drink named after a grain ("oat milk", "rice milk")
+ * must not be weighed as the grain. That was already wrong before this table
+ * gained more grain buckets; putting liquid first fixes it for every such name
+ * at once rather than blacklisting them one by one.
+ *
+ * `grain` used to hold oats and granola alongside rice and wheat at a flat
+ * 190g/cup. That is about right for dense uncooked grains and badly wrong for
+ * flaked or clustered cereals, which are mostly air: rolled oats are ~85g/cup.
+ * Live data from the deployed board made the size of the error concrete -
+ * "0.75 cup oats" resolved to 143g (0.75 x 190) and "0.5 cup oats" to 95g, both
+ * ~2.2x high, the largest portion error observed so far.
+ */
 const CATEGORY_KEYWORDS = {
-  grain: ['oat', 'rice', 'quinoa', 'granola', 'wheat'],
   liquid: ['milk', 'oil', 'yogurt'],
+  granola: ['granola', 'muesli'],
+  flaked: ['oat', 'rolled', 'flake'],
+  grain: ['rice', 'quinoa', 'wheat', 'barley'],
   leafy: ['spinach', 'broccoli', 'greens', 'lettuce'],
   fruit: ['banana', 'strawberr', 'orange', 'apple'],
   egg: ['egg'],
