@@ -12,15 +12,34 @@ const GENERIC_UNIT_TO_GRAMS = {
   // flaked: 81 is USDA's own "1 cup" portion for oats, raw, and it agrees with
   // the 40g half-cup printed on a Quaker canister - two independent sources
   // rather than a guess, which the rest of this table could use more of.
-  cup: { default: 150, grain: 190, flaked: 81, granola: 115, liquid: 240, leafy: 30, fruit: 150 },
+  cup: {
+    default: 150,
+    grain: 190,
+    // Steel cut oats are cut groats, not flakes - about twice the density, and
+    // the 81 above is wrong for them by the same factor it fixed for rolled.
+    steelcut: 160,
+    flaked: 81,
+    granola: 115,
+    legume: 192,
+    liquid: 240,
+    // Broccoli used to sit in `leafy` at 30g/cup. It is florets, not leaves:
+    // USDA puts a cup of chopped raw broccoli at 91g, so every broccoli line on
+    // the board was landing at a third of its real weight.
+    floret: 91,
+    leafy: 30,
+    fruit: 150,
+  },
   tbsp: { default: 15 },
   tsp: { default: 5 },
   slice: { default: 30 },
-  large: { default: 50 },
+  // `large` was a flat 50g, which is an egg. A large sweet potato is ~180g, so
+  // "0.5 large sweet potatoes" resolved to 25g instead of ~90 - the single
+  // biggest error in the first full board measurement.
+  large: { default: 100, egg: 50, potato: 180 },
   // Real live test caught "3 eggs" landing at 300g via a flat 100g/each
   // default (should be ~150g) - split out an egg-specific weight rather
   // than leaning on one generic bucket for every unitless, countable food.
-  each: { default: 100, egg: 50, fruit: 118 },
+  each: { default: 100, egg: 50, fruit: 118, tortilla: 55 },
 };
 
 /*
@@ -42,9 +61,17 @@ const GENERIC_UNIT_TO_GRAMS = {
 const CATEGORY_KEYWORDS = {
   liquid: ['milk', 'oil', 'yogurt'],
   granola: ['granola', 'muesli'],
+  // Before `flaked`, because "steel cut oats" contains "oat".
+  steelcut: ['steel cut', 'steel-cut'],
   flaked: ['oat', 'rolled', 'flake'],
+  legume: ['lentil'],
+  // Before `grain`, because "whole wheat wrap" contains "wheat" and a tortilla
+  // must not be weighed as a cup of wheat.
+  tortilla: ['wrap', 'tortilla'],
+  potato: ['potato'],
   grain: ['rice', 'quinoa', 'wheat', 'barley'],
-  leafy: ['spinach', 'broccoli', 'greens', 'lettuce'],
+  floret: ['broccoli', 'cauliflower'],
+  leafy: ['spinach', 'greens', 'lettuce'],
   fruit: ['banana', 'strawberr', 'orange', 'apple'],
   egg: ['egg'],
 };

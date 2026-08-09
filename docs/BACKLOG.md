@@ -229,14 +229,57 @@ fix. May interact with item 1 — a sticky header and a collapsed toolbar are th
 same region of the page — so check whether doing item 1 changes the shape of
 this one before starting it separately.
 
-## 5. Harden portion normalization
+## 5. Harden portion normalization — IN PROGRESS, now evidence-led
 
-Full detail in `docs/ROADMAP.md`. The generic gram-weight fallback table is the
-weakest link and the highest-value single improvement. Compound ingredient lines
-("oats cooked in 1 cup 2% milk" matches only the oats) are a known unfixed gap.
+**No longer guesswork.** Kevin ran Normalize across the whole board and exported
+the result, which gave 38 distinct amount/unit/ingredient resolutions to check
+against reference weights instead of reasoning about the table in the abstract.
 
-Realistically blocked on item 6 — hardening a matcher that can't be live-tested
-is guesswork.
+Measured week came out **11,801 kcal against the dietician's 14,000 (−16%)**,
+and almost all of the gap was this table rather than her numbers. Four entries
+fixed, each with a reference weight rather than a guess:
+
+| Line | Was | Now | Why |
+|---|---|---|---|
+| `0.5 large sweet potatoes` | 25g | 90g | `large` was a flat 50g — that's an egg |
+| `1 cup broccoli` | 30g | 91g | was in `leafy`; florets aren't leaves |
+| `0.5 cup steel cut oats` | 41g | 80g | steel cut are groats, ~2x flake density |
+| `1 whole wheat wrap` | 100g | 55g | `each` default; a tortilla is ~55g |
+| `0.75 cup lentils` | 113g | 144g | dry lentils ~192g/cup |
+
+That moves the measured week to **12,425**.
+
+**The steel-cut entry is a regression this project caused itself**, worth
+remembering as a pattern: `flaked: 81` was calibrated for *rolled* oats from
+real data, then Kevin switched his ingredient to *steel cut*, and the `oat`
+keyword caught both. A calibration is only valid for the food it was measured
+against — the keyword that routes to it needs to be at least as specific as the
+measurement was.
+
+**Keyword order is now load-bearing** and has two non-obvious constraints:
+`steelcut` must precede `flaked` ("steel cut oats" contains "oat"), and
+`tortilla` must precede `grain` ("whole wheat wrap" contains "wheat").
+
+### Still open
+
+**The largest single remaining error is not a weight, it's a match.**
+`0.75 cup quinoa` resolves to 142.5g but matched *"Quinoa, fat added"* at
+146 kcal/100g — cooked density applied to a dry cup measure. Dry quinoa is
+~368 kcal/100g, so each of the three quinoa lunches is short by ~316 kcal,
+about **950/week**. Fixable today with `quinoa, dry` in the item 6 search-name
+override; no code change needed. `1 cup zucchini` matching *"Zucchini, pickled"*
+is the same class, much smaller.
+
+With both corrected the board lands near 13,400 against her 14,000, which is
+estimation noise rather than a defect.
+
+**Day 2 is a useful control**: it already matched her plan before any of this,
+because it happens to contain no broccoli, no sweet potato, no steel-cut oats,
+and its rice is correctly weighed raw-against-raw. The machinery was right and
+the constants were wrong.
+
+Compound ingredient lines ("oats cooked in 1 cup 2% milk" matches only the oats)
+remain a known unfixed gap. `docs/ROADMAP.md` has the full design detail.
 
 ## 6. Separate display name from search name — DONE
 
