@@ -227,6 +227,15 @@ export default function MealPlanBoard() {
    * outcome of the last match action so every path says something.
    */
   const [matchStatus, setMatchStatus] = useState(null);
+  /*
+   * The toolbar's nine controls wrapped into a ragged ~570px staircase at phone
+   * widths, putting the whole board below the fold. Only the three the board is
+   * actually driven by stay out; the rest are occasional chores and live behind
+   * this disclosure at every width, so there is one code path rather than a
+   * desktop copy and a mobile copy of the same nine buttons.
+   */
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreMenuRef = useRef(null);
   const [recomputePreview, setRecomputePreview] = useState(null);
   const [pastedIngredients, setPastedIngredients] = useState("");
   const [normalizeState, setNormalizeState] = useState(null);
@@ -701,6 +710,34 @@ useEffect(() => {
     localStorage.setItem(STORAGE_UPDATED_AT_KEY, new Date().toISOString());
   }, [days]);
 
+  // Dismiss the More menu the two ways a menu is expected to dismiss. Bound
+  // only while it is open so the app isn't listening on every document click.
+  useEffect(() => {
+    if (!moreOpen) {
+      return undefined;
+    }
+
+    function handlePointerDown(event) {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
+        setMoreOpen(false);
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setMoreOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [moreOpen]);
+
   const filteredDays = useMemo(() => {
     if (proteinFilter === 'All') {
       return days;
@@ -1129,59 +1166,111 @@ useEffect(() => {
                 {swapMode ? 'Swap mode ON' : 'Swap mode OFF'}
               </button>
 
-              <button
-                onClick={() => window.print()}
-                className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition"
-              >
-                Print prep sheet
-              </button>
+              <div className="relative" ref={moreMenuRef}>
+                <button
+                  onClick={() => setMoreOpen((current) => !current)}
+                  aria-haspopup="menu"
+                  aria-expanded={moreOpen}
+                  className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition"
+                >
+                  More {moreOpen ? '▲' : '▼'}
+                </button>
 
-              <button
-                onClick={exportMealPlan}
-                className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition"
-              >
-                Export JSON
-              </button>
+                {moreOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 z-20 mt-2 w-60 rounded-2xl bg-white shadow-xl border border-slate-200 p-2 flex flex-col gap-1"
+                  >
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        window.print();
+                      }}
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100"
+                    >
+                      Print prep sheet
+                    </button>
 
-              <label className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition cursor-pointer">
-                Import JSON
-                <input
-                  type="file"
-                  accept="application/json,.json"
-                  onChange={importMealPlan}
-                  className="hidden"
-                />
-              </label>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        exportMealPlan();
+                      }}
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100"
+                    >
+                      Export JSON
+                    </button>
 
-              <button
-                onClick={handleSyncToCloud}
-                disabled={syncBusy !== null}
-                className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition disabled:opacity-50"
-              >
-                {syncBusy === 'push' ? 'Syncing...' : 'Sync to Cloud'}
-              </button>
+                    <label className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100 cursor-pointer">
+                      Import JSON
+                      <input
+                        type="file"
+                        accept="application/json,.json"
+                        onChange={(event) => {
+                          setMoreOpen(false);
+                          importMealPlan(event);
+                        }}
+                        className="hidden"
+                      />
+                    </label>
 
-              <button
-                onClick={handleSyncFromCloud}
-                disabled={syncBusy !== null}
-                className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition disabled:opacity-50"
-              >
-                {syncBusy === 'pull' ? 'Syncing...' : 'Sync from Cloud'}
-              </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        handleSyncToCloud();
+                      }}
+                      disabled={syncBusy !== null}
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-50"
+                    >
+                      {syncBusy === 'push' ? 'Syncing...' : 'Sync to Cloud'}
+                    </button>
 
-              <button
-                onClick={handleNormalizeBoard}
-                className="rounded-2xl bg-indigo-600 text-white px-5 py-3 font-semibold shadow hover:bg-indigo-500 active:scale-95 transition"
-              >
-                Normalize portions (beta)
-              </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        handleSyncFromCloud();
+                      }}
+                      disabled={syncBusy !== null}
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-50"
+                    >
+                      {syncBusy === 'pull' ? 'Syncing...' : 'Sync from Cloud'}
+                    </button>
 
-              <button
-                onClick={handleReset}
-                className="rounded-2xl bg-slate-800 text-white px-5 py-3 font-semibold shadow hover:bg-slate-700 active:scale-95 transition"
-              >
-                Reset board
-              </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        handleNormalizeBoard();
+                      }}
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-indigo-700 hover:bg-indigo-50"
+                    >
+                      Normalize portions (beta)
+                    </button>
+
+                    {/*
+                      Reset is the one destructive item here, so it sits last,
+                      after a divider, rather than adjacent to the sync actions
+                      it would be most costly to mis-tap next to.
+                    */}
+                    <div className="my-1 border-t border-slate-200" />
+
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        handleReset();
+                      }}
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-red-700 hover:bg-red-50"
+                    >
+                      Reset board
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

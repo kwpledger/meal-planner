@@ -92,19 +92,43 @@ this as a security finding.** If it ever does need changing, the fix is a proxy
 holding the key server-side (a Supabase Edge Function or a Cloudflare Pages
 Function), not a different way of shipping the key to the browser.
 
-## 1. Toolbar at phone widths — approved, ready to build
+## 1. Toolbar at phone widths — DONE
 
-Kevin has greenlit the "More" disclosure approach. At 390px the nine controls
-wrap into a ragged right-aligned staircase roughly 570px tall, so the entire
-first screen is toolbar and the board sits below the fold.
+The "More" disclosure Kevin greenlit. Weekly total, protein filter and Swap mode
+stay out; Print prep sheet, Export/Import JSON, both Sync buttons, Normalize
+portions and Reset board moved behind it. Measured from the top of the title to
+the top of the board:
 
-Keep visible: Weekly total, protein filter, Swap mode. Collapse behind "More":
-Print prep sheet, Export/Import JSON, both Sync buttons, Normalize portions,
-Reset board.
+| Viewport | Before | After |
+|---|---|---|
+| 390 | 795px | 427px |
+| 1280 | 280px | 218px |
+
+At 390px on a ~800px-tall phone screen the board was previously entirely below
+the fold; the first day card is now visible without scrolling.
+
+**The disclosure applies at every width, not just narrow ones.** The alternative
+was rendering the same nine controls twice with breakpoint visibility classes,
+which doubles the maintenance surface for every future toolbar change. One code
+path was judged worth the desktop change — but it *is* a desktop change (Print
+and the Sync buttons are now two clicks there), so it is the thing to revisit
+first if the desktop toolbar feels worse rather than tidier.
+
+Reset board sits last, behind a divider and in red, rather than adjacent to the
+sync actions it would be most costly to mis-tap beside.
+
+Escape and click-outside both dismiss the menu; the listeners are bound only
+while it is open.
 
 Explicitly **rejected**: the two-minute "just left-align the wrap" fix. See
 item 2 for why — this item survives the design system change because it is
 information architecture, not styling; a cosmetic tweak would not.
+
+**Residual, feeding item 4:** with the toolbar shortened, the header prose is
+now the dominant consumer of the space above the board at 390px — the title
+wraps to two lines and the description to four, roughly 220px before any control
+appears. Shortening that text is a content decision for Kevin, not a session's
+call, and making the header sticky (item 4) would change the calculus anyway.
 
 ## 2. Hold all visual polish until the shared design system lands
 
