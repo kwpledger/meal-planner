@@ -238,7 +238,26 @@ weakest link and the highest-value single improvement. Compound ingredient lines
 Realistically blocked on item 6 — hardening a matcher that can't be live-tested
 is guesswork.
 
-## 6. Separate display name from search name — NEXT UP
+## 6. Separate display name from search name — DONE
+
+Shipped as an optional `searchName` on each ingredient, with a dashed-outline
+override field under every ingredient row. `searchTermFor(ingredient)` resolves
+`searchName` → `raw` → `name`, and all three matching entry points (per-row
+Match, Match all unresolved, and the board-wide Normalize) now go through it.
+Normalize previously used `ingredient.raw` alone, so it disagreed with the other
+two even before this change; they now agree by construction.
+
+**No migration and no `SCHEMA_VERSION` bump**, deliberately. The field is
+optional and an absent value falls through to exactly the previous behaviour, so
+boards already sitting in localStorage or the cloud keep working untouched —
+verified by stripping `searchName` from a saved board and reloading. Bumping the
+version would have made an older client *refuse* a board carrying the new field
+rather than ignore it, which is the wrong failure for a two-machine setup.
+
+Editing the override deliberately does **not** re-match on its own; the number on
+screen changes only when Match is pressed, consistent with every other path.
+
+The original argument, kept because it is the evidence for the design:
 
 Kevin's idea, and the evidence for it keeps accumulating. USDA's search is poor
 at generic whole foods: "sweet potato" returns *Sweet potato tots, school*, and

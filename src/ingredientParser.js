@@ -131,8 +131,33 @@ export function buildIngredientFromLine(rawLine, mealId) {
     source: null,
     matchedFoodId: null,
     matchedFoodName: null,
+    // Optional override for what gets sent to USDA/OFF - see searchTermFor().
+    searchName: null,
     verified: false,
   };
+}
+
+/*
+ * What the nutrition lookup should actually search for.
+ *
+ * USDA's search is poor at generic whole foods: "sweet potato" returns
+ * "Sweet potato tots, school", and "banana" returns "Banana, baked". The human
+ * usually knows the wording that works ("banana, raw", "sweet potatoes") but
+ * previously the only place to put it was the ingredient's display name, which
+ * meant corrupting what the board shows in order to fix what the matcher sees.
+ * searchName is that wording, kept separate from the name.
+ *
+ * Deliberately not backfilled onto existing ingredients: it is optional, and an
+ * absent value falls through to exactly the behaviour that was there before, so
+ * boards already in localStorage or the cloud keep working untouched. That is
+ * also why SCHEMA_VERSION is unchanged - an older client reading a board that
+ * carries searchName simply ignores a field it doesn't know about, and bumping
+ * would make it refuse the data instead.
+ */
+export function searchTermFor(ingredient) {
+  const override = ingredient.searchName?.trim();
+
+  return override || ingredient.raw || ingredient.name;
 }
 
 // Preserves already-resolved ingredient objects whose raw text didn't
