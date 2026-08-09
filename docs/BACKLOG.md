@@ -151,15 +151,29 @@ stay deferred until the system exists to reconcile *against*.
 Kevin's first live run produced two data points worth keeping, both from the
 Oatmeal Power Bowl:
 
-- `0.5 cup oats` resolved to **95 g**, flagged "rough estimate". Half a cup of
-  rolled oats is roughly 40–45 g, so this is about 2x high — the generic
-  gram-weight fallback table (item 5) is the likely culprit.
-- `1 medium banana` matched **"Banana, baked"**. Plausible text relevance,
-  wrong food; baked banana is not what anyone means by "medium banana".
+- **Oats — FIXED.** `0.5 cup oats` resolved to **95 g** on the phone and
+  `0.75 cup oats` to **143 g** on the desktop. Both were exactly `amount x 190`,
+  which identified the cause without needing an API call: `CATEGORY_KEYWORDS`
+  put `oat` in the `grain` bucket, and `GENERIC_UNIT_TO_GRAMS.cup.grain` was a
+  flat 190 g/cup. That figure is reasonable for dense uncooked grains like rice
+  and badly wrong for flaked cereal, which is mostly air. Split into `flaked`
+  (81 g/cup — USDA's own "1 cup" portion for oats, raw, which also agrees with
+  the 40 g half-cup on a Quaker canister) and `granola` (115), leaving rice,
+  quinoa, wheat and barley at 190. The two live readings now resolve to 61 g and
+  41 g.
+  - `liquid` was also moved to the front of the keyword order in the same pass,
+    so a drink named after a grain ("oat milk", "rice milk") is weighed as a
+    liquid rather than as the grain. That was already wrong before the split and
+    would have got quietly worse with it.
+- `1 medium banana` matched **"Banana, baked"** — still open, and a *different
+  axis* to the oats bug. The gram weight was fine (118 g, a fair medium banana);
+  the matched food was wrong. Portion resolution and food matching fail
+  independently and should be diagnosed separately.
 
-Both are exactly the failure modes `ROADMAP.md` predicted for a best-effort
-estimator, now with concrete numbers instead of speculation. Feed them into
-item 5 rather than fixing them one at a time.
+The oats fix is the first evidence-led correction to this table rather than a
+guess, and it suggests the method for the rest of item 5: get a real reading off
+the deployed board, divide by the amount, and the responsible table constant
+falls straight out.
 
 **The sharper finding, from the keyless preview deployment.** With USDA
 unavailable, the Open Food Facts fallback still runs — it needs no API key — and
