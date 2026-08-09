@@ -2,36 +2,45 @@
 
 ## Layout & mobile
 
-- **Day cards don't size correctly unless the browser is full-screen.**
-- **No horizontal scrolling for the day cards.**
-- **The header doesn't scroll with the content.**
-- **Not mobile-friendly** (confirmed by showing it to Kevin's daughter).
+### Board grid - FIXED
 
-**Diagnosed, fix agreed, not yet implemented.** This is the next work item.
-
-The whole desktop behaviour comes from one line, `src/App.jsx:1130`:
+**Implemented and measured in a real browser.** The breakpoint ladder is gone, replaced by
 
 ```jsx
-<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7 gap-4">
+<div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
 ```
 
-The number of day columns is declared at four fixed pixel thresholds and nothing else. Under 768px: one column, all seven days stacked. 768–1279: two. 1280–1535: four. Only at **1536px and up** do you get the seven-across week the board was designed around. That fully explains "doesn't size correctly unless the browser is full-screen" — maximized on a 1080p monitor you're past 1536, and any non-maximized window usually isn't, so the layout doesn't narrow gracefully, it *reconfigures* into 4+3 and stops reading as a week.
+The original diagnosis was confirmed empirically *before* the change rather than just reasoned about - headless Chromium at each width, reading `getComputedStyle(board).gridTemplateColumns` instead of eyeballing screenshots. The predicted cliff was real and the numbers matched the estimate almost exactly:
 
-Half of the original intuition was right: within any one band the cards genuinely are fluid percentages of the window (no `max-width` on the wrapper, each card takes an equal fraction). What's missing is a floor — Tailwind's columns compile to `minmax(0, 1fr)`, so cards shrink without limit until a breakpoint changes the column count out from under them. The numbers are stark: at 1535px each card is ~360px; one pixel wider crosses into seven columns and each card is ~199px. A 45% collapse from a 1px change.
+| Viewport | Before | After |
+|---|---|---|
+| 1920 | 7 x 254px | 7 x 254px |
+| 1680 | 7 x 219px | 6 x 259px |
+| **1536** | **7 x 199px** | **6 x 235px** |
+| **1535** | **4 x 360px** | **6 x 234px** |
+| 1280 | 4 x 296px | 5 x 234px |
+| 900 | 2 x 418px | 3 x 273px |
+| 768 | 2 x 352px | 3 x 229px |
+| 390 | 1 x 342px | 1 x 342px |
 
-So the roles are inverted from what was intended. Card *width* is percentage-based; column *count* is pixel-triggered. The fix wants those swapped.
+The 1535 -> 1536 cliff (360px to 199px, a 45% collapse from a one-pixel resize) is gone: those two widths now differ by 0.2px. Card width across the whole range moved from a 199-418px swing to a 229-342px band, and the column count degrades 7 -> 6 -> 5 -> 3 -> 1 with no hand-tuned thresholds.
 
-**Agreed fix** (confirmed by Kevin): replace the breakpoint ladder with
+**One consequence worth knowing about, not a bug:** seven-across now needs ~1684px of viewport (7x220 + 6x16 gap + 48 page padding), so a window at exactly 1536px shows six columns and orphans Day 7 onto a second row. That is the accepted trade for killing the 199px cards - the floor is doing precisely what it was asked to do. If seven-across at 1536 ever matters more than the 220px floor, the floor is the number to change, not the mechanism.
 
-```css
-grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-```
+### Toolbar on a phone - OPEN, next work item
 
-— as many columns as fit without any card dropping below ~220px, sharing leftover space equally. Seven across on a wide screen, degrading to six/five/four as the window narrows, no thresholds to hand-tune and no sudden reconfigurations. Same model for mobile: percentage of viewport with a pixel floor, not iPhone-specific pixel widths.
+Checked at 390px during the same pass. It is worse than the "likely cramped" this file previously guessed: the nine controls wrap into a **ragged right-aligned staircase roughly 570px tall**, so on a phone the entire first screen is toolbar and the board sits fully below the fold. `justify-end` is what makes it ragged - each wrapped row is right-aligned to a different edge, so it reads as broken rather than as a deliberate stack.
 
-Two things still unexamined at narrow widths, worth checking during the same pass:
-- The main toolbar has ~9 controls in a row - functional via flex-wrap, but likely cramped on a phone.
-- The edit-meal modal's ingredient row editor (amount/unit/name/match-badge/verified per row) has never been checked at mobile widths at all.
+Deliberately left unfixed because it needs a decision rather than a patch: which of the nine controls are actually mobile-relevant. Reset board, Export/Import JSON and Normalize portions are arguably desktop-only chores. Options are (a) left-align the wrap and accept the height, (b) icon-only buttons below some width, or (c) collapse the secondary actions behind a "More" disclosure. (c) is the recommendation.
+
+### Ingredient row editor at mobile widths - FIXED
+
+Also checked during the same pass, and it was hiding a real defect. The row's fixed controls (amount 64px + unit 80px + remove button + gaps, about 196px) plus the name field overflowed the modal's ~311px content box at 390px. Because the overflow was clipped rather than scrollable (`scrollWidth === clientWidth`), **the remove button was rendered but unreachable - an ingredient could not be deleted on a phone at all.** Fixed by letting the row wrap (`flex-wrap` plus `min-w-40` on the name field), which drops name + remove onto a second line under amount/unit. Desktop is unaffected: the name field is still 409px at 1280 and rows still sit on one line.
+
+### Still open
+
+- **The header doesn't scroll with the content.**
+- **Not mobile-friendly** overall (confirmed by showing it to Kevin's daughter) - the grid and the ingredient editor are now fixed, the toolbar is the remaining known offender.
 
 Historical note so nobody re-diagnoses the old bug: an earlier version wrapped the whole page in a forced `min-w-[1750px]` + `overflow-x-auto` container and was removed (git history: "Fix responsive layout: remove forced min-width causing horizontal scroll"). That is **not** the current cause.
 
