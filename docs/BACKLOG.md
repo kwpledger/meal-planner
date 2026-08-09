@@ -10,12 +10,26 @@ about **order**.
 
 ---
 
-## 0. Widen the sandbox egress policy — BLOCKED ON KEVIN
+## 0. Sandbox egress policy — RESOLVED
 
-**Highest priority.** The environment's network policy refuses
-`api.nal.usda.gov`, `world.openfoodfacts.org` and `meal-planner.kwpledger.com`
-with a `403` on `CONNECT`. Three consequences, and the third is the expensive
-one:
+Kevin set the environment's Network access to **Custom** with `api.nal.usda.gov`,
+`world.openfoodfacts.org`, `meal-planner.kwpledger.com` and `*.pages.dev`
+(claude.ai/code → session menu → **Edit environment**, which is where the
+setting actually lives — not in a sidebar "Environments" list). All four verified
+reachable by `curl` from a session.
+
+**The change took effect in the already-running session**, contrary to the
+expectation that a new session would be needed. Worth knowing before anyone
+burns a session restart on it.
+
+One caveat found immediately: **Chromium cannot traverse the proxy** even when
+launched with `proxy: {server: 'http://127.0.0.1:36587'}` — it fails with
+`ERR_CONNECTION_RESET` while `curl` to the same host succeeds. So headless-browser
+testing against the *deployed* site does not work; browser testing still has to
+run against a local `npm run preview`. Fetching deployed assets with `curl` works
+fine, which is enough for build-output inspection.
+
+Kept for context, since this is what the fix bought:
 
 1. The matching pipeline has never been exercised against the real APIs from a
    session — every heuristic in `ingredientLibrary.js` and `portionResolver.js`
@@ -26,14 +40,33 @@ one:
    Kevin on his phone and described back, instead of being reproduced directly.
    Both mobile defects fixed so far were found that way.
 
-Fix is per-environment, in the claude.ai/code UI, not in this repo: set the
-network access to a custom allowlist containing `api.nal.usda.gov`,
-`world.openfoodfacts.org`, `meal-planner.kwpledger.com` and `*.pages.dev` (that
-last one covers per-PR preview deployments, which would let a session test a
-change on the real deployment before it merges). The policy is read at container
-start, so it needs a **new session** to take effect.
+## 0b. USDA key in Cloudflare Pages — RESOLVED for production, OPEN for preview
 
-## 0b. USDA key in Cloudflare Pages — RESOLVED
+**Cloudflare Pages scopes environment variables separately for Production and
+Preview.** Kevin's three secrets were set on Production only, so preview
+deployments build without them. This is not a guess — it was verified from the
+deployed bundles:
+
+- **Production** inlines a 40-character key literal, and the string
+  `"Missing USDA API key"` is *absent* from the bundle, because with a truthy
+  key the minifier constant-folds `if (!USDA_API_KEY)` to false and deletes the
+  guard as dead code. The key is there.
+- **Preview** still contains that guard string, and its asset hash
+  (`index-CD93ayjJ.js`) was **byte-identical to a local build made with no
+  `.env` at all**. Conclusive: it built with no key.
+
+That is exactly what Kevin saw on the preview — "Matched 2 of 4. USDA lookup
+failed: Missing USDA API key". The two that did match came from Open Food Facts,
+which needs no key (see item 2b — they were both bad matches).
+
+To fix: same dashboard page, switch the Production/Preview selector to
+**Preview**, add the same three variables, then retry the preview deployment.
+
+**A useful technique to keep:** deployed `VITE_*` configuration can be checked
+from a session with `curl` alone, by fetching `index.html`, extracting the
+hashed asset path and inspecting the bundle — masking any long token before
+printing so a real key never reaches the transcript. That answers "is it set in
+production?" without anyone opening a dashboard.
 
 Kevin confirmed `VITE_USDA_API_KEY` was already present in the Cloudflare Pages
 dashboard alongside the two Supabase vars, retried the deployment, and a live
@@ -103,6 +136,26 @@ Oatmeal Power Bowl:
 Both are exactly the failure modes `ROADMAP.md` predicted for a best-effort
 estimator, now with concrete numbers instead of speculation. Feed them into
 item 5 rather than fixing them one at a time.
+
+**The sharper finding, from the keyless preview deployment.** With USDA
+unavailable, the Open Food Facts fallback still runs — it needs no API key — and
+it matched `1 medium banana` to **"Banana chips"** at 118 g. Banana chips are
+roughly 519 kcal/100g against a fresh banana's ~89, so that is not a near miss,
+it is a ~6x calorie error landing in the board as a "rough estimate".
+
+This reframes the fallback. OFF is a *branded product* database, so for generic
+whole foods it will confidently return the nearest branded thing rather than
+nothing, and the current code treats a returned product as a match. Worth
+considering: refuse OFF matches when the ingredient name looks generic and only
+USDA failed, rather than accepting a branded near-homonym. A wrong number that
+looks resolved is worse than an honest `unresolved` — which is the same
+principle as never silently overwriting a number the user is looking at.
+
+**Also worth knowing (not a bug):** per-ingredient match data lives in the
+`days` array in localStorage, which is per-browser. That is why the same meal
+reads "unresolved" on desktop and "rough estimate" on the phone — two devices,
+two independent stores, no matching run on the desktop yet. This is precisely
+the limitation cloud sync exists to paper over.
 
 ## 3. Supabase failures don't name Supabase
 
