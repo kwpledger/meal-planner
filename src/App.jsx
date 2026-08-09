@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { searchUsdaFoods, searchOpenFoodFacts, getUsdaFoodDetail } from './nutritionApi';
-import { migrateDaysToIngredients, mergeIngredientsFromLines, formatIngredientAmount, parseIngredientLine, SCHEMA_VERSION } from './ingredientParser';
+import { migrateDaysToIngredients, mergeIngredientsFromLines, formatIngredientAmount, parseIngredientLine, searchTermFor, SCHEMA_VERSION } from './ingredientParser';
 import { resolvePortionToGrams, computeNutrientsForIngredient, recomputeMealFromIngredients } from './portionResolver';
 import { loadLibrary, matchIngredient } from './ingredientLibrary';
 import { pushToCloud, pullFromCloud } from './cloudSync';
@@ -335,7 +335,7 @@ export default function MealPlanBoard() {
     setMatchStatus({ type: 'busy', message: `Matching "${ingredient.name}"...` });
 
     const { entry, library, failure } = await matchIngredient(
-      ingredient.raw || ingredient.name,
+      searchTermFor(ingredient),
       ingredientLibrary
     );
 
@@ -415,7 +415,7 @@ export default function MealPlanBoard() {
       // Sequential on purpose: each call feeds the growing cache, so a repeated
       // ingredient later in the list resolves without another network round.
       const { entry, library: nextLibrary, failure } = await matchIngredient(
-        ingredient.raw || ingredient.name,
+        searchTermFor(ingredient),
         library
       );
       library = nextLibrary;
@@ -530,7 +530,7 @@ export default function MealPlanBoard() {
       const ingredient = meal.ingredients.find((ing) => ing.id === target.ingredientId);
 
       // eslint-disable-next-line no-await-in-loop
-      const { entry, library: nextLibrary } = await matchIngredient(ingredient.raw, library);
+      const { entry, library: nextLibrary } = await matchIngredient(searchTermFor(ingredient), library);
       library = nextLibrary;
 
       if (entry) {
@@ -1834,6 +1834,20 @@ useEffect(() => {
                             verified
                           </label>
                         </div>
+
+                        {/*
+                          Dashed to read as an optional override rather than a
+                          second name field. Editing it does not re-match on its
+                          own - the number on screen only changes when Match is
+                          pressed, same as every other path.
+                        */}
+                        <input
+                          type="text"
+                          value={ingredient.searchName ?? ''}
+                          onChange={(e) => updateIngredientRow(index, { searchName: e.target.value || null })}
+                          placeholder={`search USDA as… (default: ${ingredient.name || 'ingredient name'})`}
+                          className="mt-2 w-full rounded-lg border border-dashed border-slate-300 p-2 text-xs text-slate-600"
+                        />
 
                         {ingredient.prepNote && (
                           <div className="text-[11px] text-slate-400 mt-1">note: {ingredient.prepNote}</div>
