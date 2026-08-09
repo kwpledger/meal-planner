@@ -1160,11 +1160,28 @@ useEffect(() => {
               </select>
 
               <button
-                onClick={() => setSwapMode((current) => !current)}
-                className={`rounded-2xl px-5 py-3 font-semibold shadow border transition ${swapMode ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-500' : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'}`}
+                onClick={() => window.print()}
+                className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition"
               >
-                {swapMode ? 'Swap mode ON' : 'Swap mode OFF'}
+                Print prep sheet
               </button>
+
+              {/*
+                Swap mode lives in the More menu, but an *active* swap mode must
+                never be invisible: while it is on, a tap on a card swaps rather
+                than opens, and the only other cues are the menu item's own text
+                and a cursor change that does not exist on a touch screen. So the
+                on state - and a one-tap way out of it - stays in the toolbar,
+                and the off state stays out of the way.
+              */}
+              {swapMode && (
+                <button
+                  onClick={() => setSwapMode(false)}
+                  className="rounded-2xl bg-indigo-600 text-white px-5 py-3 font-semibold shadow border border-indigo-600 hover:bg-indigo-500 transition"
+                >
+                  Swap mode ON — tap to exit
+                </button>
+              )}
 
               <div className="relative" ref={moreMenuRef}>
                 <button
@@ -1185,12 +1202,14 @@ useEffect(() => {
                       role="menuitem"
                       onClick={() => {
                         setMoreOpen(false);
-                        window.print();
+                        setSwapMode((current) => !current);
                       }}
                       className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100"
                     >
-                      Print prep sheet
+                      Swap mode: {swapMode ? 'ON' : 'OFF'}
                     </button>
+
+                    <div className="my-1 border-t border-slate-200" />
 
                     <button
                       role="menuitem"
