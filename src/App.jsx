@@ -1127,7 +1127,16 @@ useEffect(() => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7 gap-4">
+          {/*
+            Column count is derived from the available width, not declared at
+            pixel breakpoints. The old ladder (grid-cols-1 md:2 xl:4 2xl:7) set
+            the *count* at fixed thresholds while card width stayed fluid, which
+            is backwards: at 1535px each card was 360px, and one pixel wider
+            crossed into seven columns at 199px each - a 45% collapse from a 1px
+            resize. auto-fit + a 220px floor inverts that, fitting as many
+            columns as can hold a readable card and sharing the remainder.
+          */}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
             {filteredDays.map((day) => {
               const isCollapsed = collapsedDays.includes(day.id);
               const dailyCalories = day.meals.reduce((total, meal) => total + meal.calories, 0);
@@ -1557,7 +1566,14 @@ useEffect(() => {
 
                     return (
                       <div key={ingredient.id} className="rounded-xl border border-slate-300 p-2">
-                        <div className="flex gap-2 items-start">
+                        {/*
+                          Wraps because the fixed controls (amt + unit + remove
+                          + gaps) come to ~196px, which left the name field and
+                          the ✕ overflowing a clipped container below ~500px -
+                          on a phone the remove button was rendered but
+                          unreachable. Wrapping drops name+✕ to a second line.
+                        */}
+                        <div className="flex flex-wrap gap-2 items-start">
                           <input
                             type="number"
                             step="any"
@@ -1578,7 +1594,7 @@ useEffect(() => {
                             value={ingredient.name}
                             onChange={(e) => updateIngredientRow(index, { name: e.target.value })}
                             placeholder="ingredient name"
-                            className="flex-1 rounded-lg border border-slate-300 p-2 text-sm"
+                            className="flex-1 min-w-40 rounded-lg border border-slate-300 p-2 text-sm"
                           />
                           <button
                             type="button"
