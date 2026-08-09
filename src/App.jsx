@@ -5,22 +5,32 @@ import { resolvePortionToGrams, computeNutrientsForIngredient, recomputeMealFrom
 import { loadLibrary, matchIngredient } from './ingredientLibrary';
 import { pushToCloud, pullFromCloud } from './cloudSync';
 
-// The dietician's 2026-07-31 revision. Every day is 2,000 kcal in her plan;
-// the per-meal macros below are hers and are the baseline the board shows,
-// not measured values - nutrition lookups stay advisory (see CLAUDE.md).
-// Her stated daily protein for Days 1 and 2 (144g, 132g) does not match the
-// sum of those days' own meals (104g, 102g); the meals are transcribed as
-// written, so the board shows the sums.
+// Kevin's working plan, not the dietician's document verbatim.
+//
+// It began as her 2026-07-31 revision, then he did a naming pass on the real
+// board: ingredient wording that USDA can actually match ("boneless skinless
+// chicken breast", "navel orange", "banana, raw"), consistent casing and
+// tags, and the substitutions he had already made in real life - Greek yogurt
+// in place of coconut on Day 5, Dave's Killer Thin for a bread that turned out
+// not to be stocked anywhere he shops.
+//
+// The macros stay hers. They are the baseline the board displays, and nutrition
+// lookups remain advisory - Normalize + apply is the explicit step that
+// replaces them with measured values (see CLAUDE.md).
+//
+// One known stale number: Day 5 breakfast still carries her coconut-yogurt
+// macros (P 6) under a Greek yogurt ingredient. Recompute corrects it on the
+// board; the seed keeps her figure rather than inventing one.
 const initialDays = [
   {
     id: "day-1",
     day: "Day 1",
     protein: "Chicken",
     meals: [
-      { id: "d1-breakfast", type: "Breakfast", name: "Oatmeal Power Bowl", calories: 520, macros: { carbs: 72, protein: 20, fat: 16, fiber: 10 }, details: ["0.5 cup oats", "0.75 cup 2% milk", "1 banana", "1 Tbsp chia", "1 tsp peanut butter"], items: ["Oats", "Milk", "Banana", "Chia", "Peanut butter"] },
-      { id: "d1-lunch", type: "Lunch", name: "Chicken Quinoa Bowl", calories: 600, macros: { carbs: 55, protein: 40, fat: 20, fiber: 6 }, details: ["5 oz chicken", "0.75 cup quinoa", "1 cup broccoli", "1 Tbsp olive oil"], items: ["Chicken", "Quinoa", "Broccoli", "Olive oil"] },
-      { id: "d1-snack", type: "Snack", name: "Orange + Almonds", calories: 260, macros: { carbs: 28, protein: 6, fat: 12, fiber: 5 }, details: ["1 orange", "0.75 oz almonds", "1 slice Dave's Killer Thin"], items: ["Orange", "Almonds", "Dave's Killer Thin"] },
-      { id: "d1-dinner", type: "Dinner", name: "Chicken + Sweet Potato Plate", calories: 620, macros: { carbs: 55, protein: 38, fat: 14, fiber: 6 }, details: ["5 oz chicken", "0.5 large sweet potato", "1 cup green beans", "1 tsp olive oil"], items: ["Chicken", "Sweet potato", "Green beans"] },
+      { id: "d1-breakfast", type: "Breakfast", name: "Oatmeal Power Bowl", calories: 520, macros: { carbs: 72, protein: 20, fat: 16, fiber: 10 }, details: ["0.5 cup steel cut oats", "0.75 cup 2% milk", "1 banana, raw", "1 tbsp chia", "1 tsp peanut butter"], items: ["Steel Cut Oats", "2% Milk", "Bananas", "Chia", "Peanut Butter"] },
+      { id: "d1-lunch", type: "Lunch", name: "Chicken Quinoa Bowl", calories: 600, macros: { carbs: 55, protein: 40, fat: 20, fiber: 6 }, details: ["5 oz boneless skinless chicken breast", "0.75 cup quinoa", "1 cup broccoli", "1 tbsp olive oil"], items: ["Boneless, Skinless Chicken Breast", "Quinoa", "Broccoli", "Olive Oil"] },
+      { id: "d1-snack", type: "Snack", name: "Orange + Almonds", calories: 260, macros: { carbs: 28, protein: 6, fat: 12, fiber: 5 }, details: ["1 navel orange", "0.75 oz almonds", "1 slice Dave's Killer Thin"], items: ["Navel Oranges", "Almonds", "Dave's Killer Thin"] },
+      { id: "d1-dinner", type: "Dinner", name: "Chicken + Sweet Potato Plate", calories: 620, macros: { carbs: 55, protein: 38, fat: 14, fiber: 6 }, details: ["5 oz boneless skinless chicken breast", "0.5 large sweet potatoes", "1 cup green beans", "1 tbsp olive oil"], items: ["Boneless, Skinless Chicken Breast", "Sweet Potatoes", "Green Beans", "Olive Oil"] },
     ],
   },
   {
@@ -28,10 +38,10 @@ const initialDays = [
     day: "Day 2",
     protein: "Fish",
     meals: [
-      { id: "d2-breakfast", type: "Breakfast", name: "Greek Yogurt Bowl", calories: 460, macros: { carbs: 52, protein: 20, fat: 18, fiber: 6 }, details: ["1 cup Greek yogurt", "0.33 cup granola", "0.5 cup berries", "1 Tbsp chia"], items: ["Greek yogurt", "Granola", "Berries", "Chia"] },
-      { id: "d2-lunch", type: "Lunch", name: "Cod + Brown Rice Plate", calories: 640, macros: { carbs: 70, protein: 42, fat: 18, fiber: 5 }, details: ["6 oz cod", "0.75 cup brown rice", "1 cup spinach", "1 Tbsp olive oil"], items: ["Cod", "Brown rice", "Spinach"] },
-      { id: "d2-snack", type: "Snack", name: "Banana + PB Toast", calories: 260, macros: { carbs: 34, protein: 6, fat: 10, fiber: 5 }, details: ["1 banana", "1 slice Dave's Killer Thin", "0.5 Tbsp peanut butter"], items: ["Banana", "Dave's Killer Thin", "Peanut butter"] },
-      { id: "d2-dinner", type: "Dinner", name: "Salmon + Veggies", calories: 640, macros: { carbs: 48, protein: 34, fat: 30, fiber: 4 }, details: ["5 oz salmon", "1 cup roasted sweet potato", "1 cup zucchini", "1 tsp olive oil"], items: ["Salmon", "Sweet potato", "Zucchini"] },
+      { id: "d2-breakfast", type: "Breakfast", name: "Greek Yogurt Bowl", calories: 460, macros: { carbs: 52, protein: 20, fat: 18, fiber: 6 }, details: ["1 cup Greek yogurt", "0.33 cup granola", "0.5 cup berries", "1 tbsp chia"], items: ["Greek Yogurt", "Granola", "Berries", "Chia"] },
+      { id: "d2-lunch", type: "Lunch", name: "Cod + Brown Rice Plate", calories: 640, macros: { carbs: 70, protein: 42, fat: 18, fiber: 5 }, details: ["6 oz cod, raw", "0.75 cup brown rice, raw", "1 cup spinach", "1 tbsp olive oil"], items: ["Cod", "Brown Rice", "Spinach", "Olive Oil"] },
+      { id: "d2-snack", type: "Snack", name: "Banana + PB Toast", calories: 260, macros: { carbs: 34, protein: 6, fat: 10, fiber: 5 }, details: ["1 banana, raw", "1 slice Dave's Killer Thin", "0.5 tbsp peanut butter"], items: ["Bananas", "Dave's Killer Thin", "Peanut Butter"] },
+      { id: "d2-dinner", type: "Dinner", name: "Salmon + Veggies", calories: 640, macros: { carbs: 48, protein: 34, fat: 30, fiber: 4 }, details: ["5 oz salmon fillet, raw", "1 cup sweet potatoes", "1 cup zucchini", "1 tbsp olive oil"], items: ["Salmon", "Sweet Potatoes", "Zucchini", "Olive Oil"] },
     ],
   },
   {
@@ -39,10 +49,10 @@ const initialDays = [
     day: "Day 3",
     protein: "Chicken",
     meals: [
-      { id: "d3-breakfast", type: "Breakfast", name: "Egg + Grain Plate", calories: 480, macros: { carbs: 40, protein: 28, fat: 20, fiber: 8 }, details: ["3 eggs", "1 slice Dave's Killer Thin", "1 cup fruit"], items: ["Eggs", "Dave's Killer Thin", "Fruit"] },
-      { id: "d3-lunch", type: "Lunch", name: "Chicken Wrap", calories: 560, macros: { carbs: 45, protein: 45, fat: 12, fiber: 4 }, details: ["6 oz chicken", "1 whole-grain wrap", "Spinach", "Mustard"], items: ["Chicken", "Wrap", "Spinach"] },
-      { id: "d3-snack", type: "Snack", name: "Orange + Cashews", calories: 200, macros: { carbs: 18, protein: 4, fat: 12, fiber: 3 }, details: ["1 orange", "0.75 oz cashews"], items: ["Orange", "Cashews"] },
-      { id: "d3-dinner", type: "Dinner", name: "Chicken + Rice Plate", calories: 760, macros: { carbs: 75, protein: 40, fat: 16, fiber: 6 }, details: ["5 oz chicken", "0.75 cup brown rice", "1 cup broccoli"], items: ["Chicken", "Brown rice", "Broccoli"] },
+      { id: "d3-breakfast", type: "Breakfast", name: "Egg + Grain Plate", calories: 480, macros: { carbs: 40, protein: 28, fat: 20, fiber: 8 }, details: ["3 eggs", "1 slice Dave's Killer Thin", "1 cup strawberries"], items: ["Eggs", "Dave's Killer Thin", "Strawberries"] },
+      { id: "d3-lunch", type: "Lunch", name: "Chicken Wrap", calories: 560, macros: { carbs: 45, protein: 45, fat: 12, fiber: 4 }, details: ["6 oz boneless skinless chicken breast", "1 whole wheat wrap", "Spinach", "1 tbsp mustard"], items: ["Boneless, Skinless Chicken Breast", "Whole Wheat Wraps", "Spinach", "Mustard"] },
+      { id: "d3-snack", type: "Snack", name: "Orange + Cashews", calories: 200, macros: { carbs: 18, protein: 4, fat: 12, fiber: 3 }, details: ["1 navel orange", "0.75 oz cashews"], items: ["Navel Oranges", "Cashews"] },
+      { id: "d3-dinner", type: "Dinner", name: "Chicken + Brown Rice Plate", calories: 760, macros: { carbs: 75, protein: 40, fat: 16, fiber: 6 }, details: ["5 oz boneless skinless chicken breast", "0.75 cup brown rice, raw", "1 cup broccoli"], items: ["Boneless, Skinless Chicken Breast", "Brown Rice", "Broccoli"] },
     ],
   },
   {
@@ -50,10 +60,10 @@ const initialDays = [
     day: "Day 4",
     protein: "Ground Turkey",
     meals: [
-      { id: "d4-breakfast", type: "Breakfast", name: "Oatmeal Bowl", calories: 520, macros: { carbs: 65, protein: 18, fat: 14, fiber: 8 }, details: ["0.5 cup oats", "1 cup 2% milk", "1 Tbsp chia", "0.5 cup strawberries"], items: ["Oats", "Milk", "Chia", "Strawberries"] },
-      { id: "d4-lunch", type: "Lunch", name: "Turkey Quinoa Bowl", calories: 660, macros: { carbs: 60, protein: 40, fat: 20, fiber: 6 }, details: ["5 oz ground turkey", "0.75 cup quinoa", "1 cup spinach", "1 Tbsp olive oil"], items: ["Ground turkey", "Quinoa", "Spinach"] },
-      { id: "d4-snack", type: "Snack", name: "Banana + Almonds", calories: 260, macros: { carbs: 32, protein: 6, fat: 12, fiber: 5 }, details: ["1 banana", "0.75 oz almonds", "1 slice Dave's Killer Thin"], items: ["Banana", "Almonds", "Dave's Killer Thin"] },
-      { id: "d4-dinner", type: "Dinner", name: "Turkey + Lentil Plate", calories: 560, macros: { carbs: 55, protein: 36, fat: 14, fiber: 6 }, details: ["5 oz turkey", "0.75 cup lentils", "1 cup green beans"], items: ["Turkey", "Lentils", "Green beans"] },
+      { id: "d4-breakfast", type: "Breakfast", name: "Oatmeal Bowl", calories: 520, macros: { carbs: 65, protein: 18, fat: 14, fiber: 8 }, details: ["0.5 cup steel cut oats", "1 cup 2% milk", "1 tbsp chia", "0.5 cup strawberries"], items: ["Steel Cut Oats", "2% Milk", "Chia", "Strawberries"] },
+      { id: "d4-lunch", type: "Lunch", name: "Turkey Quinoa Bowl", calories: 660, macros: { carbs: 60, protein: 40, fat: 20, fiber: 6 }, details: ["5 oz ground turkey", "0.75 cup quinoa", "1 cup spinach", "1 tbsp olive oil"], items: ["Ground Turkey", "Quinoa", "Spinach", "Olive Oil"] },
+      { id: "d4-snack", type: "Snack", name: "Banana + Almonds", calories: 260, macros: { carbs: 32, protein: 6, fat: 12, fiber: 5 }, details: ["1 banana, raw", "0.75 oz almonds", "1 slice Dave's Killer Thin"], items: ["Bananas", "Almonds", "Dave's Killer Thin"] },
+      { id: "d4-dinner", type: "Dinner", name: "Turkey + Lentil Plate", calories: 560, macros: { carbs: 55, protein: 36, fat: 14, fiber: 6 }, details: ["5 oz turkey breast", "0.75 cup lentils", "1 cup green beans"], items: ["Turkey Breast", "Lentils", "Green Beans"] },
     ],
   },
   {
@@ -61,10 +71,10 @@ const initialDays = [
     day: "Day 5",
     protein: "Chicken",
     meals: [
-      { id: "d5-breakfast", type: "Breakfast", name: "Coconut Yogurt Bowl", calories: 420, macros: { carbs: 48, protein: 6, fat: 16, fiber: 4 }, details: ["1 cup coconut yogurt", "0.33 cup granola", "0.5 cup strawberries"], items: ["Coconut yogurt", "Granola", "Strawberries"] },
-      { id: "d5-lunch", type: "Lunch", name: "Chicken + Brown Rice", calories: 700, macros: { carbs: 75, protein: 45, fat: 18, fiber: 6 }, details: ["6 oz chicken", "0.75 cup brown rice", "1 cup broccoli"], items: ["Chicken", "Brown rice", "Broccoli"] },
-      { id: "d5-snack", type: "Snack", name: "Orange + PB Toast", calories: 240, macros: { carbs: 26, protein: 6, fat: 10, fiber: 5 }, details: ["1 orange", "1 slice Dave's Killer Thin", "0.5 Tbsp peanut butter"], items: ["Orange", "Dave's Killer Thin", "Peanut butter"] },
-      { id: "d5-dinner", type: "Dinner", name: "Chicken + Sweet Potato", calories: 640, macros: { carbs: 55, protein: 38, fat: 18, fiber: 6 }, details: ["5 oz chicken", "0.5 large sweet potato", "1 cup spinach"], items: ["Chicken", "Sweet potato", "Spinach"] },
+      { id: "d5-breakfast", type: "Breakfast", name: "Greek Yogurt Bowl", calories: 420, macros: { carbs: 48, protein: 6, fat: 16, fiber: 4 }, details: ["1 cup greek yogurt", "0.33 cup granola", "0.5 cup strawberries"], items: ["Greek Yogurt", "Granola", "Strawberries"] },
+      { id: "d5-lunch", type: "Lunch", name: "Chicken + Brown Rice", calories: 700, macros: { carbs: 75, protein: 45, fat: 18, fiber: 6 }, details: ["6 oz boneless skinless chicken breast", "0.75 cup brown rice, raw", "1 cup broccoli"], items: ["Boneless, Skinless Chicken Breast", "Brown Rice", "Broccoli"] },
+      { id: "d5-snack", type: "Snack", name: "Orange + PB Toast", calories: 240, macros: { carbs: 26, protein: 6, fat: 10, fiber: 5 }, details: ["1 navel orange", "1 slice Dave's Killer Thin", "0.5 tbsp peanut butter"], items: ["Navel Oranges", "Dave's Killer Thin", "Peanut Butter"] },
+      { id: "d5-dinner", type: "Dinner", name: "Chicken + Sweet Potato", calories: 640, macros: { carbs: 55, protein: 38, fat: 18, fiber: 6 }, details: ["5 oz boneless skinless chicken breast", "0.5 large sweet potatoes", "1 cup spinach"], items: ["Boneless, Skinless Chicken Breast", "Sweet Potatoes", "Spinach"] },
     ],
   },
   {
@@ -73,9 +83,9 @@ const initialDays = [
     protein: "Fish",
     meals: [
       { id: "d6-breakfast", type: "Breakfast", name: "Egg + Grain Plate", calories: 480, macros: { carbs: 40, protein: 28, fat: 20, fiber: 8 }, details: ["3 eggs", "1 slice Dave's Killer Thin", "1 cup strawberries"], items: ["Eggs", "Dave's Killer Thin", "Strawberries"] },
-      { id: "d6-lunch", type: "Lunch", name: "Cod + Quinoa", calories: 700, macros: { carbs: 70, protein: 42, fat: 18, fiber: 6 }, details: ["6 oz cod", "0.75 cup quinoa", "1 cup spinach"], items: ["Cod", "Quinoa", "Spinach"] },
-      { id: "d6-snack", type: "Snack", name: "Banana + Almonds", calories: 200, macros: { carbs: 24, protein: 5, fat: 10, fiber: 4 }, details: ["1 banana", "0.75 oz almonds"], items: ["Banana", "Almonds"] },
-      { id: "d6-dinner", type: "Dinner", name: "Salmon + Veggies", calories: 620, macros: { carbs: 48, protein: 34, fat: 28, fiber: 4 }, details: ["5 oz salmon", "0.75 cup lentils", "1 cup green beans", "1 tsp olive oil"], items: ["Salmon", "Lentils", "Green beans"] },
+      { id: "d6-lunch", type: "Lunch", name: "Cod + Quinoa", calories: 700, macros: { carbs: 70, protein: 42, fat: 18, fiber: 6 }, details: ["6 oz cod, raw", "0.75 cup quinoa", "1 cup spinach"], items: ["Cod", "Quinoa", "Spinach"] },
+      { id: "d6-snack", type: "Snack", name: "Banana + Almonds", calories: 200, macros: { carbs: 24, protein: 5, fat: 10, fiber: 4 }, details: ["1 banana, raw", "0.75 oz almonds"], items: ["Bananas", "Almonds"] },
+      { id: "d6-dinner", type: "Dinner", name: "Salmon + Veggies", calories: 620, macros: { carbs: 48, protein: 34, fat: 28, fiber: 4 }, details: ["5 oz salmon fillet, raw", "0.75 cup lentils", "1 cup green beans", "1 tbsp olive oil"], items: ["Salmon", "Lentils", "Green Beans", "Olive Oil"] },
     ],
   },
   {
@@ -83,10 +93,10 @@ const initialDays = [
     day: "Day 7",
     protein: "Red Meat",
     meals: [
-      { id: "d7-breakfast", type: "Breakfast", name: "Oatmeal Bowl", calories: 520, macros: { carbs: 65, protein: 18, fat: 14, fiber: 8 }, details: ["0.75 cup oats", "1 cup 2% milk", "1 Tbsp chia", "0.5 cup strawberries"], items: ["Oats", "Milk", "Chia", "Strawberries"] },
-      { id: "d7-lunch", type: "Lunch", name: "Chicken Wrap", calories: 560, macros: { carbs: 45, protein: 38, fat: 20, fiber: 4 }, details: ["5 oz chicken", "1 whole-grain wrap", "Spinach", "1 Tbsp olive oil"], items: ["Chicken", "Wrap", "Spinach"] },
-      { id: "d7-snack", type: "Snack", name: "Orange + Almonds", calories: 200, macros: { carbs: 18, protein: 5, fat: 10, fiber: 4 }, details: ["1 orange", "0.75 oz almonds"], items: ["Orange", "Almonds"] },
-      { id: "d7-dinner", type: "Dinner", name: "Lean Beef Plate", calories: 720, macros: { carbs: 60, protein: 40, fat: 26, fiber: 6 }, details: ["5 oz lean beef", "1 cup sweet potato", "1 cup broccoli"], items: ["Lean beef", "Sweet potato", "Broccoli"] },
+      { id: "d7-breakfast", type: "Breakfast", name: "Oatmeal Bowl", calories: 520, macros: { carbs: 65, protein: 18, fat: 14, fiber: 8 }, details: ["0.75 cup steel cut oats", "1 cup 2% milk", "1 tbsp chia", "0.5 cup strawberries"], items: ["Steel Cut Oats", "2% Milk", "Chia", "Strawberries"] },
+      { id: "d7-lunch", type: "Lunch", name: "Chicken Wrap", calories: 560, macros: { carbs: 45, protein: 38, fat: 20, fiber: 4 }, details: ["5 oz boneless skinless chicken breast", "1 whole wheat wrap", "Spinach", "1 tbsp olive oil"], items: ["Boneless, Skinless Chicken Breast", "Whole Wheat Wraps", "Spinach", "Olive Oil"] },
+      { id: "d7-snack", type: "Snack", name: "Orange + Almonds", calories: 200, macros: { carbs: 18, protein: 5, fat: 10, fiber: 4 }, details: ["1 navel orange", "0.75 oz almonds"], items: ["Navel Oranges", "Almonds"] },
+      { id: "d7-dinner", type: "Dinner", name: "Lean Beef Plate", calories: 720, macros: { carbs: 60, protein: 40, fat: 26, fiber: 6 }, details: ["5 oz lean beef, raw", "1 cup sweet potatoes", "1 cup broccoli"], items: ["Lean Beef", "Sweet Potatoes", "Broccoli"] },
     ],
   },
 ];
