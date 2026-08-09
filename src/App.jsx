@@ -219,6 +219,23 @@ export default function MealPlanBoard() {
   const [portionResolutions, setPortionResolutions] = useState({});
   const [ingredientLibrary, setIngredientLibrary] = useState(() => loadLibrary());
   const [autoMatchResult, setAutoMatchResult] = useState(null);
+  /*
+   * Match/Match-all previously reported nothing at all: both bailed out through
+   * silent early returns, so "no match found", "already matched, rewrote the
+   * same values" and "still waiting on the network" were indistinguishable from
+   * a dead button - which is exactly how they were reported. This carries the
+   * outcome of the last match action so every path says something.
+   */
+  const [matchStatus, setMatchStatus] = useState(null);
+  /*
+   * The toolbar's nine controls wrapped into a ragged ~570px staircase at phone
+   * widths, putting the whole board below the fold. Only the three the board is
+   * actually driven by stay out; the rest are occasional chores and live behind
+   * this disclosure at every width, so there is one code path rather than a
+   * desktop copy and a mobile copy of the same nine buttons.
+   */
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreMenuRef = useRef(null);
   const [recomputePreview, setRecomputePreview] = useState(null);
   const [pastedIngredients, setPastedIngredients] = useState("");
   const [normalizeState, setNormalizeState] = useState(null);
@@ -305,13 +322,26 @@ export default function MealPlanBoard() {
     const ingredient = editForm.ingredients[index];
 
     if (!ingredient.name) {
+      setMatchStatus({ type: 'error', message: 'Enter an ingredient name first.' });
       return;
     }
 
-    const { entry, library } = await matchIngredient(ingredient.raw || ingredient.name, ingredientLibrary);
+    setMatchStatus({ type: 'busy', message: `Matching "${ingredient.name}"...` });
+
+    const { entry, library, failure } = await matchIngredient(
+      ingredient.raw || ingredient.name,
+      ingredientLibrary
+    );
+
     setIngredientLibrary(library);
 
     if (!entry) {
+      // A provider outage and a genuine miss are different problems with
+      // different fixes; say which one happened.
+      setMatchStatus({
+        type: 'error',
+        message: failure || `No USDA or Open Food Facts match found for "${ingredient.name}".`,
+      });
       return;
     }
 
@@ -337,10 +367,37 @@ export default function MealPlanBoard() {
       // to spot-check it, regardless of how confident the resolution was.
       verified: false,
     });
+
+    setMatchStatus({
+      type: 'ok',
+      message: `"${ingredient.name}" matched ${entry.matchedFoodName}${
+        grams != null ? ` - ${Math.round(grams)} g` : ' (no gram weight resolved)'
+      }.`,
+    });
   }
 
   async function handleMatchAllRows() {
     let library = ingredientLibrary;
+    // "Unresolved" is the only state this button acts on, which is correct but
+    // was invisible: on a meal whose rows had all already matched it skipped
+    // every row and reported nothing, which reads exactly like a dead button.
+    const candidates = editForm.ingredients.filter(
+      (ingredient) => ingredient.name && ingredient.gramsConfidence === 'unresolved'
+    );
+
+    if (candidates.length === 0) {
+      setMatchStatus({
+        type: 'info',
+        message: 'Nothing to match - every row already has a match. Use a row’s own Match button to redo one.',
+      });
+      return;
+    }
+
+    setMatchStatus({ type: 'busy', message: `Matching ${candidates.length} unresolved ingredient(s)...` });
+
+    let matched = 0;
+    let failed = 0;
+    let firstFailure = null;
 
     for (let index = 0; index < editForm.ingredients.length; index += 1) {
       const ingredient = editForm.ingredients[index];
@@ -349,12 +406,21 @@ export default function MealPlanBoard() {
         continue;
       }
 
-      const { entry, library: nextLibrary } = await matchIngredient(ingredient.raw || ingredient.name, library);
+      // Sequential on purpose: each call feeds the growing cache, so a repeated
+      // ingredient later in the list resolves without another network round.
+      const { entry, library: nextLibrary, failure } = await matchIngredient(
+        ingredient.raw || ingredient.name,
+        library
+      );
       library = nextLibrary;
 
       if (!entry) {
+        failed += 1;
+        firstFailure = firstFailure || failure;
         continue;
       }
+
+      matched += 1;
 
       const matchedFood = entry.source === 'usda'
         ? { source: 'usda', foodPortions: entry.foodPortions }
@@ -379,6 +445,21 @@ export default function MealPlanBoard() {
     }
 
     setIngredientLibrary(library);
+
+    if (failed === 0) {
+      setMatchStatus({ type: 'ok', message: `Matched ${matched} of ${candidates.length} ingredient(s).` });
+    } else if (firstFailure) {
+      // Every row failing with a provider error is an outage, not 8 bad names.
+      setMatchStatus({
+        type: 'error',
+        message: `Matched ${matched} of ${candidates.length}. ${firstFailure}`,
+      });
+    } else {
+      setMatchStatus({
+        type: 'info',
+        message: `Matched ${matched} of ${candidates.length}; ${failed} found no match and stayed unresolved.`,
+      });
+    }
   }
 
   function handleRecomputeFromIngredients() {
@@ -628,6 +709,34 @@ useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(days));
     localStorage.setItem(STORAGE_UPDATED_AT_KEY, new Date().toISOString());
   }, [days]);
+
+  // Dismiss the More menu the two ways a menu is expected to dismiss. Bound
+  // only while it is open so the app isn't listening on every document click.
+  useEffect(() => {
+    if (!moreOpen) {
+      return undefined;
+    }
+
+    function handlePointerDown(event) {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
+        setMoreOpen(false);
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setMoreOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [moreOpen]);
 
   const filteredDays = useMemo(() => {
     if (proteinFilter === 'All') {
@@ -1057,59 +1166,111 @@ useEffect(() => {
                 {swapMode ? 'Swap mode ON' : 'Swap mode OFF'}
               </button>
 
-              <button
-                onClick={() => window.print()}
-                className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition"
-              >
-                Print prep sheet
-              </button>
+              <div className="relative" ref={moreMenuRef}>
+                <button
+                  onClick={() => setMoreOpen((current) => !current)}
+                  aria-haspopup="menu"
+                  aria-expanded={moreOpen}
+                  className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition"
+                >
+                  More {moreOpen ? '▲' : '▼'}
+                </button>
 
-              <button
-                onClick={exportMealPlan}
-                className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition"
-              >
-                Export JSON
-              </button>
+                {moreOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 z-20 mt-2 w-60 rounded-2xl bg-white shadow-xl border border-slate-200 p-2 flex flex-col gap-1"
+                  >
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        window.print();
+                      }}
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100"
+                    >
+                      Print prep sheet
+                    </button>
 
-              <label className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition cursor-pointer">
-                Import JSON
-                <input
-                  type="file"
-                  accept="application/json,.json"
-                  onChange={importMealPlan}
-                  className="hidden"
-                />
-              </label>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        exportMealPlan();
+                      }}
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100"
+                    >
+                      Export JSON
+                    </button>
 
-              <button
-                onClick={handleSyncToCloud}
-                disabled={syncBusy !== null}
-                className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition disabled:opacity-50"
-              >
-                {syncBusy === 'push' ? 'Syncing...' : 'Sync to Cloud'}
-              </button>
+                    <label className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100 cursor-pointer">
+                      Import JSON
+                      <input
+                        type="file"
+                        accept="application/json,.json"
+                        onChange={(event) => {
+                          setMoreOpen(false);
+                          importMealPlan(event);
+                        }}
+                        className="hidden"
+                      />
+                    </label>
 
-              <button
-                onClick={handleSyncFromCloud}
-                disabled={syncBusy !== null}
-                className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition disabled:opacity-50"
-              >
-                {syncBusy === 'pull' ? 'Syncing...' : 'Sync from Cloud'}
-              </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        handleSyncToCloud();
+                      }}
+                      disabled={syncBusy !== null}
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-50"
+                    >
+                      {syncBusy === 'push' ? 'Syncing...' : 'Sync to Cloud'}
+                    </button>
 
-              <button
-                onClick={handleNormalizeBoard}
-                className="rounded-2xl bg-indigo-600 text-white px-5 py-3 font-semibold shadow hover:bg-indigo-500 active:scale-95 transition"
-              >
-                Normalize portions (beta)
-              </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        handleSyncFromCloud();
+                      }}
+                      disabled={syncBusy !== null}
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-50"
+                    >
+                      {syncBusy === 'pull' ? 'Syncing...' : 'Sync from Cloud'}
+                    </button>
 
-              <button
-                onClick={handleReset}
-                className="rounded-2xl bg-slate-800 text-white px-5 py-3 font-semibold shadow hover:bg-slate-700 active:scale-95 transition"
-              >
-                Reset board
-              </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        handleNormalizeBoard();
+                      }}
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-indigo-700 hover:bg-indigo-50"
+                    >
+                      Normalize portions (beta)
+                    </button>
+
+                    {/*
+                      Reset is the one destructive item here, so it sits last,
+                      after a divider, rather than adjacent to the sync actions
+                      it would be most costly to mis-tap next to.
+                    */}
+                    <div className="my-1 border-t border-slate-200" />
+
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        handleReset();
+                      }}
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-red-700 hover:bg-red-50"
+                    >
+                      Reset board
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1560,6 +1721,22 @@ useEffect(() => {
                   </button>
                 </div>
 
+                {matchStatus && (
+                  <div
+                    className={`mb-2 text-xs rounded-lg px-3 py-2 border ${
+                      matchStatus.type === 'error'
+                        ? 'bg-red-50 border-red-200 text-red-700'
+                        : matchStatus.type === 'busy'
+                        ? 'bg-slate-50 border-slate-200 text-slate-600'
+                        : matchStatus.type === 'info'
+                        ? 'bg-amber-50 border-amber-200 text-amber-700'
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                    }`}
+                  >
+                    {matchStatus.message}
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   {editForm.ingredients.map((ingredient, index) => {
                     const confidence = CONFIDENCE_LABELS[ingredient.gramsConfidence] || CONFIDENCE_LABELS.unresolved;
@@ -1743,13 +1920,19 @@ useEffect(() => {
                 These results are estimates and may be per 100g.
               </p>
 
-              <div className="flex gap-2 mb-3">
+              {/*
+                Wraps for the same reason the ingredient rows do: an input plus
+                three buttons on one unwrapped line pushed "Open Food Facts" and
+                "Auto-match & cache" off the right edge of a phone viewport,
+                where they were unreachable rather than merely cramped.
+              */}
+              <div className="flex flex-wrap gap-2 mb-3">
                 <input
                   type="text"
                   value={nutritionQuery}
                   onChange={(e) => setNutritionQuery(e.target.value)}
                   placeholder="Search food, e.g. chicken breast or Dave's Killer Thin"
-                  className="flex-1 rounded-xl border border-slate-300 p-3"
+                  className="flex-1 min-w-48 rounded-xl border border-slate-300 p-3"
                 />
 
                 <button

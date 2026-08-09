@@ -218,6 +218,16 @@ export async function matchIngredient(rawLine, library) {
     return { entry: cached, library, fromCache: true };
   }
 
+  /*
+   * Both lookups below swallow their errors so one dead provider can't stop the
+   * other from being tried. That is right, but it used to make "this ingredient
+   * genuinely isn't in either database" and "the network call failed" return
+   * the identical empty result, so the UI reported a missing API key or a
+   * blocked host as "no match found for oats". Record why we came up empty and
+   * hand it back, so callers can tell a real miss from an outage.
+   */
+  let lookupFailure = null;
+
   try {
     const usdaData = await searchUsdaFoods(buildUsdaSearchQuery(parsed.name));
     const rankedFoods = rankUsdaFoods(usdaData.foods, parsed.name);
@@ -248,6 +258,7 @@ export async function matchIngredient(rawLine, library) {
     }
   } catch (error) {
     console.error(`USDA match failed for "${parsed.name}":`, error);
+    lookupFailure = `USDA lookup failed: ${error.message}`;
   }
 
   // USDA came up empty (or errored) - fall back to Open Food Facts, mainly
@@ -280,7 +291,10 @@ export async function matchIngredient(rawLine, library) {
     }
   } catch (error) {
     console.error(`Open Food Facts match failed for "${parsed.name}":`, error);
+    // Prefer the USDA reason when both failed - USDA is the primary source and
+    // the likelier thing to have been misconfigured.
+    lookupFailure = lookupFailure || `Open Food Facts lookup failed: ${error.message}`;
   }
 
-  return { entry: null, library, fromCache: false };
+  return { entry: null, library, fromCache: false, failure: lookupFailure };
 }
