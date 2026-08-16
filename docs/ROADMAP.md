@@ -183,10 +183,22 @@ they apply — don't reorder casually.
 - **Matching quality is heuristic.** Text-relevance scoring plus a median-energy
   tiebreak. Works for common ingredients, still occasionally picks an odd match.
   The `verified` checkbox exists because this is not meant to be trusted blindly.
-- **The largest single remaining error is a match, not a weight.** Quinoa
-  resolves against *"Quinoa, fat added"* at 146 kcal/100g — cooked density
-  applied to a dry cup measure, across three lunches. Fixable with `quinoa, dry`
-  in the search-name override, no code change.
+- **The quinoa match — FIXED, and the fix carries a residual.** Quinoa used to
+  resolve against *"Quinoa, fat added"* at 146 kcal/100g — cooked density
+  applied to a dry cup measure, across three lunches — and now resolves against
+  *"Quinoa, uncooked"* at **368**. Zucchini went from *"Zucchini, pickled"* to
+  *"Squash, zucchini, baby, raw"* at 21. Weekly total **13,187** against the
+  dietician's 14,000, which is estimation noise rather than a defect. **But the
+  correction was made by editing the display names rather than the search-name
+  override**, so the board now shows *"quinoa, dry"* and *"zucchini, raw"* to the
+  reader — exactly what `searchName` was added to prevent. `docs/BACKLOG.md`
+  item 3 is the cleanup and explains why it is safe to do.
+- **The search-name override is under-discovered.** It went unused even by the
+  person who requested it, on the exact two ingredients it was built for. It is a
+  dashed-outline field *below* each ingredient row while the display name sits on
+  the row itself and visibly works, which is a plausible enough explanation to
+  act on if a third case appears. Not a code change yet — one data point about
+  placement, recorded so the second one isn't read as a coincidence.
 - **Open Food Facts will confidently return branded near-homonyms for generic
   whole foods.** With USDA unavailable it matched "1 medium banana" to *"Banana
   chips"* — roughly a 6x calorie error landing as a resolved "rough estimate".

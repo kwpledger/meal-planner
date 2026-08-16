@@ -94,7 +94,7 @@ Also: narrate your reasoning back to him, including routine results like a green
 
 Working end-to-end: the 7-day board, drag/drop + swap mode, print sheet, grocery aggregation, Cronometer text export, Export/Import JSON, structured per-ingredient editing with USDA/OFF matching (single, bulk, and a local re-weigh pass), per-ingredient search-name overrides, and the phone toolbar disclosure. Deployed favicon and page title are the real kwp logo mark.
 
-**Cloud sync is mid-cutover.** The Supabase→Cloudflare KV migration's code half is done; the dashboard half is Kevin's and is `docs/BACKLOG.md` item 1. **Until the `MEAL_PLAN_KV` namespace is created and bound, sync is down in production** - the function answers a 503 that names the missing binding. Nothing else is affected: the board is in localStorage, so this costs cross-device sync, not data.
+**Cloud sync now runs on Cloudflare KV and is verified end to end** - pushed from the desktop, pulled on the phone, matching timestamps, on the real board. The only thing left of that migration is tearing Supabase down (`docs/BACKLOG.md` item 1, step 7); nothing reads it any more, so it is cleanup rather than work.
 
 **Work order lives in `docs/BACKLOG.md`** - live work above a divider, finished work below, so the top heading is always the next thing to pick up. `docs/ROADMAP.md` stays the deep explanation of what is broken and why.
 

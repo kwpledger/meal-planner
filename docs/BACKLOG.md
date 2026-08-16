@@ -13,13 +13,12 @@ about **order**.
 
 ---
 
-## 1. Finish the KV cutover — Kevin's dashboard steps
+## 1. Finish the KV cutover — one teardown step left
 
-**Steps 1–5 are done and the preview round trip is verified** (see Shipped,
-"Replace Supabase sync with Cloudflare KV"). **What remains is step 6 and, when
-Kevin is ready, step 7.** Step 6 has to be Kevin because it reads the board out
-of his browser's localStorage; nothing else here can be done from a session
-either, because it is all dashboard work.
+**The cutover is complete — steps 1–6 are done and verified end to end.** Only
+step 7, the Supabase teardown, remains, and nothing reads Supabase any more so
+it can happen whenever. Everything here is dashboard work or reads the board out
+of Kevin's browser, so none of it could be done from a session.
 
 The full list is kept rather than trimmed — the ordering constraints and the
 redeploy trap in step 4 are the reusable part, and a fresh session reading only
@@ -58,11 +57,14 @@ code that could read Supabase.
    is itself the production redeploy. (The branch preview URL tested sync
    end-to-end before this — it writes to the preview namespace, so it could not
    touch the real board.)
-6. **← NEXT. Push the board to KV.** On `meal-planner.kwpledger.com`, press
-   **Sync to Cloud**, then confirm from the second machine with **Sync from
-   Cloud**. Production picks up its binding from the merge build, so there is no
-   separate redeploy for it.
-7. **Tear Supabase down**, once step 6 is confirmed from both machines: delete
+6. ~~**Push the board to KV.**~~ **DONE, two machines confirmed.** Production
+   picked up its binding from the merge build, with no separate redeploy. Pushed
+   from the desktop, then pulled on the phone in a **private tab** — which is a
+   stronger test than a reload, because a private window has no localStorage at
+   all, so the board that appeared came entirely from KV rather than from a
+   cached local copy. Timestamps matched on both sides.
+7. **← NEXT (whenever). Tear Supabase down.** Step 6 is confirmed from both
+   machines, so this is unblocked: delete
    the Supabase project, the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`
    repository secrets (Settings → Secrets and variables → Actions), and the two
    `VITE_SUPABASE_*` variables in **both** Cloudflare scopes. Also **remove the
@@ -71,7 +73,19 @@ code that could read Supabase.
    "Supabase Preview" check on PR #15, which reported `skipped`. Harmless, but
    it is the last thread connecting the repo to a project that is going away.
 
-Steps 1–6 are the cutover; step 7 is cleanup that can wait.
+Steps 1–6 were the cutover and are done; step 7 is cleanup that can wait.
+
+**One near-miss worth keeping.** The push in step 6 nearly went the wrong way.
+The desktop was holding an **11,801** board — the measured week *before* the
+portion-table fixes — while the phone had **13,187**, carrying the re-weigh
+apply and the quinoa/zucchini corrections. Step 1 said "the machine with the
+most current board" and the desktop was not it. The first production push made
+the *older* board the cloud copy; the phone's real Safari still had the good one,
+and a pull there would have destroyed roughly 1,400 kcal/week of accuracy work.
+Caught by cross-checking the weekly total on screen against the number in these
+docs, and fixed by pushing from the phone instead. **"Most current board" is not
+self-evident to the person holding two of them** — the useful instruction is
+"compare the weekly totals on both machines first, and push from the higher-numbered one."
 
 
 ## 2. Adopt the shared design system (and hold visual polish until then)
@@ -105,19 +119,55 @@ scale rather than reaching past the semantic layer to raw palette values,
 OKLCH over HSB so equal lightness means equal *perceived* lightness, dark-mode
 values chosen at the same time, and typography before colour.
 
-## 3. Kevin's own next action: two search-name overrides
+## 3. Move two corrections out of the display names and into `searchName`
 
-No code. Two entries in the search-name override field (see Shipped), worth more
-than anything a session can do to the fallback table right now:
+**The matching fix is done; the mechanism it was done by is the residual.**
 
-- **`quinoa, dry`** on the three quinoa lunches. They currently match *"Quinoa,
-  fat added"* at 146 kcal/100g — cooked density applied to a dry cup measure.
-  Dry quinoa is ~368. Worth roughly **+950 kcal/week**.
-- **`zucchini, raw`** on Day 2 dinner, which matched *"Zucchini, pickled"*. Same
-  class of error, much smaller.
+Both corrections landed and the numbers are right. Read straight off the live
+cloud board on 2026-08-16:
 
-With both applied the board lands near 13,400 against the dietician's 14,000 —
-estimation noise rather than a defect.
+| Ingredient | Matched food | kcal/100g |
+|---|---|---|
+| Quinoa (Days 1, 4, 6) | *Quinoa, uncooked* | **368** |
+| Zucchini (Day 2) | *Squash, zucchini, baby, raw* | **21** |
+
+368 is the dry-quinoa figure this file predicted, against the *"Quinoa, fat
+added"* 146 it replaced, and the zucchini is fresh rather than pickled. Weekly
+total moved to **13,187** against the dietician's 14,000 — estimation noise
+rather than a defect, which was the stated goal.
+
+**But it was done by editing the display name, not the override field.** The
+stored records read `name: "quinoa, dry"`, `raw: "0.75 cup quinoa, dry"`,
+`searchName: null`. So the board cards now literally show *"quinoa, dry"* and
+*"zucchini, raw"* — which is precisely the corruption `searchName` exists to
+prevent (see Shipped, "Separate display name from search name": fixing what the
+matcher sees by damaging what the board shows was the entire problem the field
+was added to solve).
+
+This is worth recording rather than quietly repairing, because it says something
+about the feature: **the override field did not get used even by the person who
+asked for it**, on the exact two ingredients it was built for. The likeliest
+reason is discoverability — it is a dashed-outline field *below* each ingredient
+row, while the name is the obvious thing on the row itself, and editing the name
+visibly works. If a third case of this shows up, the conclusion is that the
+field needs to be more prominent, not that the user needs reminding.
+
+### The cleanup, and why it is safe
+
+For each of the four ingredients: set the display name back to `quinoa` /
+`zucchini`, and put `quinoa, dry` / `zucchini, raw` into the search-name
+override field.
+
+**This will not lose the corrected numbers.** Neither editing a display name nor
+editing the override re-runs matching — the number on screen changes only when
+Match is pressed, which is deliberate and consistent across every path in the
+app. So `matchedFoodName` and `nutrientsPer100g` survive the edit untouched, and
+filling in `searchName` at the same time means the correction still holds if
+anything *does* re-match later.
+
+Do the override field and the name in the same edit. Restoring the name alone
+would leave the board correct today and silently wrong the next time those rows
+are re-matched, which is the worse of the two states because it looks finished.
 
 
 ## 4. Harden portion normalization
