@@ -85,22 +85,36 @@ values. Resuming is a dashboard click inside a 90-day window, and there is
 Export JSON besides.
 
 
-## 2. Hold all visual polish until the shared design system lands
+## 2. Adopt the shared design system (and hold visual polish until then)
 
 
 **Not a task. A constraint on other tasks.**
 
-`kwpledger-designsystem` is being extracted from `kwpledger-site`, and every
+`kwpledger-design` has now been extracted from `kwpledger-site`, and every
 repo under `kwpledger.com` will consume it cross-repo. Kevin's call, stated
 directly: don't spend effort polishing a visual scheme that is likely to be
 replaced soon anyway.
 
-The practical test for whether a piece of UI work is allowed to proceed now:
-does it change *what is on screen and where*, or does it change *how that looks*?
-Structural and behavioural fixes (the toolbar disclosure, the grid fix) go
-ahead. Colour, spacing, typography and token work waits. `CLAUDE.md`'s design
-reconciliation notes — three token layers, OKLCH, typography before colour —
-stay deferred until the system exists to reconcile *against*.
+**The system now exists**, so this item has changed shape: it is no longer
+"wait" but "adopt". `kwpledger-design` publishes tagged releases (v0.2.0 at the
+time of writing) — **pin a version rather than tracking a branch**, because a
+design system that moves under a consumer is how a shared system turns into a
+liability. Kevin will attach it to this project as a second source.
+
+Until it is attached and its tokens are actually readable from this repo, the
+hold still applies in practice: don't invent a colour scheme locally that the
+shared system is about to define.
+
+The practical test for whether a piece of UI work may proceed meanwhile: does it
+change *what is on screen and where*, or *how that looks*? Structural and
+behavioural fixes (the toolbar disclosure, the grid fix) go ahead. Colour,
+spacing, typography and token work waits.
+
+`CLAUDE.md`'s reconciliation notes are the plan to execute once it is attached —
+three token layers with domain tokens mapping onto a shared neutral categorical
+scale rather than reaching past the semantic layer to raw palette values,
+OKLCH over HSB so equal lightness means equal *perceived* lightness, dark-mode
+values chosen at the same time, and typography before colour.
 
 ## 3. Kevin's own next action: two search-name overrides
 
