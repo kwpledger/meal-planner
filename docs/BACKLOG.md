@@ -17,7 +17,7 @@ about **order**.
 
 **The code half is done and merged** (see Shipped, "Replace Supabase sync with
 Cloudflare KV"). What is left cannot be done from a session, because it is all
-dashboard work. Until step 1 is done, **sync is down in production** — the
+dashboard work. Until steps 3 and 4 are both done, **sync is down** — the
 function answers a 503 naming the missing binding.
 
 In order. **Step 1 has to happen before the PR merges**, because merging removes
@@ -28,21 +28,33 @@ the only code that can read Supabase.
    **Export JSON** and keep the file. That leaves the authoritative board in
    localStorage, which is where the new push will read it from, and the export
    is the backup that makes everything after this reversible.
-2. **Create two KV namespaces.** Cloudflare dashboard → Workers & Pages → KV →
-   Create. Name them `meal-planner-sync` and `meal-planner-sync-preview`.
-3. **Bind them.** Workers & Pages → meal-planner → Settings → Bindings → add a
-   KV namespace binding with variable name **`MEAL_PLAN_KV`**. Do this
-   **twice** — once for Production pointing at `meal-planner-sync`, once for
-   Preview pointing at `meal-planner-sync-preview`. Two namespaces rather than
-   one because a preview deployment is same-origin with its own function, so a
-   push from a preview URL would otherwise overwrite the real board.
-4. **Merge the PR.** Cloudflare rebuilds production automatically on push to
-   `main`. (The branch preview URL can be used to test sync end-to-end before
-   this, once step 3 is done — it writes to the preview namespace, so it cannot
-   touch the real board.)
-5. **Push the board to KV.** On `meal-planner.kwpledger.com`, press **Sync to
+2. **Create two KV namespaces.** Cloudflare dashboard → **Storage & databases →
+   Workers KV** → Create (*not* under Workers & Pages, where an older version of
+   these steps sent Kevin looking). Name them `meal-planner-sync` and
+   `meal-planner-sync-preview`.
+3. **Bind them.** Workers & Pages → meal-planner → Settings → Bindings →
+   **Add** → KV namespace, variable name **`MEAL_PLAN_KV`**. There is no
+   separate "KV namespace binding" menu item; it is behind that Add button.
+   Configure it **twice** using the **Choose environment** dropdown in the
+   dialog — Production → `meal-planner-sync`, Preview →
+   `meal-planner-sync-preview`. The UI refuses the same name twice *within one
+   environment*, which reads as "it won't let me add it again" if the dropdown
+   is missed. Two namespaces rather than one because a preview deployment is
+   same-origin with its own function, so a push from a preview URL would
+   otherwise overwrite the real board.
+4. **Redeploy — the binding does nothing until you do.** Deployments → the
+   deployment you want → **Retry deployment**. This is the step that is easy to
+   miss and hard to diagnose: a Worker reads bindings at request time, but **a
+   Pages deployment captures its bindings when it is built**, so a deployment
+   created before the binding existed keeps reporting it missing however correct
+   the dashboard looks. Pushing any commit to the branch has the same effect.
+5. **Merge the PR.** Cloudflare rebuilds production automatically on push to
+   `main`, so the merge is itself the production redeploy. (The branch preview
+   URL tests sync end-to-end before this — it writes to the preview namespace,
+   so it cannot touch the real board.)
+6. **Push the board to KV.** On `meal-planner.kwpledger.com`, press **Sync to
    Cloud**, then confirm from the second machine with **Sync from Cloud**.
-6. **Tear Supabase down**, once step 5 is confirmed from both machines: delete
+7. **Tear Supabase down**, once step 6 is confirmed from both machines: delete
    the Supabase project, the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`
    repository secrets (Settings → Secrets and variables → Actions), and the two
    `VITE_SUPABASE_*` variables in **both** Cloudflare scopes. Also **remove the
@@ -51,7 +63,7 @@ the only code that can read Supabase.
    "Supabase Preview" check on PR #15, which reported `skipped`. Harmless, but
    it is the last thread connecting the repo to a project that is going away.
 
-Steps 1–5 are the cutover; step 6 is cleanup that can wait.
+Steps 1–6 are the cutover; step 7 is cleanup that can wait.
 
 
 ## 2. Adopt the shared design system (and hold visual polish until then)
@@ -289,7 +301,7 @@ The keep-alive workflow (and with it the repo's entire `.github/` directory),
 those cut the production bundle from **461 kB to 258 kB** (129 kB → 77 kB
 gzipped), a 44% reduction for a feature that moves one JSON blob. The Supabase
 project, its two repository secrets and the two `VITE_SUPABASE_*` Cloudflare
-variables are Kevin's to delete — live item 1, step 6.
+variables are Kevin's to delete — live item 1, step 7.
 
 `.env.example` is down to one line, `VITE_USDA_API_KEY`, and `CLAUDE.md`'s
 "Running it" section was updated in the same commit. Both described Supabase
@@ -352,7 +364,7 @@ browser. Against the PR's preview deployment:
 
 **Still unverified: KV itself.** Every path that touches the namespace is
 short-circuited by the missing binding, so the first real read/write is Kevin's
-step 4.
+step 4 redeploy.
 
 
 ## Separate display name from search name
