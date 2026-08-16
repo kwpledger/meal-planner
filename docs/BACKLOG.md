@@ -13,76 +13,41 @@ about **order**.
 
 ---
 
-## 1. Replace Supabase sync with Cloudflare KV
+## 1. Finish the KV cutover — Kevin's dashboard steps
 
-**Kevin's call, and the one that ends a recurring problem rather than managing
-it.** Cloud sync currently runs on a free-tier Supabase project that keeps
-threatening to auto-pause, and the evidence says we cannot stop that by trying
-harder.
+**The code half is done and merged** (see Shipped, "Replace Supabase sync with
+Cloudflare KV"). What is left cannot be done from a session, because it is all
+dashboard work. Until step 1 is done, **sync is down in production** — the
+function answers a 503 naming the missing binding.
 
-### Why this is not a keep-alive tuning problem
+In order. **Step 1 has to happen before the PR merges**, because merging removes
+the only code that can read Supabase.
 
-The keep-alive works. Twelve runs, the last eight consecutive daily scheduled
-runs, every one green — and green is meaningful here, because the workflow
-captures curl's exit code separately and requires HTTP **204** (PostgREST's
-success code for a PATCH), failing loudly on anything else. Each green run is a
-confirmed accepted write.
+1. **Capture the board while Supabase is still reachable.** On the machine with
+   the most current board, press **Sync from Cloud** (accept the preview), then
+   **Export JSON** and keep the file. That leaves the authoritative board in
+   localStorage, which is where the new push will read it from, and the export
+   is the backup that makes everything after this reversible.
+2. **Create two KV namespaces.** Cloudflare dashboard → Workers & Pages → KV →
+   Create. Name them `meal-planner-sync` and `meal-planner-sync-preview`.
+3. **Bind them.** Workers & Pages → meal-planner → Settings → Bindings → add a
+   KV namespace binding with variable name **`MEAL_PLAN_KV`**. Do this
+   **twice** — once for Production pointing at `meal-planner-sync`, once for
+   Preview pointing at `meal-planner-sync-preview`. Two namespaces rather than
+   one because a preview deployment is same-origin with its own function, so a
+   push from a preview URL would otherwise overwrite the real board.
+4. **Merge the PR.** Cloudflare rebuilds production automatically on push to
+   `main`. (The branch preview URL can be used to test sync end-to-end before
+   this, once step 3 is done — it writes to the preview namespace, so it cannot
+   touch the real board.)
+5. **Push the board to KV.** On `meal-planner.kwpledger.com`, press **Sync to
+   Cloud**, then confirm from the second machine with **Sync from Cloud**.
+6. **Tear Supabase down**, once step 5 is confirmed from both machines: delete
+   the Supabase project, the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`
+   repository secrets (Settings → Secrets and variables → Actions), and the two
+   `VITE_SUPABASE_*` variables in **both** Cloudflare scopes.
 
-On top of that, Kevin pushed a real board to `meal_plan_sync` at 22:58 on
-2026-08-08. The pause-warning email arrived at 00:39 the next morning claiming
-the project had "not seen sufficient activity for more than 7 days." That claim
-is false against the evidence.
-
-This is the **second** strategy to be ignored. The original keep-alive was a
-read (`select=id&limit=1`), and Supabase's own API log showed those requests
-arriving with 200s while a pause warning went out anyway — which is why it was
-changed to a write. Writes are now being ignored too.
-
-Whether the metric is deliberately unsatisfiable or merely badly built is not
-knowable from outside, and guessing is not useful. What *is* established: two
-correct strategies have both failed, so a third attempt is effort aimed at a
-metric that has twice proven not to be watching.
-
-### The replacement
-
-The app is already deployed on Cloudflare Pages. A **Pages Function plus a KV
-namespace** does everything `cloudSync.js` does — that whole surface is two
-functions moving one JSON blob. Cloudflare's free tier meters requests rather
-than pausing for idleness, so the entire failure class disappears.
-
-What it lets us delete:
-
-- the Supabase project
-- `.github/workflows/supabase-keepalive.yml` (the repo's only workflow)
-- the `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` repository secrets
-- the two `VITE_SUPABASE_*` variables in **both** Cloudflare scopes
-- `src/supabaseClient.js` and the `@supabase/supabase-js` dependency
-- the deliberately wide-open RLS policies, which stop being a tradeoff to
-  justify because there is no longer a public table to protect
-
-### Scope, honestly
-
-Real work, roughly half a session, and it trades something that currently works
-for a migration. Not urgent — see the blast-radius note below. The pieces:
-
-1. A KV namespace and a Pages Function exposing GET/PUT for one key.
-2. Rewrite `pushToCloud` / `pullFromCloud` against it. The function signatures
-   and return shapes should not need to change, which keeps `App.jsx` untouched.
-3. Keep the pull preview gate exactly as it is — it is the one direction that
-   can destroy unsynced local work.
-4. Decide whether the endpoint needs any gate at all. Supabase's open RLS was
-   accepted on the reasoning that the worst case is someone overwriting one
-   personal board, recoverable from Export JSON. The same reasoning applies, but
-   a Pages Function makes a shared-secret header nearly free if it is wanted.
-5. Migrate the existing row: pull once from Supabase, push once to KV.
-
-### Why this is not an emergency
-
-If the project pauses before this lands, the blast radius is small and fully
-recoverable. The board lives in localStorage, so a pause costs cross-device
-sync, not data. Push and pull both fail loudly rather than returning stale
-values. Resuming is a dashboard click inside a 90-day window, and there is
-Export JSON besides.
+Steps 1–5 are the cutover; step 6 is cleanup that can wait.
 
 
 ## 2. Adopt the shared design system (and hold visual polish until then)
@@ -258,39 +223,7 @@ reads "unresolved" on desktop and "rough estimate" on the phone — two devices,
 two independent stores, no matching run on the desktop yet. This is precisely
 the limitation cloud sync exists to paper over.
 
-## 6. Sync failures don't name their cause
-
-
-Cheap insurance, not urgent — do it next time sync code is open anyway.
-
-This pattern has now cost real debugging time twice. A paused free-tier project
-surfaced as a generic `TypeError: Failed to fetch` with nothing pointing at
-Supabase, and missing credentials surfaced as a blank white page with the cause
-visible only in the devtools console. Both were eventually diagnosed correctly,
-but both started from a symptom that actively pointed away from the cause.
-
-The `assertConfigured()` guard added alongside the grid fix covers the
-missing-credentials case only. The remaining gap is the failure *during* a sync
-call: catch the fetch-level failure in `handleSyncToCloud` / `handleSyncFromCloud`
-and say something like "couldn't reach Supabase — the project may have
-auto-paused, check the dashboard" rather than surfacing the raw browser error.
-
-**The nutrition half of this pattern is now fixed**, and it turned out to be
-worse than the Supabase half. `matchIngredient` caught its USDA and OFF errors,
-logged them to the console and returned an empty result, so a missing API key or
-a blocked host was reported to the user as *"no match found for oats"* — a
-message that actively points at the wrong cause. It now returns a `failure`
-reason alongside the empty result and the UI shows it. Same medicine is what
-this item wants for sync.
-
-**Item 1 may retire most of this.** Moving sync to Cloudflare KV removes the
-auto-pause failure entirely, so the specific "the project may have paused"
-message would no longer have anything to describe. The general lesson survives
-the migration and should be carried into the replacement: a sync call that
-fails must say *which service* failed and *why*, not surface a raw browser
-error. Worth doing as part of item 1 rather than before it.
-
-## 7. Header doesn't scroll with the content
+## 6. Header doesn't scroll with the content
 
 
 Long-standing, from the original layout complaints. Unexamined since the grid
@@ -303,6 +236,102 @@ re-measure before designing anything here.
 # Shipped
 
 Kept for the reasoning and the operational gotchas, not for action.
+
+
+## Replace Supabase sync with Cloudflare KV — code half
+
+
+**The code is done; the dashboard half is live item 1.** `functions/api/board.js`
+is a Pages Function exposing `GET`/`PUT` on `/api/board` against a KV namespace
+bound as `MEAL_PLAN_KV`; `cloudSync.js` was rewritten against it.
+`docs/ARCHITECTURE.md` describes the result.
+
+**`App.jsx` was not touched.** The whole point of keeping `pushToCloud` /
+`pullFromCloud` signatures and return shapes identical was that the UI — the
+status line, the two buttons, and critically the pull preview gate — should not
+know the backend changed. It doesn't.
+
+### Why this was a replacement rather than a keep-alive problem
+
+Kept because it is the entire argument, and because the closing lesson outlives
+Supabase.
+
+The keep-alive worked. Twelve runs, the last eight consecutive daily scheduled
+runs, every one green — and green was meaningful there, because the workflow
+captured curl's exit code separately and required HTTP **204** (PostgREST's
+success code for a PATCH), failing loudly on anything else. Each green run was a
+confirmed accepted write.
+
+On top of that, Kevin pushed a real board to `meal_plan_sync` at 22:58 on
+2026-08-08. The pause-warning email arrived at 00:39 the next morning claiming
+the project had "not seen sufficient activity for more than 7 days." That claim
+was false against the evidence.
+
+That was the **second** strategy to be ignored. The original keep-alive was a
+read (`select=id&limit=1`), and Supabase's own API log showed those requests
+arriving with 200s while a pause warning went out anyway — which is why it was
+changed to a write. Writes were ignored too.
+
+Whether the metric was deliberately unsatisfiable or merely badly built is not
+knowable from outside. What was established: two correct strategies both failed,
+so a third attempt would have been effort aimed at a metric that had twice
+proven not to be watching. **A green Actions run proves the request succeeded,
+not that the remote service counted it** — that is the part worth keeping.
+
+### What got deleted
+
+The keep-alive workflow (and with it the repo's entire `.github/` directory),
+`src/supabaseClient.js`, and the `@supabase/supabase-js` dependency. The last of
+those cut the production bundle from **461 kB to 258 kB** (129 kB → 77 kB
+gzipped), a 44% reduction for a feature that moves one JSON blob. The Supabase
+project, its two repository secrets and the two `VITE_SUPABASE_*` Cloudflare
+variables are Kevin's to delete — live item 1, step 6.
+
+`.env.example` is down to one line, `VITE_USDA_API_KEY`, and `CLAUDE.md`'s
+"Running it" section was updated in the same commit. Both described Supabase
+correctly right up until the migration landed, which is exactly the kind of
+staleness nothing breaks to warn you about.
+
+### The two decisions the item left open
+
+**No auth gate, and not for the reason the item suggested.** The item noted a
+shared-secret header would be "nearly free" on a Pages Function. It is free to
+*write* and worth nothing: a browser-only SPA cannot hold a secret, so the
+header would ship in the bundle and stop nobody who looked, while adding a
+second value to keep in sync across two Cloudflare scopes. The open-endpoint
+reasoning carried over from Supabase's open RLS instead — worst case is someone
+overwriting one board that also lives in localStorage and Export JSON. What the
+function does carry is a 1 MB body cap and shape validation, which are real:
+they stop the endpoint becoming free general-purpose storage, and a rejected
+push provably leaves the stored board intact.
+
+**Failure messages name the service** (this absorbed the old item 6). Every path
+in `cloudSync.js` says which endpoint failed and why — unreachable, wrong
+content type, unbound namespace, or the function's own error text. The
+`npm run dev` case is called out by name, because Vite answers `/api/board` with
+the SPA's `index.html` and a 200, and "unexpected token <" is the worst possible
+description of "you're not running a Pages deployment".
+
+### Verified before pushing
+
+No test infrastructure exists in this repo and adding one was not this task, so
+verification was two throwaway harnesses run in a scratch directory:
+
+- The function against a `Map`-backed KV stub — 22 checks: round trip, 404 on an
+  empty namespace, 503 naming `MEAL_PLAN_KV` when unbound, six malformed bodies
+  rejected as 400, the oversized body as 413, the stored board surviving every
+  rejected push, a client-supplied `updatedAt` being ignored in favour of the
+  server's, and 405 on a wrong verb.
+- `cloudSync.js` against a stubbed `fetch` — the exact request shape it sends,
+  all three documented pull statuses plus an older-schema board still reading
+  `ok`, and every error path producing a message that names the endpoint.
+
+Both passed. `npm run build` and `npm run lint` are green (three pre-existing
+unused-eslint-disable warnings in `App.jsx` and `ingredientLibrary.js`, untouched).
+
+**Not verified from a session: anything against real KV.** Cloudflare Pages
+Functions do not run under Vite, and the sandbox cannot drive a browser against
+a deployment. The first real exercise is Kevin's step 4 preview test.
 
 
 ## Separate display name from search name
@@ -424,11 +453,11 @@ Explicitly **rejected**: the two-minute "just left-align the wrap" fix. See
 item 2 for why — this item survives the design system change because it is
 information architecture, not styling; a cosmetic tweak would not.
 
-**Residual, feeding item 7:** with the toolbar shortened, the header prose is
+**Residual, feeding item 6:** with the toolbar shortened, the header prose is
 now the dominant consumer of the space above the board at 390px — the title
 wraps to two lines and the description to four, roughly 220px before any control
 appears. Shortening that text is a content decision for Kevin, not a session's
-call, and making the header sticky (item 7) would change the calculus anyway.
+call, and making the header sticky (item 6) would change the calculus anyway.
 
 ## Sandbox egress policy
 

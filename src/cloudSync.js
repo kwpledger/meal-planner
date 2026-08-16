@@ -1,64 +1,88 @@
-import { supabase, isCloudSyncConfigured } from './supabaseClient';
 import { SCHEMA_VERSION } from './ingredientParser';
 
-const SYNC_ROW_ID = 'kevin-meal-plan';
+/*
+ * The whole cloud sync surface: two functions moving one JSON blob to and from
+ * a Cloudflare Pages Function backed by KV (functions/api/board.js).
+ *
+ * Same-origin, so there is no URL and no key to configure - which is why this
+ * module reads no environment variables at all any more. The trade is that
+ * `npm run dev` does not serve Pages Functions, so sync only works against a
+ * deployment or `wrangler pages dev`. The dev case is detected explicitly below
+ * rather than left to surface as a JSON parse error.
+ */
 
-// Both sync directions are unusable without credentials; fail here with a
-// readable message rather than dereferencing a null client deeper in.
-function assertConfigured() {
-  if (!isCloudSyncConfigured) {
+const SYNC_ENDPOINT = '/api/board';
+
+/*
+ * Every failure here has to name the service and the cause. This pattern has
+ * cost real debugging time twice: a paused Supabase project surfaced as a bare
+ * "TypeError: Failed to fetch" pointing nowhere, and missing credentials
+ * surfaced as a blank white page. The auto-pause failure is gone with Supabase,
+ * but the lesson outlives it - a raw browser error is worse than no error,
+ * because it actively points away from the cause.
+ */
+async function syncFetch(options) {
+  let response;
+
+  try {
+    response = await fetch(SYNC_ENDPOINT, options);
+  } catch (error) {
     throw new Error(
-      'Cloud sync is not configured - VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY are missing from .env'
+      `Could not reach the sync endpoint at ${SYNC_ENDPOINT}. Check your connection - and note that "npm run dev" does not serve Cloudflare Pages Functions, so sync needs a deployment or "wrangler pages dev". (${error.message})`,
+      { cause: error }
     );
   }
+
+  // Vite's dev server answers an unknown path with the SPA's index.html and a
+  // 200, so a "successful" response that is HTML means the function is not
+  // being served rather than that anything went wrong with sync.
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(
+      `The sync endpoint at ${SYNC_ENDPOINT} returned ${contentType || 'no content type'} instead of JSON (HTTP ${response.status}). The Pages Function is most likely not deployed on this origin.`
+    );
+  }
+
+  const body = await response.json();
+
+  return { response, body };
 }
 
 export async function pushToCloud(days) {
-  assertConfigured();
-  const updatedAt = new Date().toISOString();
+  const { response, body } = await syncFetch({
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ schemaVersion: SCHEMA_VERSION, days }),
+  });
 
-  const { error } = await supabase
-    .from('meal_plan_sync')
-    .upsert({
-      id: SYNC_ROW_ID,
-      schema_version: SCHEMA_VERSION,
-      days,
-      updated_at: updatedAt,
-    });
-
-  if (error) {
-    throw error;
+  if (!response.ok) {
+    throw new Error(body.error ?? `Sync endpoint returned HTTP ${response.status}.`);
   }
 
-  return { pushedAt: updatedAt };
+  return { pushedAt: body.updatedAt };
 }
 
 export async function pullFromCloud() {
-  assertConfigured();
-  // .maybeSingle() (not .single()) returns null instead of throwing when
-  // the table has no row yet - the expected first-run state, not an error.
-  const { data, error } = await supabase
-    .from('meal_plan_sync')
-    .select('days, schema_version, updated_at')
-    .eq('id', SYNC_ROW_ID)
-    .maybeSingle();
+  const { response, body } = await syncFetch({ method: 'GET' });
 
-  if (error) {
-    throw error;
-  }
-
-  if (!data) {
+  // 404 is the first-ever-sync state, not an error - the same case the old
+  // Supabase implementation got from .maybeSingle() returning null.
+  if (response.status === 404) {
     return { status: 'empty' };
   }
 
-  if (data.schema_version > SCHEMA_VERSION) {
-    return { status: 'incompatible', cloudSchemaVersion: data.schema_version };
+  if (!response.ok) {
+    throw new Error(body.error ?? `Sync endpoint returned HTTP ${response.status}.`);
+  }
+
+  if (body.schemaVersion > SCHEMA_VERSION) {
+    return { status: 'incompatible', cloudSchemaVersion: body.schemaVersion };
   }
 
   return {
     status: 'ok',
-    days: data.days,
-    updatedAt: data.updated_at,
-    schemaVersion: data.schema_version,
+    days: body.days,
+    updatedAt: body.updatedAt,
+    schemaVersion: body.schemaVersion,
   };
 }

@@ -2,125 +2,83 @@
 
 Everything in this file was verified directly against the running source and live infrastructure while writing it (not from memory) - specifically to answer "what actually is 'the cloud' here."
 
-> ## ⚠️ Read this before the Supabase sections
->
-> **The Supabase half of this document describes a system that is scheduled for replacement**, and that replacement is the top item in `docs/BACKLOG.md`. It is accurate as of writing and sync works today - but if you are here to *implement* the migration rather than to understand the current state, read the backlog item first.
->
-> Short version of why: free-tier projects pause after ~7 days of inactivity, and two separate keep-alive strategies (a read, then a daily write) were both demonstrably ignored by whatever metric drives that. See `docs/ROADMAP.md` for the evidence. **Do not spend time tuning the keep-alive.**
->
-> The replacement is a Cloudflare Pages Function plus a KV namespace - the app is already deployed on Cloudflare Pages, and KV meters requests rather than pausing for idleness. The whole sync surface is two functions moving one JSON blob, so the client-side change is small.
->
-> **What survives the migration** and is worth reading regardless: the deployment section at the bottom, the Production/Preview variable-scoping gotcha, the request/response contract that `pushToCloud`/`pullFromCloud` must keep honouring, and the pull-preview gate - the one sync direction that can destroy unsynced local work.
->
-> **What becomes history:** the Supabase project, both tables, the RLS discussion, the keep-alive workflow and its two repository secrets.
-
 ## Cloud sync ("Sync to Cloud" / "Sync from Cloud")
 
 ### What it is
 
-**Supabase** (hosted Postgres + auto-generated REST API). Project:
+A **Cloudflare Pages Function backed by a KV namespace**, living in this repo at `functions/api/board.js`. It exposes exactly one endpoint, `/api/board`, with two verbs: `GET` reads the stored board, `PUT` replaces it. That is the entire server.
 
-- Name: `kwpledger's Project`
-- Project ref/ID: `ulqudbxgctecuiiiihqt`
-- URL: `https://ulqudbxgctecuiiiihqt.supabase.co`
-- Region: `us-east-1`
-- Free tier
+It is same-origin with the app, which is the source of most of its simplicity: the client needs no URL, no key, and no CORS headers exist in the function. `src/cloudSync.js` is the whole client-side surface - two functions, no configuration, no SDK.
 
-This is **not** a custom backend - the app talks directly to Supabase's auto-generated REST API (PostgREST) via the official `@supabase/supabase-js` client (v2.110.0, in `package.json`). There is no server-side code in this repo; `src/supabaseClient.js` + `src/cloudSync.js` are the entire client-side surface.
+**This replaced Supabase**, which was retired rather than fixed. Free-tier Supabase projects auto-pause after ~7 days of inactivity, and two separate keep-alive strategies - a read, then a daily write - were both demonstrably ignored by whatever metric drives that. The evidence is preserved in `docs/ROADMAP.md`. Cloudflare KV meters requests instead of pausing for idleness, so the failure class is gone rather than mitigated. Nothing about the *shape* of the old design was wrong: a single row holding one JSON blob is exactly what KV stores.
 
-### The endpoint / how it's called
+### The storage
 
-The app never constructs a raw URL - it goes through the SDK:
+One KV namespace, bound to the Pages project as **`MEAL_PLAN_KV`**, holding one key:
 
-```js
-// src/supabaseClient.js
-import { createClient } from '@supabase/supabase-js';
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-);
-```
+| | |
+|---|---|
+| key | `kevin-meal-plan` - the literal, carried over from the old Supabase row id |
+| value | JSON: `{ schemaVersion, days, updatedAt }` |
 
-```js
-// src/cloudSync.js - the entire sync surface
-pushToCloud(days)   // supabase.from('meal_plan_sync').upsert({...})
-pullFromCloud()      // supabase.from('meal_plan_sync').select(...).eq('id', SYNC_ROW_ID).maybeSingle()
-```
+`days` is the entire board state - the same shape as `days` in `App.jsx` and the Export JSON payload. `schemaVersion` mirrors the app's `SCHEMA_VERSION` constant (`ingredientParser.js`), currently `2`.
 
-Under the hood, `supabase-js` issues HTTPS requests to `https://ulqudbxgctecuiiiihqt.supabase.co/rest/v1/meal_plan_sync`.
+**`updatedAt` is stamped by the function, not the client.** Pull shows this timestamp beside the local one so Kevin can tell which side is newer before overwriting; a device with a wrong clock would make that comparison lie.
 
-### Table schema
+### Request/response contract
 
-One table, `public.meal_plan_sync`, designed to hold exactly one row (a JSON blob, not a normalized schema - see `CLAUDE.md` for why):
+This is the contract `App.jsx` depends on, and it is deliberately unchanged from the Supabase implementation - the migration touched no UI code.
 
-| column | type | notes |
-|---|---|---|
-| `id` | text, primary key | always the fixed literal `'kevin-meal-plan'` - enforces "single row" by convention, not a constraint |
-| `schema_version` | integer | mirrors the app's `SCHEMA_VERSION` constant (`ingredientParser.js`), currently `2` |
-| `days` | jsonb | the entire board state - the same shape as `days` in `App.jsx` / the Export JSON payload |
-| `updated_at` | timestamptz | set by the client on every push |
+**Push** (`pushToCloud(days)`) - `PUT /api/board` with `{ schemaVersion, days }`. Returns `{ pushedAt }`. Throws on any non-2xx; the caller (`handleSyncToCloud`) shows `error.message` in the status line.
 
-Created via migration `create_meal_plan_sync` (applied through the Supabase MCP `apply_migration` tool, not a file in this repo - there is no local migrations directory).
+**Pull** (`pullFromCloud()`) - `GET /api/board`. Returns one of:
 
-### Second table: `public.keepalive`
+- `{ status: 'empty' }` - HTTP 404, nothing pushed yet. The first-run state, not an error.
+- `{ status: 'incompatible', cloudSchemaVersion }` - stored board is a newer schema than this build understands.
+- `{ status: 'ok', days, updatedAt, schemaVersion }` - normal case.
 
-Unrelated to sync - it exists only so the scheduled keep-alive has something to write that isn't the board. Also a single row, `id = 'ping'`, with a `pinged_at timestamptz`. Created via migration `create_keepalive_table`. RLS enabled with `select` and `update` policies only; no insert or delete policy, so the anon key can bump the timestamp and nothing else. See "Known operational gotcha" below for why the keep-alive writes at all.
+Pull is two-step in the UI: fetching shows a preview screen with both the cloud and local last-saved timestamps side by side before anything overwrites local state (`pullPreview` in `App.jsx`). **This is the one sync direction that can destroy unsynced local work, so it is gated.** Push has no such gate; it only ever writes the cloud key.
 
-### Auth: there is none
+### Auth: there is none, deliberately
 
-The publishable key (`VITE_SUPABASE_PUBLISHABLE_KEY`) is baked into the public client JS bundle at build time - anyone who loads the site has it. Row Level Security is **enabled but intentionally fully open**:
+Same reasoning as the open Supabase RLS policies it replaces, and it survives the move unchanged: single-user personal tool, and the worst case is someone overwriting one meal board that also exists in localStorage and in Export JSON.
 
-```sql
-create policy "public read" on public.meal_plan_sync for select using (true);
-create policy "public write" on public.meal_plan_sync for insert with check (true);
-create policy "public update" on public.meal_plan_sync for update using (true) with check (true);
-```
+A shared-secret header was considered and **rejected on the grounds that it cannot work here**, not that it wasn't worth the effort. A browser-only SPA cannot hold a secret - any value the client sends ships inside the bundle every visitor downloads, so a secret header stops nobody who looks and mainly creates a second thing to keep in sync across two Cloudflare environment scopes. If this ever genuinely needs a gate, the honest options are Cloudflare Access in front of the route, or moving the write behind something that authenticates a person.
 
-This was a deliberate choice, not an oversight (Supabase's own Security Advisor will flag both write policies as "RLS Policy Always True" - that's expected). Reasoning: single-user personal project, same exposure model already accepted for the USDA API key, worst case is someone finding the key and overwriting the one synced row (recoverable from local data or an Export JSON backup). If this ever needs tightening, options discussed and deferred: a shared passphrase gate, or real Supabase Auth (sign-in) - neither implemented.
+The two guards the function *does* carry are real rather than theatre:
 
-### Request/response shape
+- **A 1,000,000-byte body cap** (`MAX_BODY_BYTES`). Not a security boundary - it stops a mis-shaped or runaway client turning a personal sync endpoint into free general-purpose storage. A full board is tens of KB; KV's own value ceiling is 25 MiB, far above anything legitimate. Checked twice, because `content-length` is client-supplied and optional: the header is an early out, the measured body length is the enforcement.
+- **Shape validation.** `days` must be an array and `schemaVersion` an integer, or the request is a 400 and the stored board is untouched. Verified: a rejected push leaves the previous board intact.
 
-**Push** (`pushToCloud(days)`): upserts one row -
-```js
-{ id: 'kevin-meal-plan', schema_version: 2, days: [...], updated_at: '2026-07-06T...' }
-```
-Throws on any Supabase error; caller (`App.jsx`'s `handleSyncToCloud`) catches and shows `error.message` in the status line.
+### What is configured outside this repo
 
-**Pull** (`pullFromCloud()`): selects `days, schema_version, updated_at` for `id = 'kevin-meal-plan'` using `.maybeSingle()` (deliberately not `.single()` - returns `null` instead of throwing when the table is empty, which is the expected first-ever-sync state). Returns one of:
-- `{ status: 'empty' }` - no row yet
-- `{ status: 'incompatible', cloudSchemaVersion }` - cloud row is a newer schema than this build understands
-- `{ status: 'ok', days, updatedAt, schemaVersion }` - normal case
+**Only one thing now, and it is a binding rather than a value.**
 
-Pull is two-step in the UI: fetching shows a preview screen with both the cloud and local last-saved timestamps side by side before anything overwrites local state (`pullPreview` in `App.jsx`) - this is the one sync direction that can destroy unsynced local work, so it's gated. Push has no such gate; it only ever writes to the cloud row.
+- **The KV namespace binding.** Cloudflare dashboard → Workers & Pages → meal-planner → Settings → Bindings → KV namespace, variable name `MEAL_PLAN_KV`. **Pages scopes bindings separately for Production and Preview, exactly as it does environment variables** - so "works in production, 503s on the preview URL" is the expected shape of getting this half-right. The function names the missing binding explicitly in that 503 rather than failing opaquely.
+- Binding a **separate namespace for Preview** is worth doing rather than pointing both scopes at one. A preview deployment is same-origin with its own function, so a push from a preview URL would otherwise overwrite the real board. Two namespaces cost nothing and remove that accident entirely.
+- **No `wrangler.toml`, deliberately.** A `wrangler.toml` in a Pages project causes the dashboard configuration to be ignored *entirely*, which would move build-time variables and bindings into the file as an all-or-nothing switch. Everything else in this project is configured in the dashboard; this stays consistent with it.
 
-### What's configured outside this repo
+`.env` now needs only `VITE_USDA_API_KEY`. Sync needs no local configuration because it has no local configuration to need.
 
-Nothing about Supabase access lives in committed code except the table name/column names/RLS SQL in this doc:
+### The one thing that got worse
 
-- **Local dev**: `.env` (gitignored) needs `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` - see `.env.example` for the exact variable names (no real values committed anywhere).
-- **Production (Cloudflare Pages)**: the same two variables must *also* be set in the Cloudflare Pages dashboard (Workers & Pages → meal-planner → Settings → Variables and Secrets), independently of `.env`. Vite bakes `VITE_*` vars in at **build time**, so setting them in Cloudflare requires a fresh build/deploy to actually take effect - changing the dashboard value alone does nothing until the next build (use "Retry deployment" if no code change is pending). This bit Kevin twice already (once for the USDA key, once for these) - it's the single most likely thing to be wrong if sync works locally but not in production.
-- **Supabase project itself**: managed entirely through the Supabase dashboard / MCP tools, not through any file in this repo.
+**`npm run dev` cannot sync.** Vite's dev server does not serve Pages Functions, so `/api/board` returns the SPA's `index.html` with a 200. That is diagnosed explicitly rather than surfacing as a JSON parse error - the client checks the content type and says the function is not deployed on this origin. `npx wrangler pages dev dist` (after a build) serves both halves on one origin if local sync testing is actually needed.
 
-### Known operational gotcha: free-tier auto-pause
+This is a real regression from Supabase, which worked from anywhere with credentials. It was accepted because the day-to-day use of sync is between two deployed browsers, not from a dev server.
 
-Supabase free-tier projects auto-pause after ~7 days of API inactivity. A paused project doesn't serve requests at all, which surfaces client-side as a generic `TypeError: Failed to fetch` - no CORS error, no 4xx/5xx, just a failed network request, because there's nothing listening. This caused a real outage once (see `docs/ROADMAP.md`); it was confirmed live at the time, with the project reading `INACTIVE` and even server-side SQL access via the Supabase MCP tools timing out against it.
+### Failure messages name the service
 
-**If it happens again**: open the Supabase dashboard for project `ulqudbxgctecuiiiihqt` and resume/restore it. There's no code fix - it's an infrastructure state issue, and the symptom is indistinguishable from a network failure from inside the app.
-
-**Mitigation now in place**: `.github/workflows/supabase-keepalive.yml` (the only workflow in this repo - see Deployment below) makes one small REST request daily. It requires the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` repository secrets, and fails loudly rather than silently passing if they're absent. Note the residual gap: GitHub disables scheduled workflows after 60 days of repo inactivity, so a long-dormant repo can still let the project pause.
-
-**Why the ping writes rather than reads** - this changed once, and the reasoning matters if it's ever revisited. The first version was deliberately read-only (`select=id&limit=1`) so it could never touch the synced board. It ran successfully three times over five days and Supabase still sent a scheduled-for-pause warning. That warning was investigated rather than assumed wrong: Supabase's own API log showed the requests arriving and returning 200, so they were not failing silently, and the project had been resumed only five days before an email claiming seven days of inactivity - arithmetic that cannot be literally true. Whatever their pause metric watches, HTTP reads did not appear to move it, and writes are the common thread in the workarounds other users report. That points at data change (WAL, storage) rather than request count. **This is inference from one experiment, not a documented rule** - Supabase does not publish the threshold.
-
-The read-only safety property was preserved by *target* rather than by verb: the ping writes to a dedicated `keepalive` table and never to `meal_plan_sync`. It updates one pre-existing row rather than inserting, because in Postgres an `UPDATE` writes a new tuple and marks the old one dead - the same physical churn as insert-then-delete, with no table growth to manage. The anon role has `select` and `update` on that table and deliberately **no insert or delete policy**, so the publishable key cannot add rows or remove the one that exists (verified directly by attempting both as `anon`; both were rejected).
+Carried forward from the old implementation's worst habit, which cost real debugging time twice: a paused Supabase project surfaced as a bare `TypeError: Failed to fetch` pointing nowhere, and missing credentials surfaced as a blank white page with the cause visible only in the devtools console. Every failure path in `cloudSync.js` now names the endpoint and the likely cause - unreachable, wrong content type, unbound namespace, or the function's own error text.
 
 ## Deployment
 
-**Not part of this repo.** There is no deploy workflow, no `wrangler.toml`, no deploy config file anywhere in the tree - an earlier GitHub Pages Actions workflow (`.github/workflows/main.yml`) existed and was deliberately deleted (see git history, "Remove obsolete GitHub Pages deploy workflow") once hosting moved to Cloudflare Pages. The one workflow that does exist, `.github/workflows/supabase-keepalive.yml`, has nothing to do with deployment - it only pings Supabase on a schedule (see the auto-pause section above).
+**Not part of this repo.** There is no deploy workflow and no deploy config file anywhere in the tree - an earlier GitHub Pages Actions workflow (`.github/workflows/main.yml`) existed and was deliberately deleted (see git history, "Remove obsolete GitHub Pages deploy workflow") once hosting moved to Cloudflare Pages. **This repo now has no `.github/` directory at all**: its only remaining workflow was the Supabase keep-alive, deleted with the migration.
 
 - **Host**: Cloudflare Pages, project name `meal-planner`.
 - **How it deploys**: Cloudflare's own GitHub App integration watches `kwpledger/meal-planner` on GitHub directly and rebuilds automatically on every push to `main` - there's nothing in this repo that triggers it. Build command is Cloudflare's default for a Vite project (`npm install` + `npm run build`, serving `dist/`).
+- **Functions deploy with it.** Cloudflare Pages picks up the `functions/` directory automatically and routes it by file path, so `functions/api/board.js` becomes `/api/board`. No build step, no configuration, and it is not part of the Vite build - `npm run build` neither sees nor bundles it.
 - **URLs**: production alias `meal-planner.kwpledger.com` (custom domain), plus a per-deployment preview URL of the form `https://<deployment-hash>.meal-planner.pages.dev`.
 - **Vite base path**: `base: '/'` in `vite.config.js` - correct for the custom domain root, would be wrong (`/meal-planner/` needed instead) if this ever moved back to a GitHub Pages-style subpath.
-- **Env vars for the build**: see the "configured outside this repo" section above - set per-project in the Cloudflare dashboard, not derived from anything in this repo.
+- **Env vars for the build**: `VITE_USDA_API_KEY` only, set per-project in the Cloudflare dashboard, not derived from anything in this repo. Vite bakes `VITE_*` vars in at **build time**, so setting one in Cloudflare requires a fresh build/deploy to take effect - changing the dashboard value alone does nothing until the next build. This bit Kevin twice already. Note the contrast with the KV binding above, which is read at *request* time and therefore takes effect without a rebuild.
 
 To redeploy without a code change (e.g., after only updating a Cloudflare env var): Cloudflare dashboard → Workers & Pages → meal-planner → Deployments → latest deployment → **Retry deployment**.

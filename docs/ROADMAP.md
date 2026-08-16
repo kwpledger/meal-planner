@@ -84,13 +84,15 @@ the whole page in a forced `min-w-[1750px]` + `overflow-x-auto` container and wa
 removed (git history: "Fix responsive layout: remove forced min-width causing
 horizontal scroll"). That is **not** the current cause of anything.
 
-## Cloud sync: working, and scheduled for replacement
+## Cloud sync: Supabase retired — history, not an open issue
 
-Sync works today. It is also **the top item in `docs/BACKLOG.md`, to be replaced
-by a Cloudflare Pages Function plus KV** — read that item before touching
-anything here, because most of this section is about to become history.
+Sync now runs on a Cloudflare Pages Function plus KV (`functions/api/board.js`);
+`docs/ARCHITECTURE.md` describes what it is. **Nothing in this section is
+actionable any more.** It is kept because the reasoning is the whole argument
+for why the migration happened, and because the general lesson at the end of it
+outlives Supabase entirely.
 
-### Why it is being replaced
+### Why it was replaced
 
 Free-tier Supabase projects pause after ~7 days of inactivity, and a paused
 project surfaces in the browser as a bare `TypeError: Failed to fetch` — no CORS
@@ -98,8 +100,8 @@ error, no 4xx/5xx, because nothing is listening. That caused one real outage
 (resolved by resuming from the dashboard).
 
 `.github/workflows/supabase-keepalive.yml` was built to prevent a recurrence,
-and **it does not work — not because it is broken, but because the metric it
-targets does not appear to respond to it.** Two strategies have now failed:
+and **it did not work — not because it was broken, but because the metric it
+targeted did not appear to respond to it.** Two strategies failed:
 
 1. **Read-only ping** (`select=id&limit=1`), deliberately read-only so it could
    never touch the board. Three successful runs, confirmed arriving in
@@ -111,20 +113,38 @@ targets does not appear to respond to it.** Two strategies have now failed:
    claiming more than seven days without sufficient activity — a claim that is
    false against the evidence.
 
-Whether the metric is deliberately unsatisfiable or merely badly built is not
-knowable from outside, and guessing is not useful. What is established: two
-correct strategies were ignored, so a third attempt is effort aimed at something
-that is not watching. **Do not spend time tuning the keep-alive.**
+Whether the metric was deliberately unsatisfiable or merely badly built is not
+knowable from outside, and guessing was not useful. What was established: two
+correct strategies were ignored, so a third attempt would have been effort aimed
+at something that was not watching. Replacing the dependency was the cheaper
+move than a third attempt at satisfying it.
 
-**A green Actions run proves the request succeeded, not that Supabase counted
-it.** That distinction is the whole lesson of this section.
+**A green Actions run proves the request succeeded, not that the remote service
+counted it.** That distinction is the whole lesson of this section, and it is
+the part worth carrying forward — the workflow was green throughout.
 
-### If it pauses before the migration lands
+### What the migration deleted
 
-Not an emergency. The board lives in localStorage, so a pause costs cross-device
-sync, not data. Push and pull both fail loudly rather than returning stale
-values. Resuming is a dashboard click inside a 90-day window, and there is
-Export JSON besides.
+Gone from the repo: `.github/workflows/supabase-keepalive.yml` (and with it the
+whole `.github/` directory), `src/supabaseClient.js`, and the
+`@supabase/supabase-js` dependency. That last one cut the production bundle from
+461 kB to 258 kB (129 kB to 77 kB gzipped) — incidental, but a 44% cut for a
+feature that moves one JSON blob is a fair measure of how oversized the
+dependency was for the job.
+
+**Still standing at the time of writing**, because deleting them is dashboard
+work rather than code: the Supabase project itself, both tables
+(`meal_plan_sync` and `keepalive`), the open-by-design RLS policies, the two
+repository secrets, and the two `VITE_SUPABASE_*` variables in both Cloudflare
+scopes. `docs/BACKLOG.md` item 1 step 6 is where that lives. They are inert —
+nothing in the app reads them any more.
+
+### The one regression it introduced
+
+**`npm run dev` can no longer sync**, because Vite's dev server does not serve
+Pages Functions. Diagnosed explicitly in `cloudSync.js` rather than left to
+surface as a parse error. `wrangler pages dev dist` covers it if local sync
+testing is ever actually needed. See `docs/ARCHITECTURE.md`.
 
 ## Nutrition matching and portion sizes
 
