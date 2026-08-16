@@ -8,7 +8,7 @@ Deployed at **meal-planner.kwpledger.com**. Repo: `kwpledger/meal-planner`.
 
 ## Architecture & file layout
 
-Single-page React 19 + Vite app, no router, no backend of its own (the "backend" is a thin optional Supabase sync layer — see `docs/ARCHITECTURE.md`).
+Single-page React 19 + Vite app, no router. The only backend is one Cloudflare Pages Function in this repo that reads and writes a single JSON blob in KV — see `docs/ARCHITECTURE.md`.
 
 ```
 src/
@@ -34,23 +34,29 @@ src/
                         olive oil, etc.) is only looked up once.
   nutritionApi.js       Raw fetch wrappers for USDA FoodData Central and
                         Open Food Facts.
-  supabaseClient.js     Supabase client singleton (reads env vars).
-  cloudSync.js          pushToCloud/pullFromCloud - the whole cloud sync
-                        surface, two functions.
+  cloudSync.js          pushToCloud/pullFromCloud - the whole client-side
+                        cloud sync surface, two functions, no configuration.
+
+functions/
+  api/board.js          The only server-side code in the project: a Cloudflare
+                        Pages Function serving GET/PUT on /api/board against a
+                        KV namespace. Deployed by Pages automatically from the
+                        directory name; not part of the Vite build.
 ```
 
 State lives in `App.jsx`'s `days` array (7 days -> meals -> structured `ingredients`), persisted to `localStorage` on every change. There is no server-side source of truth by default - see "Design decisions" below.
 
 Two directories outside `src/` matter:
 
-- **`.github/workflows/supabase-keepalive.yml`** - the repo's only workflow, and one the next task deletes. Nothing to do with deployment; it writes to Supabase daily to stop the free-tier project auto-pausing. **It does not achieve that**, and neither did the read-only version before it - both were demonstrably ignored, which is why sync is moving to Cloudflare KV. Read `docs/ROADMAP.md` before touching it, and don't try to tune it.
+- **`functions/`** - Cloudflare Pages Functions, routed by file path (`functions/api/board.js` → `/api/board`). Pages picks the directory up automatically on deploy; there is no build step and Vite neither sees nor bundles it. It runs on Workers, not in the browser and not in Node - so no React, no `import.meta.env`, and its only configuration is the `MEAL_PLAN_KV` binding set in the Cloudflare dashboard. **There is no longer a `.github/` directory**; the repo's only workflow was the Supabase keep-alive, deleted with that migration.
 - **`.addedbykevin/`** - a drop-box for binaries and reference material Kevin passes in (logos, fonts, design-token snapshots). Tracked deliberately - gitignoring it would defeat the purpose. **It is not source.** `src/index.css` carries an `@source not "../.addedbykevin"` rule because Tailwind v4 auto-scans every tracked file for utility-shaped strings, and ordinary English collides with the utility namespace - the prose "Lora is a *static* SemiBold" in a doc there was enough to emit a `.static` rule into production CSS. Don't remove that exclusion.
 
 ## Design decisions and why
 
 - **Visual board over a text/spreadsheet view.** The whole point of this project was turning a dietician PDF into something Kevin could actually look at and rearrange, not just read. Color-coded meal-type cards, drag/drop, and swap mode all serve that.
 - **localStorage as primary store, not a database, by default.** This is a single-user tool; a real backend was explicitly avoided until it was actually needed (see cloud sync below). Simpler to reason about, nothing to keep running, no auth to manage.
-- **Cloud sync was added as a thin JSON-blob push/pull, not a real backend.** When localStorage's single-browser limitation became a real problem (multiple PCs), the considered alternative was a normalized Supabase schema (separate tables for days/meals/ingredients). That was explicitly rejected as overkill for a personal project - see `docs/ARCHITECTURE.md` for what was built instead and why.
+- **Cloud sync is a thin JSON-blob push/pull, not a real backend.** When localStorage's single-browser limitation became a real problem (multiple PCs), the considered alternative was a normalized schema (separate tables for days/meals/ingredients). That was explicitly rejected as overkill for a personal project. The blob shape has now survived a complete backend swap without changing, which is the strongest evidence that call was right.
+- **Sync runs on Cloudflare KV because Supabase's free tier could not be kept awake.** Not a design preference - free-tier projects auto-pause after ~7 days of inactivity, and two separate keep-alive strategies (a read, then a daily write) were both demonstrably ignored while the workflow ran green throughout. KV meters requests rather than pausing for idleness, so the failure class is gone rather than mitigated. **The lesson that outlives it: a green CI run proves the request succeeded, not that the remote service counted it.** Full evidence in `docs/BACKLOG.md` (Shipped) and `docs/ROADMAP.md`; don't re-litigate the keep-alive.
 - **Manual, explicit sync direction (push/pull buttons), not automatic/continuous sync.** Automatic sync needs real conflict resolution (what happens when two devices both have unsynced edits?). Manual push/pull with a visible before-you-overwrite confirmation was chosen instead - simpler, and matches the mental model of the pre-existing Export/Import JSON feature.
 - **Nutrition-database lookups (USDA/Open Food Facts) are advisory, never authoritative.** The dietician's numbers are the baseline; auto-matched ingredient data is deliberately never silently written over calories/macros - there's always an explicit "Recompute" -> preview diff -> "Apply" step. This shows up repeatedly: the bulk Normalize action writes ingredient match data automatically (safe - doesn't change what's visible) but requires explicit per-meal or apply-all confirmation before touching calories/macros.
 - **"Auto-match, flag for review" over "block until confirmed."** When ingredient matching can't find a clean match, it picks its best guess and marks it unverified rather than stopping to ask - matching data gets populated automatically, verification is a separate, later, optional step (the `verified` checkbox per ingredient).
@@ -60,7 +66,7 @@ Two directories outside `src/` matter:
 - **The test for whether a piece of UI work may proceed** - useful beyond the design-system question, so keep it: does the change alter *what is on screen and where* (structure, information architecture, reachability - proceed) or *how that looks* (colour, spacing, typography, tokens - wait for the system)? This is why the phone-toolbar fix went ahead as a "More" disclosure while the one-line "left-align the wrap" tidy-up was explicitly turned down; the first survives a design-system change, the second was throwaway.
 - **Color in this app is reinforcement, never the sole carrier.** All three color-coded axes - meal types, macro bars, ingredient-match confidence - already have text labels beside them. This was checked directly, correcting an earlier assumption that the macro bars were an unlabeled stacked chart; they are three separately labeled rows. It means the palette can change more freely than it looks, and it means any future color work must keep those labels.
 - **Full-page forced-width layout was tried and rejected.** An earlier version wrapped the whole board (including the header) in a `min-w-[1750px]` + `overflow-x-auto` container, meant to let the 7-day row scroll horizontally on narrow screens. In practice it forced the *entire page* - header included - to never be narrower than 1750px, breaking mobile and normal window resizing entirely. Removed in favor of the existing Tailwind responsive grid breakpoints doing their job unobstructed. (Mobile-friendliness is still an open issue for other reasons - see `docs/ROADMAP.md`.)
-- **Open RLS on the Supabase sync table, no auth.** Deliberate, not an oversight - see `docs/ARCHITECTURE.md`. Note that Supabase itself is on the way out (see Current state), which retires this question rather than answering it.
+- **The sync endpoint is unauthenticated, deliberately.** Carried over from the open RLS policies it replaces: single-user tool, and the worst case is someone overwriting one board that also lives in localStorage and in Export JSON. A shared-secret header was rejected because it *cannot work* here, not because it wasn't worth the effort - a browser-only SPA cannot hold a secret, so the header would ship in the bundle. The function's 1 MB body cap and shape validation are the guards that are real rather than theatre. If a gate is ever genuinely needed, the honest answer is Cloudflare Access in front of the route.
 - **An ingredient's display name and its search term are separate fields.** USDA's search is poor at generic whole foods - "sweet potato" returns *Sweet potato tots, school*, "banana" returns *Banana, baked*. The wording that works is knowledge the human has and the matcher doesn't, and before `searchName` existed the only place to put it was the display name, so fixing what the matcher saw meant corrupting what the board showed. `searchTermFor(ingredient)` resolves `searchName` -> `raw` -> `name`, and all three matching entry points go through it. The field is optional and its absence behaves exactly as before, which is why it needed no migration and no `SCHEMA_VERSION` bump - a bump would make an older client *refuse* a board carrying the field rather than ignore it, the wrong failure for a two-machine setup.
 - **A portion calibration is only valid for the food it was measured against.** `flaked: 81g/cup` was derived from real rolled-oats data, then the board's ingredient changed to *steel cut* oats and the `oat` keyword routed those to it too - roughly 2x wrong in the opposite direction. The keyword that routes to a constant has to be at least as specific as the measurement behind it. This is also why `CATEGORY_KEYWORDS` order is load-bearing and commented at each constraint.
 - **"Normalize" and "Re-weigh" are deliberately different actions.** Normalize matches *unresolved* ingredients and costs network calls. Re-weigh recomputes grams for *already-matched* ingredients against the current portion table, purely locally. The split exists because Normalize's `unresolved`-only filter meant a fully-matched board could not receive a table recalibration at all - it silently kept old weights and read ~624 kcal/week low. Re-weigh only touches `generic-fallback` rows: `exact-weight` comes from the unit itself, and `food-portion` came from USDA portion data that isn't stored on the ingredient, so recomputing it would downgrade a real measurement to a guess.
@@ -86,9 +92,9 @@ Also: narrate your reasoning back to him, including routine results like a green
 
 ## Current state
 
-Working end-to-end: the 7-day board, drag/drop + swap mode, print sheet, grocery aggregation, Cronometer text export, Export/Import JSON, structured per-ingredient editing with USDA/OFF matching (single, bulk, and a local re-weigh pass), per-ingredient search-name overrides, the phone toolbar disclosure, and Supabase cloud sync. Deployed favicon and page title are the real kwp logo mark.
+Working end-to-end: the 7-day board, drag/drop + swap mode, print sheet, grocery aggregation, Cronometer text export, Export/Import JSON, structured per-ingredient editing with USDA/OFF matching (single, bulk, and a local re-weigh pass), per-ingredient search-name overrides, and the phone toolbar disclosure. Deployed favicon and page title are the real kwp logo mark.
 
-**The next task is replacing Supabase cloud sync with a Cloudflare Pages Function plus KV.** Kevin's call. `docs/BACKLOG.md` item 1 carries the full evidence, scope and the five implementation steps; `docs/ROADMAP.md` explains why the keep-alive can't be tuned into working. That item is the reason a fresh session is being handed this: **read it first.**
+**Cloud sync is mid-cutover.** The Supabase→Cloudflare KV migration's code half is done; the dashboard half is Kevin's and is `docs/BACKLOG.md` item 1. **Until the `MEAL_PLAN_KV` namespace is created and bound, sync is down in production** - the function answers a 503 that names the missing binding. Nothing else is affected: the board is in localStorage, so this costs cross-device sync, not data.
 
 **Work order lives in `docs/BACKLOG.md`** - live work above a divider, finished work below, so the top heading is always the next thing to pick up. `docs/ROADMAP.md` stays the deep explanation of what is broken and why.
 
@@ -98,8 +104,12 @@ The board is currently seeded from **Kevin's working plan, not the dietician's d
 
 - The environment's network policy is edited at claude.ai/code via the session menu's **Edit environment**, and the change applies to the *already-running* session - no restart needed. It currently allows `api.nal.usda.gov`, `world.openfoodfacts.org`, `meal-planner.kwpledger.com` and `*.pages.dev`.
 - **Chromium cannot traverse the session proxy** (`ERR_CONNECTION_RESET` where `curl` succeeds on the same host). Headless-browser testing runs against a local `npm run preview`; `curl` handles anything deployed.
+- **A PR's Cloudflare branch preview is a `*.pages.dev` host, which the egress policy already allows** - so `curl` can exercise a deployed Pages Function from a session the moment the preview build finishes. This was written off as impossible once ("nothing can be verified against the real deployment") on the strength of the Chromium finding; that limitation is about *browsers*, and an API endpoint needs no browser.
 - Deployed `VITE_*` configuration can be checked from a session with `curl` alone - fetch `index.html`, extract the hashed asset path, inspect the bundle - **masking any long token before printing** so a real key never reaches the transcript. That answers "is it set in production?" without opening a dashboard.
-- **Cloudflare Pages scopes environment variables separately for Production and Preview.** Both are configured now. A variable set on only one scope produces a preview build that behaves nothing like production.
+- **Cloudflare Pages scopes environment variables separately for Production and Preview** - and **KV bindings the same way**. A value or binding set on only one scope produces a preview that behaves nothing like production.
+- **Neither takes effect until a redeploy** - and for bindings this is not the obvious answer. A Worker reads its bindings at *request* time, so the instinct is that adding one to a Pages project fixes a running deployment. It does not: **a Pages deployment captures its bindings when it is built**, so a deployment created before the binding existed will keep answering as if it were still missing, however correct the dashboard looks. Cloudflare's own wording is "once configured, the binding must be redeployed to take effect." This cost a real round trip - the docs here asserted the opposite, Kevin bound the namespace correctly in both scopes, and the app still reported it unbound. Retry the deployment or push a commit.
+- **KV lives under Storage & databases → Workers KV in the dashboard**, not under Workers & Pages. And there is no separate "KV namespace binding" menu entry: it is the project's Settings → Bindings → **Add** → KV namespace, with a **Choose environment** dropdown that is how one binding name gets configured for both Production and Preview - the UI will not let you add the same name twice within one environment.
+- **A `wrangler.toml` in a Pages project causes the dashboard configuration to be ignored entirely.** That is why there isn't one - everything else here is configured in the dashboard, and adding the file would be an all-or-nothing switch, not an addition.
 - A **green GitHub Actions run proves the request succeeded, not that the remote service counted it.** That distinction is the entire keep-alive saga.
 
 See `docs/ROADMAP.md` for everything known-broken or unfinished.
@@ -112,8 +122,10 @@ npm run dev      # local dev server
 npm run build    # production build - run this before committing non-trivial changes
 ```
 
-Needs a `.env` file (see `.env.example` for the required keys - USDA API key, Supabase URL, Supabase publishable key). Without it, nutrition lookups and cloud sync fail; the core board still works.
+`.env` now holds exactly one key, `VITE_USDA_API_KEY` (see `.env.example`). Without it, nutrition lookups fail and the core board still works. Sync needs no local configuration at all - the endpoint is same-origin and the KV binding lives on the deployment.
 
-That last clause only became true recently. `supabaseClient.js` called `createClient(undefined, undefined)`, which throws `supabaseUrl is required` during *module evaluation* - before React mounted - so a missing `.env` produced a blank white page with the error visible only in the devtools console. The client is now null when the vars are absent and `cloudSync.js` fails with a message naming the missing keys, so the board renders and only the two sync buttons are affected.
+**`npm run dev` cannot sync**, and that is expected rather than broken: Vite's dev server does not serve Pages Functions, so `/api/board` returns the SPA's `index.html` with a 200. `cloudSync.js` checks the content type and says so by name, because "unexpected token <" is the worst possible description of "you're not running a Pages deployment". Use `npx wrangler pages dev dist` after a build if sync genuinely needs exercising locally.
+
+A degradation principle worth keeping, learned the hard way from the module this replaced: `supabaseClient.js` called `createClient(undefined, undefined)`, which threw during *module evaluation* - before React mounted - so a missing `.env` produced a blank white page with the error visible only in the devtools console. Missing or broken configuration must degrade to a failing button with a readable message, never to a page that doesn't render.
 
 See `docs/ARCHITECTURE.md` for the cloud sync and deployment details, and `docs/ROADMAP.md` for known issues.
