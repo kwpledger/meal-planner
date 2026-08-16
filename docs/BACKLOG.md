@@ -45,7 +45,11 @@ the only code that can read Supabase.
 6. **Tear Supabase down**, once step 5 is confirmed from both machines: delete
    the Supabase project, the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`
    repository secrets (Settings → Secrets and variables → Actions), and the two
-   `VITE_SUPABASE_*` variables in **both** Cloudflare scopes.
+   `VITE_SUPABASE_*` variables in **both** Cloudflare scopes. Also **remove the
+   Supabase GitHub integration** from the repo — it was not on the original
+   deletion list because nothing in the tree referenced it; it surfaced as a
+   "Supabase Preview" check on PR #15, which reported `skipped`. Harmless, but
+   it is the last thread connecting the repo to a project that is going away.
 
 Steps 1–5 are the cutover; step 6 is cleanup that can wait.
 
@@ -329,9 +333,26 @@ verification was two throwaway harnesses run in a scratch directory:
 Both passed. `npm run build` and `npm run lint` are green (three pre-existing
 unused-eslint-disable warnings in `App.jsx` and `ingredientLibrary.js`, untouched).
 
-**Not verified from a session: anything against real KV.** Cloudflare Pages
-Functions do not run under Vite, and the sandbox cannot drive a browser against
-a deployment. The first real exercise is Kevin's step 4 preview test.
+**Then verified against the real deployment**, which had been written off as
+impossible and turned out not to be — the branch preview is a `*.pages.dev`
+host, which the sandbox egress policy already allows, and `curl` needs no
+browser. Against the PR's preview deployment:
+
+- `GET /api/board` → **503** carrying the exact "MEAL_PLAN_KV namespace is not
+  bound" message, JSON content type. This is the expected state before Kevin's
+  binding step, and it proves the function deploys, routes by file path, and
+  reports a missing binding the way it was designed to.
+- It also settles a routing question the stub harness could not: **verb-specific
+  handlers really do take precedence over the `onRequest` catch-all** in the live
+  runtime. A GET reaching `onRequest` would have answered 405, not 503.
+- `POST /api/board` → **405** from that catch-all, rather than Pages falling
+  through to the static handler and answering with the SPA's `index.html`.
+- `GET /` → **200**. The static site is unaffected by the presence of
+  `functions/`.
+
+**Still unverified: KV itself.** Every path that touches the namespace is
+short-circuited by the missing binding, so the first real read/write is Kevin's
+step 4.
 
 
 ## Separate display name from search name
