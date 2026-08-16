@@ -119,58 +119,7 @@ scale rather than reaching past the semantic layer to raw palette values,
 OKLCH over HSB so equal lightness means equal *perceived* lightness, dark-mode
 values chosen at the same time, and typography before colour.
 
-## 3. Move two corrections out of the display names and into `searchName`
-
-**The matching fix is done; the mechanism it was done by is the residual.**
-
-Both corrections landed and the numbers are right. Read straight off the live
-cloud board on 2026-08-16:
-
-| Ingredient | Matched food | kcal/100g |
-|---|---|---|
-| Quinoa (Days 1, 4, 6) | *Quinoa, uncooked* | **368** |
-| Zucchini (Day 2) | *Squash, zucchini, baby, raw* | **21** |
-
-368 is the dry-quinoa figure this file predicted, against the *"Quinoa, fat
-added"* 146 it replaced, and the zucchini is fresh rather than pickled. Weekly
-total moved to **13,187** against the dietician's 14,000 — estimation noise
-rather than a defect, which was the stated goal.
-
-**But it was done by editing the display name, not the override field.** The
-stored records read `name: "quinoa, dry"`, `raw: "0.75 cup quinoa, dry"`,
-`searchName: null`. So the board cards now literally show *"quinoa, dry"* and
-*"zucchini, raw"* — which is precisely the corruption `searchName` exists to
-prevent (see Shipped, "Separate display name from search name": fixing what the
-matcher sees by damaging what the board shows was the entire problem the field
-was added to solve).
-
-This is worth recording rather than quietly repairing, because it says something
-about the feature: **the override field did not get used even by the person who
-asked for it**, on the exact two ingredients it was built for. The likeliest
-reason is discoverability — it is a dashed-outline field *below* each ingredient
-row, while the name is the obvious thing on the row itself, and editing the name
-visibly works. If a third case of this shows up, the conclusion is that the
-field needs to be more prominent, not that the user needs reminding.
-
-### The cleanup, and why it is safe
-
-For each of the four ingredients: set the display name back to `quinoa` /
-`zucchini`, and put `quinoa, dry` / `zucchini, raw` into the search-name
-override field.
-
-**This will not lose the corrected numbers.** Neither editing a display name nor
-editing the override re-runs matching — the number on screen changes only when
-Match is pressed, which is deliberate and consistent across every path in the
-app. So `matchedFoodName` and `nutrientsPer100g` survive the edit untouched, and
-filling in `searchName` at the same time means the correction still holds if
-anything *does* re-match later.
-
-Do the override field and the name in the same edit. Restoring the name alone
-would leave the board correct today and silently wrong the next time those rows
-are re-matched, which is the worse of the two states because it looks finished.
-
-
-## 4. Harden portion normalization
+## 3. Harden portion normalization
 
 
 **No longer guesswork.** Kevin ran Normalize across the whole board and exported
@@ -233,7 +182,7 @@ exactly.
 146 kcal/100g — cooked density applied to a dry cup measure. Dry quinoa is
 ~368 kcal/100g, so each of the three quinoa lunches is short by ~316 kcal,
 about **950/week**. Fixable today with `quinoa, dry` in the search-name
-override (item 3); no code change needed. `1 cup zucchini` matching *"Zucchini, pickled"*
+override (now shipped); no code change needed. `1 cup zucchini` matching *"Zucchini, pickled"*
 is the same class, much smaller.
 
 With both corrected the board lands near 13,400 against her 14,000, which is
@@ -247,7 +196,7 @@ the constants were wrong.
 Compound ingredient lines ("oats cooked in 1 cup 2% milk" matches only the oats)
 remain a known unfixed gap. `docs/ROADMAP.md` has the full design detail.
 
-## 5. Matching quality — the evidence file
+## 4. Matching quality — the evidence file
 
 
 Kevin's first live run produced two data points worth keeping, both from the
@@ -273,7 +222,7 @@ Oatmeal Power Bowl:
   independently and should be diagnosed separately.
 
 The oats fix is the first evidence-led correction to this table rather than a
-guess, and it suggests the method for the rest of item 4: get a real reading off
+guess, and it suggests the method for the rest of item 3: get a real reading off
 the deployed board, divide by the amount, and the responsible table constant
 falls straight out.
 
@@ -297,7 +246,7 @@ reads "unresolved" on desktop and "rough estimate" on the phone — two devices,
 two independent stores, no matching run on the desktop yet. This is precisely
 the limitation cloud sync exists to paper over.
 
-## 6. Header doesn't scroll with the content
+## 5. Header doesn't scroll with the content
 
 
 Long-standing, from the original layout complaints. Unexamined since the grid
@@ -310,6 +259,49 @@ re-measure before designing anything here.
 # Shipped
 
 Kept for the reasoning and the operational gotchas, not for action.
+
+
+## The two quinoa/zucchini corrections
+
+
+Done, and worth more than any code change available at the time. Read off the
+live cloud board on 2026-08-16:
+
+| Ingredient | Was | Now | kcal/100g |
+|---|---|---|---|
+| Quinoa (Days 1, 4, 6) | *Quinoa, fat added* | *Quinoa, uncooked* | 146 → **368** |
+| Zucchini (Day 2) | *Zucchini, pickled* | *Squash, zucchini, baby, raw* | → **21** |
+
+Weekly total **13,187** against the dietician's 14,000 — estimation noise rather
+than a defect, which was the stated target.
+
+**Kevin did it by editing the ingredient name, not the `searchName` override,
+and that turns out to be correct rather than a workaround.** Recorded because a
+session got this wrong first and the reasoning is the useful part:
+
+The board has *two* name fields per meal, and they are not the same thing.
+`meal.items` is the human-readable display list the meal cards render
+(`"Quinoa"`, `"Cod"`, `"Brown Rice"`). `meal.ingredients[].name` / `.raw` is the
+matcher's input, and **the seed already writes USDA-friendly text there** —
+`"1 banana, raw"`, `"6 oz cod, raw"`, `"0.75 cup brown rice, raw"` are all
+original. So `"0.75 cup quinoa, dry"` is the established convention of this
+board, not a corruption of it, and the meal cards are unaffected because they
+never read that field.
+
+That narrows what `searchName` is actually for. It is not "the place search
+terms go" — the ingredient name is already that. It is the escape hatch for the
+case where the wording USDA needs would be *unacceptable* in the places the
+ingredient name does surface: the grocery list (keyed on `ingredient.name`), the
+meal detail modal and the Cronometer export (both `ingredient.raw`). Those read
+`"quinoa, dry"` today, consistent with the `"cod, raw"` already beside them.
+
+**The correction a session made to itself here.** The first reading was that
+editing the name had corrupted the visible board and needed cleaning up — it
+asserted the cards "literally show quinoa, dry". They do not; they show
+`meal.items`. Kevin's own screenshot contradicted the claim within a minute of
+it being made. The lesson is narrow and practical: **this board has two name
+fields and a session that checks only `ingredients` will misread what the user
+sees.** Check `items` before making any claim about what is on screen.
 
 
 ## Replace Supabase sync with Cloudflare KV — code half
@@ -561,11 +553,11 @@ Explicitly **rejected**: the two-minute "just left-align the wrap" fix. See
 item 2 for why — this item survives the design system change because it is
 information architecture, not styling; a cosmetic tweak would not.
 
-**Residual, feeding item 6:** with the toolbar shortened, the header prose is
+**Residual, feeding item 5:** with the toolbar shortened, the header prose is
 now the dominant consumer of the space above the board at 390px — the title
 wraps to two lines and the description to four, roughly 220px before any control
 appears. Shortening that text is a content decision for Kevin, not a session's
-call, and making the header sticky (item 6) would change the calculus anyway.
+call, and making the header sticky (item 5) would change the calculus anyway.
 
 ## Sandbox egress policy
 

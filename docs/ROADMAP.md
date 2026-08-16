@@ -183,22 +183,25 @@ they apply — don't reorder casually.
 - **Matching quality is heuristic.** Text-relevance scoring plus a median-energy
   tiebreak. Works for common ingredients, still occasionally picks an odd match.
   The `verified` checkbox exists because this is not meant to be trusted blindly.
-- **The quinoa match — FIXED, and the fix carries a residual.** Quinoa used to
-  resolve against *"Quinoa, fat added"* at 146 kcal/100g — cooked density
-  applied to a dry cup measure, across three lunches — and now resolves against
-  *"Quinoa, uncooked"* at **368**. Zucchini went from *"Zucchini, pickled"* to
-  *"Squash, zucchini, baby, raw"* at 21. Weekly total **13,187** against the
-  dietician's 14,000, which is estimation noise rather than a defect. **But the
-  correction was made by editing the display names rather than the search-name
-  override**, so the board now shows *"quinoa, dry"* and *"zucchini, raw"* to the
-  reader — exactly what `searchName` was added to prevent. `docs/BACKLOG.md`
-  item 3 is the cleanup and explains why it is safe to do.
-- **The search-name override is under-discovered.** It went unused even by the
-  person who requested it, on the exact two ingredients it was built for. It is a
-  dashed-outline field *below* each ingredient row while the display name sits on
-  the row itself and visibly works, which is a plausible enough explanation to
-  act on if a third case appears. Not a code change yet — one data point about
-  placement, recorded so the second one isn't read as a coincidence.
+- **The quinoa match — FIXED.** Quinoa used to resolve against *"Quinoa, fat
+  added"* at 146 kcal/100g — cooked density applied to a dry cup measure, across
+  three lunches — and now resolves against *"Quinoa, uncooked"* at **368**.
+  Zucchini went from *"Zucchini, pickled"* to *"Squash, zucchini, baby, raw"* at
+  21. Weekly total **13,187** against the dietician's 14,000, which is estimation
+  noise rather than a defect. Fixed by editing the ingredient name, which is the
+  right mechanism here and not a workaround — see `docs/BACKLOG.md` (Shipped).
+- **This board has two name fields, and confusing them produces false readings.**
+  `meal.items` is the display list the meal cards render (`"Quinoa"`, `"Cod"`);
+  `meal.ingredients[].name` / `.raw` is the matcher's input, and the seed already
+  writes USDA-friendly text there (`"1 banana, raw"`, `"6 oz cod, raw"`,
+  `"0.75 cup brown rice, raw"` are all original). A session inspecting only
+  `ingredients` concluded the visible board had been corrupted with search terms;
+  it had not, because the cards never read that field. **Check `items` before
+  claiming anything about what is on screen.** `searchName` is correspondingly
+  narrower than it looks: not "where search terms go" — the ingredient name is
+  already that — but the escape hatch for when the wording USDA needs would be
+  unacceptable in the grocery list, the meal detail modal or the Cronometer
+  export, which are the three places `name`/`raw` actually surface.
 - **Open Food Facts will confidently return branded near-homonyms for generic
   whole foods.** With USDA unavailable it matched "1 medium banana" to *"Banana
   chips"* — roughly a 6x calorie error landing as a resolved "rough estimate".
