@@ -575,11 +575,81 @@ export default function MealPlanBoard() {
     setIngredientLibrary(library);
     setDays(workingDays);
 
-    // Only compare meals where every ingredient actually resolved. A
-    // partially-matched meal (e.g. a cancelled run, or one ingredient with
-    // no match at all) would otherwise "compute" to a near-zero total that
-    // looks like a real, applicable number - it isn't, it's just missing
-    // data, and applying it would wipe out that meal's calories.
+    const { comparisons, skippedCount } = buildMealComparisons(workingDays);
+
+    setNormalizeState({ status: 'review', comparisons, cancelled: normalizeCancelRef.current, skippedCount });
+  }
+
+  /*
+   * Re-runs gram resolution over ingredients that are already matched, using
+   * the portion table as it stands now. Purely local arithmetic with no network
+   * calls, which makes it the cheap way to pick up a recalibrated table.
+   *
+   * This exists because Normalize deliberately only targets `unresolved` rows,
+   * so once a board is fully matched there was no way to apply a table fix to
+   * it short of pressing Match on every affected row by hand. That bit for
+   * real: after the sweet-potato/broccoli/steel-cut recalibration, a fully
+   * resolved board silently kept its old weights and read ~624 kcal/week low.
+   *
+   * Only `generic-fallback` rows are touched, and the reason is not obvious:
+   * `exact-weight` comes from the unit itself (oz/g) so the table has no say,
+   * and `food-portion` came from real USDA foodPortions data which is not
+   * stored on the ingredient - recomputing those would silently *downgrade*
+   * a per-food measurement to a generic guess.
+   */
+  function handleReweighBoard() {
+    const workingDays = structuredClone(days);
+    let reweighed = 0;
+
+    workingDays.forEach((day) => {
+      day.meals.forEach((meal) => {
+        meal.ingredients.forEach((ingredient) => {
+          if (ingredient.gramsConfidence !== 'generic-fallback') {
+            return;
+          }
+
+          const { grams, confidence } = resolvePortionToGrams({
+            amount: ingredient.amount,
+            unit: ingredient.unit,
+            name: ingredient.name,
+            // No matchedFood: the food-specific branches need portion data we
+            // don't retain, and this path is about the generic table anyway.
+            matchedFood: null,
+          });
+
+          if (grams != null && Math.abs(grams - (ingredient.grams ?? 0)) > 0.01) {
+            ingredient.grams = grams;
+            ingredient.gramsConfidence = confidence;
+            reweighed += 1;
+          }
+        });
+      });
+    });
+
+    if (reweighed === 0) {
+      setNormalizeState({ status: 'no-reweigh-targets' });
+      return;
+    }
+
+    setDays(workingDays);
+
+    const { comparisons, skippedCount } = buildMealComparisons(workingDays);
+
+    setNormalizeState({ status: 'review', comparisons, skippedCount, reweighed });
+  }
+
+  /*
+   * Shared by Normalize and Re-weigh: turns a working copy of the board into
+   * the reviewable list of meals whose computed total now disagrees with what
+   * is stored.
+   *
+   * Only compares meals where every ingredient actually resolved. A
+   * partially-matched meal (a cancelled run, or one ingredient with no match at
+   * all) would otherwise "compute" to a near-zero total that looks like a real,
+   * applicable number - it isn't, it's just missing data, and applying it would
+   * wipe out that meal's calories.
+   */
+  function buildMealComparisons(workingDays) {
     const comparisons = [];
     let skippedCount = 0;
 
@@ -613,7 +683,7 @@ export default function MealPlanBoard() {
 
     comparisons.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
 
-    setNormalizeState({ status: 'review', comparisons, cancelled: normalizeCancelRef.current, skippedCount });
+    return { comparisons, skippedCount };
   }
 
   function cancelNormalizeBoard() {
@@ -1284,6 +1354,17 @@ useEffect(() => {
                       className="text-left rounded-xl px-4 py-2 font-semibold text-indigo-700 hover:bg-indigo-50"
                     >
                       Normalize portions (beta)
+                    </button>
+
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        handleReweighBoard();
+                      }}
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-indigo-700 hover:bg-indigo-50"
+                    >
+                      Re-weigh portions
                     </button>
 
                     {/*
@@ -2123,8 +2204,17 @@ useEffect(() => {
 
             {normalizeState.status === 'no-targets' && (
               <p className="text-sm text-slate-600">
-                Every ingredient on the board already has a resolved match. Edit a meal and use "Match" again
-                if you want to re-resolve a specific ingredient.
+                Every ingredient on the board already has a resolved match. Use "Re-weigh portions" to
+                recalculate their gram weights against the current portion table without re-querying USDA,
+                or edit a meal and use "Match" to re-resolve one ingredient.
+              </p>
+            )}
+
+            {normalizeState.status === 'no-reweigh-targets' && (
+              <p className="text-sm text-slate-600">
+                Nothing to re-weigh. Every estimated portion on the board already matches what the current
+                portion table would produce. Ingredients measured in grams or ounces, and those with real
+                per-food portion data, are deliberately left alone.
               </p>
             )}
 
@@ -2152,9 +2242,11 @@ useEffect(() => {
               <div>
                 <p className="text-sm text-slate-600 mb-4">
                   {normalizeState.cancelled && 'Stopped early - '}
-                  Ingredient grams/matches for the board have been saved. These are the fully-resolved meals where
-                  computed calories differ from the stored value - nothing here has been applied to the visible
-                  cards yet.
+                  {normalizeState.reweighed
+                    ? `${normalizeState.reweighed} estimated portion${normalizeState.reweighed === 1 ? '' : 's'} re-weighed against the current portion table - no lookups were made. `
+                    : 'Ingredient grams/matches for the board have been saved. '}
+                  These are the fully-resolved meals where computed calories differ from the stored value -
+                  nothing here has been applied to the visible cards yet.
                 </p>
 
                 {normalizeState.skippedCount > 0 && (

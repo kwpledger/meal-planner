@@ -149,6 +149,30 @@ measurement was.
 `steelcut` must precede `flaked` ("steel cut oats" contains "oat"), and
 `tortilla` must precede `grain` ("whole wheat wrap" contains "wheat").
 
+### Re-weighing an already-resolved board — SHIPPED
+
+A gap this project created for itself. Normalize deliberately targets only
+`unresolved` rows, so once a board is fully matched there was no way to apply a
+table recalibration to it short of pressing Match on every affected row by hand.
+That bit for real: after the sweet-potato/broccoli/steel-cut fix, Kevin's fully
+resolved board silently kept its old weights and read about **624 kcal/week
+low** — he was reading 12,563 and reasoning about a daily target from it.
+
+**Re-weigh portions** in the More menu re-runs `resolvePortionToGrams` over
+already-matched rows using the table as it stands. Purely local arithmetic —
+verified zero network calls — and it reuses Normalize's existing preview and
+per-meal apply gate, so nothing on screen changes without an explicit apply.
+
+It only touches `generic-fallback` rows, and the reason is not obvious:
+`exact-weight` comes from the unit itself (oz/g) so the table has no say, and
+`food-portion` came from real USDA `foodPortions` data that is *not* stored on
+the ingredient — recomputing those would silently downgrade a per-food
+measurement to a generic guess.
+
+Verified against Kevin's exported board: 13 portions re-weighed, weekly total
+unchanged until Apply, then 11,801 → 12,425, matching the offline simulation
+exactly.
+
 ### Still open
 
 **The largest single remaining error is not a weight, it's a match.**
