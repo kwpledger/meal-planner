@@ -15,24 +15,29 @@ about **order**.
 
 ## 1. Finish the KV cutover — Kevin's dashboard steps
 
-**The code half is done and merged** (see Shipped, "Replace Supabase sync with
-Cloudflare KV"). What is left cannot be done from a session, because it is all
-dashboard work. Until steps 3 and 4 are both done, **sync is down** — the
-function answers a 503 naming the missing binding.
+**Steps 1–5 are done and the preview round trip is verified** (see Shipped,
+"Replace Supabase sync with Cloudflare KV"). **What remains is step 6 and, when
+Kevin is ready, step 7.** Step 6 has to be Kevin because it reads the board out
+of his browser's localStorage; nothing else here can be done from a session
+either, because it is all dashboard work.
 
-In order. **Step 1 has to happen before the PR merges**, because merging removes
-the only code that can read Supabase.
+The full list is kept rather than trimmed — the ordering constraints and the
+redeploy trap in step 4 are the reusable part, and a fresh session reading only
+the remaining steps would miss why they are in that order.
 
-1. **Capture the board while Supabase is still reachable.** On the machine with
+**Step 1 had to happen before the PR merged**, because merging removed the only
+code that could read Supabase.
+
+1. ~~**Capture the board while Supabase is still reachable.**~~ **DONE.** On the machine with
    the most current board, press **Sync from Cloud** (accept the preview), then
    **Export JSON** and keep the file. That leaves the authoritative board in
    localStorage, which is where the new push will read it from, and the export
    is the backup that makes everything after this reversible.
-2. **Create two KV namespaces.** Cloudflare dashboard → **Storage & databases →
+2. ~~**Create two KV namespaces.**~~ **DONE.** Cloudflare dashboard → **Storage & databases →
    Workers KV** → Create (*not* under Workers & Pages, where an older version of
    these steps sent Kevin looking). Name them `meal-planner-sync` and
    `meal-planner-sync-preview`.
-3. **Bind them.** Workers & Pages → meal-planner → Settings → Bindings →
+3. ~~**Bind them.**~~ **DONE.** Workers & Pages → meal-planner → Settings → Bindings →
    **Add** → KV namespace, variable name **`MEAL_PLAN_KV`**. There is no
    separate "KV namespace binding" menu item; it is behind that Add button.
    Configure it **twice** using the **Choose environment** dropdown in the
@@ -42,18 +47,21 @@ the only code that can read Supabase.
    is missed. Two namespaces rather than one because a preview deployment is
    same-origin with its own function, so a push from a preview URL would
    otherwise overwrite the real board.
-4. **Redeploy — the binding does nothing until you do.** Deployments → the
+4. ~~**Redeploy — the binding does nothing until you do.**~~ **DONE, and this was the one that bit.** Deployments → the
    deployment you want → **Retry deployment**. This is the step that is easy to
    miss and hard to diagnose: a Worker reads bindings at request time, but **a
    Pages deployment captures its bindings when it is built**, so a deployment
    created before the binding existed keeps reporting it missing however correct
    the dashboard looks. Pushing any commit to the branch has the same effect.
-5. **Merge the PR.** Cloudflare rebuilds production automatically on push to
-   `main`, so the merge is itself the production redeploy. (The branch preview
-   URL tests sync end-to-end before this — it writes to the preview namespace,
-   so it cannot touch the real board.)
-6. **Push the board to KV.** On `meal-planner.kwpledger.com`, press **Sync to
-   Cloud**, then confirm from the second machine with **Sync from Cloud**.
+5. ~~**Merge the PR.**~~ **DONE — this commit is on `main` because of it.**
+   Cloudflare rebuilds production automatically on push to `main`, so the merge
+   is itself the production redeploy. (The branch preview URL tested sync
+   end-to-end before this — it writes to the preview namespace, so it could not
+   touch the real board.)
+6. **← NEXT. Push the board to KV.** On `meal-planner.kwpledger.com`, press
+   **Sync to Cloud**, then confirm from the second machine with **Sync from
+   Cloud**. Production picks up its binding from the merge build, so there is no
+   separate redeploy for it.
 7. **Tear Supabase down**, once step 6 is confirmed from both machines: delete
    the Supabase project, the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`
    repository secrets (Settings → Secrets and variables → Actions), and the two
@@ -362,9 +370,26 @@ browser. Against the PR's preview deployment:
 - `GET /` → **200**. The static site is unaffected by the presence of
   `functions/`.
 
-**Still unverified: KV itself.** Every path that touches the namespace is
-short-circuited by the missing binding, so the first real read/write is Kevin's
-step 4 redeploy.
+### KV itself — verified against the preview deployment
+
+The last gap, closed once the binding was bound and redeployed. The endpoint
+flipped from 503 to **404 `{"error":"No board has been pushed yet."}`** the
+moment the new deployment went live, which is the empty-namespace path reading
+real KV rather than a stub.
+
+Kevin then drove the full round trip through the UI, which is a better test than
+anything a session could stage because it uses his real 79 KB board:
+
+- **Sync to Cloud** → "Synced to cloud at 8/16/2026, 4:30:33 PM."
+- **Sync from Cloud** → the pull gate, showing cloud 4:30:33 PM against local
+  4:28:56 PM side by side with nothing changed until confirmed.
+
+A session-side write was deliberately *not* attempted first. The function has no
+DELETE verb, so a test board written into `meal-planner-sync-preview` would have
+sat there until something overwrote it — and a **Sync from Cloud** pressed before
+a **Sync to Cloud** would have offered Kevin a pull preview of fabricated data.
+The read path was provable without that risk, and his own test covered the write
+path minutes later.
 
 
 ## Separate display name from search name
