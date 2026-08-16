@@ -2,6 +2,18 @@
 
 Everything in this file was verified directly against the running source and live infrastructure while writing it (not from memory) - specifically to answer "what actually is 'the cloud' here."
 
+> ## ⚠️ Read this before the Supabase sections
+>
+> **The Supabase half of this document describes a system that is scheduled for replacement**, and that replacement is the top item in `docs/BACKLOG.md`. It is accurate as of writing and sync works today - but if you are here to *implement* the migration rather than to understand the current state, read the backlog item first.
+>
+> Short version of why: free-tier projects pause after ~7 days of inactivity, and two separate keep-alive strategies (a read, then a daily write) were both demonstrably ignored by whatever metric drives that. See `docs/ROADMAP.md` for the evidence. **Do not spend time tuning the keep-alive.**
+>
+> The replacement is a Cloudflare Pages Function plus a KV namespace - the app is already deployed on Cloudflare Pages, and KV meters requests rather than pausing for idleness. The whole sync surface is two functions moving one JSON blob, so the client-side change is small.
+>
+> **What survives the migration** and is worth reading regardless: the deployment section at the bottom, the Production/Preview variable-scoping gotcha, the request/response contract that `pushToCloud`/`pullFromCloud` must keep honouring, and the pull-preview gate - the one sync direction that can destroy unsynced local work.
+>
+> **What becomes history:** the Supabase project, both tables, the RLS discussion, the keep-alive workflow and its two repository secrets.
+
 ## Cloud sync ("Sync to Cloud" / "Sync from Cloud")
 
 ### What it is
