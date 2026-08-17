@@ -101,36 +101,53 @@ self-evident to the person holding two of them** — the useful instruction is
 "compare the weekly totals on both machines first, and push from the higher-numbered one."
 
 
-## 2. Adopt the shared design system (and hold visual polish until then)
+## 2. Adopt the shared design system — step 1 done, 5 to go
 
+**In progress.** `@kwpledger/design` is pinned at **v0.2.0** and the typography
+is adopted. `docs/DESIGN-SYSTEM.md` is the wiring, the traps, and the
+verification; this item is only the order.
 
-**Not a task. A constraint on other tasks.**
+The hold on visual polish is **over for typography and still on for colour** —
+don't invent a colour locally that the system already defines.
 
-`kwpledger-design` has now been extracted from `kwpledger-site`, and every
-repo under `kwpledger.com` will consume it cross-repo. Kevin's call, stated
-directly: don't spend effort polishing a visual scheme that is likely to be
-replaced soon anyway.
+The practical test for whether a piece of UI work may proceed meanwhile is
+unchanged and still useful: does it change *what is on screen and where*, or
+*how that looks*? Structural and behavioural fixes (the toolbar disclosure, the
+grid fix) go ahead regardless.
 
-**The system now exists**, so this item has changed shape: it is no longer
-"wait" but "adopt". `kwpledger-design` publishes tagged releases (v0.2.0 at the
-time of writing) — **pin a version rather than tracking a branch**, because a
-design system that moves under a consumer is how a shared system turns into a
-liability. Kevin will attach it to this project as a second source.
+1. ~~**Typography.**~~ **DONE.** Pinned dependency, fonts copied to
+   `public/fonts/` with `OFL-NOTICE.txt`, `--font-display` / `--font-body` /
+   `--fw-display` consumed via `@layer base`, and `color-scheme: light` pinned
+   so the dark block cannot half-apply. `font-bold` removed from all 19 heading
+   elements — Lora is a static SemiBold and 700 was making the browser
+   synthesise a fake bold.
+2. **← NEXT. Neutrals.** ~200 `slate-*` and `bg-white` utilities →
+   `--surface`, `--surface-card`, `--fg`, `--fg-muted`, `--border`. The largest
+   single chunk, and the one that makes dark mode real: **this is the change
+   that removes the `color-scheme: light` guard**, so it is not done until the
+   board is legible in both themes.
+3. **Accent.** ~25 `indigo-*` → `--accent` / `--accent-hover`.
+4. **Categorical.** Domain tokens *in this repo* — `--meal-breakfast` …
+   `--macro-fat` — onto `--data-1` … `--data-7`. Seven of eight slots; SPEC
+   §4.1 sized the scale against this app, and `categorical.css`'s worked example
+   is literally `--meal-breakfast: var(--data-1-surface)`. **Never map a domain
+   token past the semantic layer to a raw palette value** — that is the one rule
+   the whole layering exists to enforce. Bridge into Tailwind with `@theme`,
+   and remember the theme key must not equal the token name (see
+   `docs/DESIGN-SYSTEM.md`).
+5. **Status.** The ingredient-confidence badges and warnings
+   (`amber`/`emerald`/`red`) → `--warning` / `--success` / `--danger`. SPEC §5.4
+   authors status at strictly higher chroma than categorical, which is exactly
+   the distinction those badges want — and §5.1 forbids mapping a status onto
+   `--data-n` in either direction.
+6. **Drop the guard.** Remove `color-scheme: light`, verify both themes.
 
-Until it is attached and its tokens are actually readable from this repo, the
-hold still applies in practice: don't invent a colour scheme locally that the
-shared system is about to define.
+Steps 2–5 are more than one session each in places; step 2 is the big one.
 
-The practical test for whether a piece of UI work may proceed meanwhile: does it
-change *what is on screen and where*, or *how that looks*? Structural and
-behavioural fixes (the toolbar disclosure, the grid fix) go ahead. Colour,
-spacing, typography and token work waits.
+**Colour is reinforcement, never the sole carrier** — SPEC §8, and already true
+here: meal types, macro bars and match confidence all carry text labels. Any
+colour work must keep them.
 
-`CLAUDE.md`'s reconciliation notes are the plan to execute once it is attached —
-three token layers with domain tokens mapping onto a shared neutral categorical
-scale rather than reaching past the semantic layer to raw palette values,
-OKLCH over HSB so equal lightness means equal *perceived* lightness, dark-mode
-values chosen at the same time, and typography before colour.
 
 ## 3. Harden portion normalization
 

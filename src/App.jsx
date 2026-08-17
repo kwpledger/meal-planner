@@ -1221,7 +1221,7 @@ useEffect(() => {
       <div className="print:hidden">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-6">
             <div>
-              <h1 className="text-4xl font-bold text-slate-800">Kevin’s Visual Meal Planner</h1>
+              <h1 className="text-4xl text-slate-800">Kevin’s Visual Meal Planner</h1>
               <p className="text-slate-600 mt-2 max-w-3xl">
                 Drag meals between days, or enable swap mode to exchange meals by clicking two cards. Click a meal normally to view ingredient amounts.
               </p>
@@ -1452,7 +1452,7 @@ useEffect(() => {
                   <div className="mb-4 sticky top-0 bg-white/95 backdrop-blur rounded-2xl pb-3 z-10">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h2 className="text-2xl font-bold text-slate-800">{day.day}</h2>
+                        <h2 className="text-2xl text-slate-800">{day.day}</h2>
                         <p className="text-sm text-slate-500">{day.protein}</p>
                       </div>
                       <div className="flex flex-col items-end gap-2">
@@ -1548,7 +1548,7 @@ useEffect(() => {
                             <div className="text-[11px] uppercase tracking-wide text-slate-500 font-bold">
                               {meal.type}
                             </div>
-                            <h3 className="font-bold text-base leading-tight text-slate-800">
+                            <h3 className="text-base leading-tight text-slate-800">
                               {meal.name}
                             </h3>
                           </div>
@@ -1579,7 +1579,7 @@ useEffect(() => {
 
           <div className="mt-8 grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="bg-white rounded-3xl shadow-lg p-6 border border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-800 mb-2">Auto Grocery Aggregation</h2>
+              <h2 className="text-2xl text-slate-800 mb-2">Auto Grocery Aggregation</h2>
               <p className="text-sm text-slate-500 mb-4">
                 Built from the current board. Rearrange meals and this list follows the new weekly layout.
               </p>
@@ -1610,7 +1610,7 @@ useEffect(() => {
             </div>
 
             <div className="bg-white rounded-3xl shadow-lg p-6 border border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-800 mb-4">Cronometer Helper</h2>
+              <h2 className="text-2xl text-slate-800 mb-4">Cronometer Helper</h2>
               <p className="text-sm text-slate-500 mb-4">
                 Use this as a copy/paste checklist for entering foods manually. The calories and macros are planner estimates, not verified Cronometer values.
               </p>
@@ -1630,7 +1630,7 @@ useEffect(() => {
             </div>
 
             <div className="bg-white rounded-3xl shadow-lg p-6 border border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-800 mb-4">Quick Visual Rules</h2>
+              <h2 className="text-2xl text-slate-800 mb-4">Quick Visual Rules</h2>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-amber-100 rounded-2xl p-4 border border-amber-300">
@@ -1665,13 +1665,13 @@ useEffect(() => {
       </div>
       <div className="hidden print:block bg-white text-slate-900 p-8">
         <div className="border-b border-slate-300 pb-4 mb-6">
-          <h1 className="text-3xl font-bold">Sunday Meal-Prep Sheet</h1>
+          <h1 className="text-3xl ">Sunday Meal-Prep Sheet</h1>
           <p className="text-sm text-slate-600 mt-1">Generated from the current meal board layout.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-6 mb-8">
           <div>
-            <h2 className="text-xl font-bold mb-3">Prep Priorities</h2>
+            <h2 className="text-xl mb-3">Prep Priorities</h2>
             <ul className="space-y-2 text-sm">
               <li>☐ Cook or portion proteins for the week</li>
               <li>☐ Batch cook quinoa / brown rice as needed</li>
@@ -1683,7 +1683,7 @@ useEffect(() => {
           </div>
 
           <div>
-            <h2 className="text-xl font-bold mb-3">Weekly Targets</h2>
+            <h2 className="text-xl mb-3">Weekly Targets</h2>
             <div className="text-sm space-y-1">
               <div>Total planned calories: {weeklyCalories.toLocaleString()}</div>
               <div>Macro target: 40% carbs • 30% protein • 30% fat</div>
@@ -1693,11 +1693,11 @@ useEffect(() => {
           </div>
         </div>
 
-        <h2 className="text-xl font-bold mb-3">Grocery / Prep Checklist</h2>
+        <h2 className="text-xl mb-3">Grocery / Prep Checklist</h2>
         <div className="grid grid-cols-2 gap-6">
           {Object.entries(prepGroups).map(([groupName, entries]) => (
             <div key={groupName} className="break-inside-avoid border border-slate-300 rounded-xl p-4">
-              <h3 className="font-bold text-lg mb-3">{groupName}</h3>
+              <h3 className="text-lg mb-3">{groupName}</h3>
               {entries.length === 0 ? (
                 <div className="text-sm text-slate-500">No items</div>
               ) : (
@@ -1714,11 +1714,11 @@ useEffect(() => {
           ))}
         </div>
 
-        <h2 className="text-xl font-bold mt-8 mb-3">Day-by-Day Meal Check</h2>
+        <h2 className="text-xl mt-8 mb-3">Day-by-Day Meal Check</h2>
         <div className="grid grid-cols-2 gap-4">
           {days.map((day) => (
             <div key={day.id} className="break-inside-avoid border border-slate-300 rounded-xl p-4">
-              <h3 className="font-bold text-lg">{day.day} — {day.protein}</h3>
+              <h3 className="text-lg">{day.day} — {day.protein}</h3>
               <ul className="mt-2 space-y-1 text-sm">
                 {day.meals.map((meal) => (
                   <li key={meal.id}>☐ {meal.type}: {meal.name}</li>
@@ -1734,7 +1734,7 @@ useEffect(() => {
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
       
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-slate-800">
+              <h2 className="text-2xl text-slate-800">
                 Edit Meal
               </h2>
       
@@ -2043,7 +2043,7 @@ useEffect(() => {
             </div>
       
             <div className="border-t border-slate-200 pt-4">
-              <h3 className="font-bold text-slate-800 mb-2">Nutrition Lookup</h3>
+              <h3 className="text-slate-800 mb-2">Nutrition Lookup</h3>
 
               <p className="text-sm text-slate-500 mb-3">
                 Search for a food, then manually copy values into the meal fields if they look useful.
@@ -2193,7 +2193,7 @@ useEffect(() => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-slate-800">Normalize portions</h2>
+              <h2 className="text-2xl text-slate-800">Normalize portions</h2>
               <button
                 onClick={() => setNormalizeState(null)}
                 className="text-slate-500 hover:text-slate-700 text-xl"
@@ -2310,7 +2310,7 @@ useEffect(() => {
       {pullPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6">
-            <h2 className="text-2xl font-bold text-slate-800 mb-4">Pull from cloud?</h2>
+            <h2 className="text-2xl text-slate-800 mb-4">Pull from cloud?</h2>
 
             <p className="text-sm text-slate-600 mb-4">
               This will replace your current board with the cloud copy. Nothing has been changed yet.
@@ -2363,7 +2363,7 @@ useEffect(() => {
                 <div className="text-xs uppercase tracking-wide text-slate-500 font-bold">
                   {selectedMeal.day} • {selectedMeal.type}
                 </div>
-                <h2 className="text-2xl font-bold text-slate-800 mt-1">{selectedMeal.name}</h2>
+                <h2 className="text-2xl text-slate-800 mt-1">{selectedMeal.name}</h2>
                 <div className="text-sm text-slate-500 mt-1">{selectedMeal.calories} calories</div>
               </div>
 
@@ -2377,7 +2377,7 @@ useEffect(() => {
             </div>
 
             <div className={`rounded-2xl border-2 p-4 ${colorMap[selectedMeal.type]}`}>
-              <h3 className="font-bold text-slate-800 mb-3">Ingredient amounts</h3>
+              <h3 className="text-slate-800 mb-3">Ingredient amounts</h3>
               <ul className="space-y-2">
                 {selectedMeal.ingredients.map((ingredient) => (
                   <li key={ingredient.id} className="flex items-start gap-2 text-slate-700">
