@@ -1,6 +1,16 @@
 @import "tailwindcss";
 
 /*
+ * The shared kwp design system, pinned. See docs/DESIGN-SYSTEM.md for how this
+ * is wired and what is deliberately not adopted yet.
+ *
+ * Pinned to a tag rather than tracking a branch: a design system that moves
+ * under a consumer is how a shared system turns into a liability. Bumping the
+ * pin is a deliberate act, and it requires re-copying public/fonts/ (see below).
+ */
+@import "@kwpledger/design";
+
+/*
  * .addedbykevin/ is a drop-box for reference material, not source. Tailwind v4
  * auto-scans every tracked file for anything shaped like a utility name, and
  * plain English collides with the utility namespace - the prose "Lora is a
@@ -8,3 +18,73 @@
  * uses. Excluded so documentation can't mutate the production stylesheet.
  */
 @source not "../.addedbykevin";
+
+/*
+ * TYPOGRAPHY ONLY, FOR NOW. This adoption is deliberately staged: the type
+ * tokens are consumed here, the colour tokens are not. See docs/BACKLOG.md.
+ *
+ * NO `@theme` BRIDGE FOR THE FONTS, AND THE REASON GENERALISES. The obvious
+ * move is `@theme inline { --font-display: var(--font-display) }` to get a
+ * `font-display` utility. It was tried and removed: `inline` changes what the
+ * *utility* resolves to, but Tailwind still emits `:root { --font-display:
+ * var(--font-display) }`, and a custom property that references itself is a
+ * cycle - it computes to the guaranteed-invalid value, so `font-family` would
+ * fall back to the initial serif with no error anywhere.
+ *
+ * It happens to work today only because Tailwind's block lands before the
+ * design system's real definition and is overridden by it. That is
+ * import-order luck, not a mechanism.
+ *
+ * The rule to carry into the colour work, where @theme bridging IS needed:
+ * **the theme key must never equal the design-system token name.**
+ * `--color-meal-breakfast: var(--data-1-surface)` is fine because the two
+ * names differ. `--font-display: var(--font-display)` is not.
+ *
+ * Nothing needed a font utility anyway - typography is applied to elements
+ * below, so no component has to remember.
+ */
+
+/*
+ * base.css sets `color-scheme: light dark` on :root, which opts the browser
+ * into dark form controls, scrollbars and canvas default. This app has no dark
+ * mode: roughly 200 hard-coded Tailwind neutrals (slate-*, bg-white) still
+ * paint it light on every device. Left alone, a dark-preference browser would
+ * get dark chrome around a light page - a half-dark state that did not exist
+ * before this import.
+ *
+ * Note what this override does NOT do: `prefers-color-scheme` reflects the OS
+ * setting, so base.css's dark block still redefines --surface, --fg and friends
+ * underneath. That is harmless *only* because nothing here consumes a colour
+ * token yet. The moment the neutrals migrate, this line must come off and dark
+ * mode has to be handled properly rather than suppressed.
+ */
+:root {
+  color-scheme: light;
+}
+
+@layer base {
+  /*
+   * Applied to elements rather than through utilities in JSX. Typography is a
+   * base-layer concern - every heading should be Lora without a component
+   * having to remember - and it keeps this whole step to one file, with no
+   * change to App.jsx at all.
+   */
+  body {
+    font-family: var(--font-body);
+  }
+
+  /*
+   * Lora ships as a STATIC SemiBold - one weight, 600. Ask for anything else
+   * and the browser synthesises it, which is a fake bold that looks subtly
+   * wrong next to the real one. --fw-display exists precisely to stop that, so
+   * it is set here rather than left to Tailwind's font-bold utilities, which
+   * would ask for 700.
+   */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: var(--fw-display);
+  }
+}
