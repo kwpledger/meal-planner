@@ -4,9 +4,17 @@ Ordered. **The top item is the next thing to do** — this file exists so a sess
 never has to ask Kevin "what would you like to tackle next?", which is the one
 question that reliably stalls this project (see `docs/WORKING-PREFERENCES.md`).
 
-Everything above the divider is live work. Everything below it is finished, kept
-because the reasoning and the operational gotchas are worth not rediscovering —
-not because anyone needs to act on it.
+There are three sections, in order: **live work** (numbered — this is the order),
+then **Polish**, then **Shipped**.
+
+Polish is deliberately outside the numbering. It holds things that are real but
+not load-bearing, so they can be written down without lengthening the list that
+governs what happens next. **Never offer a Polish entry as the next thing to
+do** — if the numbered items are all blocked, say so rather than reaching down
+into it.
+
+Shipped is finished work, kept because the reasoning and the operational gotchas
+are worth not rediscovering — not because anyone needs to act on it.
 
 `docs/ROADMAP.md` explains *what is broken and why* in depth. This file is only
 about **order**.
@@ -258,6 +266,55 @@ Long-standing, from the original layout complaints. Unexamined since the grid
 fix, and the toolbar disclosure has since changed that region of the page — the
 header prose is now the dominant consumer of space above the board at 390px, so
 re-measure before designing anything here.
+
+---
+
+# Polish — deliberately outside the running order
+
+Kevin's framing: *"items 98 and 99."* Real, worth keeping, and **not competing
+with the numbered list above.** Nothing here is load-bearing; the app is correct
+without any of it. Do not surface these as "next" — the numbered items are the
+order, and this section exists so these two can be written down without
+lengthening it.
+
+## Display tags and ingredients are not linked
+
+`meal.items` (the chips on the meal cards) and `meal.ingredients` are maintained
+independently, and always have been. Kevin authored the tags by hand while
+editing the JSON — which is why `"Boneless, Skinless Chicken Breast"` carries a
+comma the ingredient name (`"boneless skinless chicken breast"`) does not.
+
+The consequence is drift: an ingredient added through the editor gets **no**
+display tag, and a renamed one leaves its old tag standing. Kevin's call, and
+agreed: *"that's polish, not load bearing."*
+
+**Not obviously "link them", though**, and that is the reason this is a note
+rather than a task. The hand-written tags are better copy than the matcher text
+would be — `"Salmon"` reads better on a card than `"salmon fillet, raw"` — which
+is the entire reason two fields exist. Auto-deriving one from the other trades
+good copy for consistency. If this is ever picked up, the interesting design is
+probably *warn on drift* rather than *derive*, so the human keeps authoring the
+copy and only gets told when a tag has gone stale.
+
+## `searchName` has no production usage
+
+Implemented, wired through all three matching entry points, and verified by
+stripping it from a saved board — but **zero ingredients in production carry
+one**, including the two it was specifically built for. The quinoa and zucchini
+corrections went into the ingredient name instead, which turned out to be the
+right place, because the seed's naming convention already puts USDA-friendly
+text there.
+
+Kevin spotted this himself: *"so searchName is still untested in this
+context..."* Correct, and worth stating rather than leaving the field looking
+load-bearing.
+
+The honest position: the field costs nothing to keep and is genuinely the right
+tool for one specific case — where the wording USDA needs would be unacceptable
+in the grocery list, the meal detail modal or the Cronometer export, the three
+places `name`/`raw` actually surface. That case has not arrived. If it never
+does, the conclusion is that the seed's naming convention had already solved the
+problem and the field can be retired rather than defended.
 
 ---
 
