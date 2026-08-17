@@ -183,10 +183,45 @@ they apply — don't reorder casually.
 - **Matching quality is heuristic.** Text-relevance scoring plus a median-energy
   tiebreak. Works for common ingredients, still occasionally picks an odd match.
   The `verified` checkbox exists because this is not meant to be trusted blindly.
-- **The largest single remaining error is a match, not a weight.** Quinoa
-  resolves against *"Quinoa, fat added"* at 146 kcal/100g — cooked density
-  applied to a dry cup measure, across three lunches. Fixable with `quinoa, dry`
-  in the search-name override, no code change.
+- **The quinoa match — FIXED.** Quinoa used to resolve against *"Quinoa, fat
+  added"* at 146 kcal/100g — cooked density applied to a dry cup measure, across
+  three lunches — and now resolves against *"Quinoa, uncooked"* at **368**.
+  Zucchini went from *"Zucchini, pickled"* to *"Squash, zucchini, baby, raw"* at
+  21. Weekly total **13,187** against the dietician's 14,000, which is estimation
+  noise rather than a defect. Fixed by editing the ingredient name, which is the
+  right mechanism here and not a workaround — see `docs/BACKLOG.md` (Shipped).
+- **This board has two name fields, and confusing them produces false readings.**
+  `meal.items` is the display list the meal cards render (`"Quinoa"`, `"Cod"`);
+  `meal.ingredients[].name` / `.raw` is the matcher's input, and the seed already
+  writes USDA-friendly text there (`"1 banana, raw"`, `"6 oz cod, raw"`,
+  `"0.75 cup brown rice, raw"` are all original). A session inspecting only
+  `ingredients` concluded the visible board had been corrupted with search terms;
+  it had not, because the cards never read that field. **Check `items` before
+  claiming anything about what is on screen.** `searchName` is correspondingly
+  narrower than it looks: not "where search terms go" — the ingredient name is
+  already that — but the escape hatch for when the wording USDA needs would be
+  unacceptable in the grocery list, the meal detail modal or the Cronometer
+  export, which are the three places `name`/`raw` actually surface.
+- **`items` and `ingredients` have no link and never have.** Confirmed by Kevin,
+  who authored the display tags by hand while editing the JSON: `"Boneless,
+  Skinless Chicken Breast"` carries a comma the ingredient name
+  (`"boneless skinless chicken breast"`) does not, because he typed both
+  separately. Nothing derives one from the other and nothing keeps them in sync,
+  so **an ingredient added through the editor will not appear as a display tag**,
+  and a renamed ingredient leaves its old tag standing. This is a real drift
+  hazard rather than a hypothetical one — it is the mechanism behind the
+  misreading above. Whether to link them is a genuine design question and not
+  obviously "yes": the hand-written tags are better copy than the matcher text
+  would be, which is the entire reason two fields exist.
+- **`searchName` has never been used on the real board.** It is implemented,
+  wired through all three matching entry points, and verified by stripping it
+  from a saved board — but zero ingredients in production carry one, including
+  the two it was designed for, because the ingredient name turned out to be the
+  right place for those. A shipped feature with no production usage is worth
+  saying out loud rather than assuming it is load-bearing: if a case never
+  arrives where the search wording is unacceptable in the grocery list, the
+  honest conclusion is that the field solved a problem that the seed's naming
+  convention had already solved.
 - **Open Food Facts will confidently return branded near-homonyms for generic
   whole foods.** With USDA unavailable it matched "1 medium banana" to *"Banana
   chips"* — roughly a 6x calorie error landing as a resolved "rough estimate".

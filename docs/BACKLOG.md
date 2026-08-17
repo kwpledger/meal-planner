@@ -13,13 +13,12 @@ about **order**.
 
 ---
 
-## 1. Finish the KV cutover — Kevin's dashboard steps
+## 1. Finish the KV cutover — one teardown step left
 
-**Steps 1–5 are done and the preview round trip is verified** (see Shipped,
-"Replace Supabase sync with Cloudflare KV"). **What remains is step 6 and, when
-Kevin is ready, step 7.** Step 6 has to be Kevin because it reads the board out
-of his browser's localStorage; nothing else here can be done from a session
-either, because it is all dashboard work.
+**The cutover is complete — steps 1–6 are done and verified end to end.** Only
+step 7, the Supabase teardown, remains, and nothing reads Supabase any more so
+it can happen whenever. Everything here is dashboard work or reads the board out
+of Kevin's browser, so none of it could be done from a session.
 
 The full list is kept rather than trimmed — the ordering constraints and the
 redeploy trap in step 4 are the reusable part, and a fresh session reading only
@@ -58,20 +57,40 @@ code that could read Supabase.
    is itself the production redeploy. (The branch preview URL tested sync
    end-to-end before this — it writes to the preview namespace, so it could not
    touch the real board.)
-6. **← NEXT. Push the board to KV.** On `meal-planner.kwpledger.com`, press
-   **Sync to Cloud**, then confirm from the second machine with **Sync from
-   Cloud**. Production picks up its binding from the merge build, so there is no
-   separate redeploy for it.
-7. **Tear Supabase down**, once step 6 is confirmed from both machines: delete
-   the Supabase project, the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`
-   repository secrets (Settings → Secrets and variables → Actions), and the two
-   `VITE_SUPABASE_*` variables in **both** Cloudflare scopes. Also **remove the
-   Supabase GitHub integration** from the repo — it was not on the original
-   deletion list because nothing in the tree referenced it; it surfaced as a
-   "Supabase Preview" check on PR #15, which reported `skipped`. Harmless, but
-   it is the last thread connecting the repo to a project that is going away.
+6. ~~**Push the board to KV.**~~ **DONE, two machines confirmed.** Production
+   picked up its binding from the merge build, with no separate redeploy. Pushed
+   from the desktop, then pulled on the phone in a **private tab** — which is a
+   stronger test than a reload, because a private window has no localStorage at
+   all, so the board that appeared came entirely from KV rather than from a
+   cached local copy. Timestamps matched on both sides.
+7. **Tear Supabase down — mostly done.** The **project itself is deleted**;
+   the org is an empty workspace. What is left is dangling references to
+   something that no longer exists, so none of it can break anything:
+   - the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` **repository secrets**
+     (GitHub → Settings → Secrets and variables → Actions). Nothing reads them —
+     the workflow that did was deleted with the migration.
+   - the two `VITE_SUPABASE_*` **variables in both Cloudflare scopes**
+     (Production and Preview each hold their own copy). They are still inlined
+     into every build, so removing them shrinks the bundle by two dead strings
+     and nothing else.
+   - the **Supabase GitHub integration** on the repo. It surfaced as a "Supabase
+     Preview" check on PR #15 reporting `skipped`, which is how it was noticed
+     at all — nothing in the tree references it. It will keep posting a skipped
+     check on every PR until it is removed.
 
-Steps 1–6 are the cutover; step 7 is cleanup that can wait.
+Steps 1–6 were the cutover and are done; the remainder of step 7 is tidying.
+
+**One near-miss worth keeping.** The push in step 6 nearly went the wrong way.
+The desktop was holding an **11,801** board — the measured week *before* the
+portion-table fixes — while the phone had **13,187**, carrying the re-weigh
+apply and the quinoa/zucchini corrections. Step 1 said "the machine with the
+most current board" and the desktop was not it. The first production push made
+the *older* board the cloud copy; the phone's real Safari still had the good one,
+and a pull there would have destroyed roughly 1,400 kcal/week of accuracy work.
+Caught by cross-checking the weekly total on screen against the number in these
+docs, and fixed by pushing from the phone instead. **"Most current board" is not
+self-evident to the person holding two of them** — the useful instruction is
+"compare the weekly totals on both machines first, and push from the higher-numbered one."
 
 
 ## 2. Adopt the shared design system (and hold visual polish until then)
@@ -105,22 +124,7 @@ scale rather than reaching past the semantic layer to raw palette values,
 OKLCH over HSB so equal lightness means equal *perceived* lightness, dark-mode
 values chosen at the same time, and typography before colour.
 
-## 3. Kevin's own next action: two search-name overrides
-
-No code. Two entries in the search-name override field (see Shipped), worth more
-than anything a session can do to the fallback table right now:
-
-- **`quinoa, dry`** on the three quinoa lunches. They currently match *"Quinoa,
-  fat added"* at 146 kcal/100g — cooked density applied to a dry cup measure.
-  Dry quinoa is ~368. Worth roughly **+950 kcal/week**.
-- **`zucchini, raw`** on Day 2 dinner, which matched *"Zucchini, pickled"*. Same
-  class of error, much smaller.
-
-With both applied the board lands near 13,400 against the dietician's 14,000 —
-estimation noise rather than a defect.
-
-
-## 4. Harden portion normalization
+## 3. Harden portion normalization
 
 
 **No longer guesswork.** Kevin ran Normalize across the whole board and exported
@@ -183,7 +187,7 @@ exactly.
 146 kcal/100g — cooked density applied to a dry cup measure. Dry quinoa is
 ~368 kcal/100g, so each of the three quinoa lunches is short by ~316 kcal,
 about **950/week**. Fixable today with `quinoa, dry` in the search-name
-override (item 3); no code change needed. `1 cup zucchini` matching *"Zucchini, pickled"*
+override (now shipped); no code change needed. `1 cup zucchini` matching *"Zucchini, pickled"*
 is the same class, much smaller.
 
 With both corrected the board lands near 13,400 against her 14,000, which is
@@ -197,7 +201,7 @@ the constants were wrong.
 Compound ingredient lines ("oats cooked in 1 cup 2% milk" matches only the oats)
 remain a known unfixed gap. `docs/ROADMAP.md` has the full design detail.
 
-## 5. Matching quality — the evidence file
+## 4. Matching quality — the evidence file
 
 
 Kevin's first live run produced two data points worth keeping, both from the
@@ -223,7 +227,7 @@ Oatmeal Power Bowl:
   independently and should be diagnosed separately.
 
 The oats fix is the first evidence-led correction to this table rather than a
-guess, and it suggests the method for the rest of item 4: get a real reading off
+guess, and it suggests the method for the rest of item 3: get a real reading off
 the deployed board, divide by the amount, and the responsible table constant
 falls straight out.
 
@@ -247,7 +251,7 @@ reads "unresolved" on desktop and "rough estimate" on the phone — two devices,
 two independent stores, no matching run on the desktop yet. This is precisely
 the limitation cloud sync exists to paper over.
 
-## 6. Header doesn't scroll with the content
+## 5. Header doesn't scroll with the content
 
 
 Long-standing, from the original layout complaints. Unexamined since the grid
@@ -260,6 +264,49 @@ re-measure before designing anything here.
 # Shipped
 
 Kept for the reasoning and the operational gotchas, not for action.
+
+
+## The two quinoa/zucchini corrections
+
+
+Done, and worth more than any code change available at the time. Read off the
+live cloud board on 2026-08-16:
+
+| Ingredient | Was | Now | kcal/100g |
+|---|---|---|---|
+| Quinoa (Days 1, 4, 6) | *Quinoa, fat added* | *Quinoa, uncooked* | 146 → **368** |
+| Zucchini (Day 2) | *Zucchini, pickled* | *Squash, zucchini, baby, raw* | → **21** |
+
+Weekly total **13,187** against the dietician's 14,000 — estimation noise rather
+than a defect, which was the stated target.
+
+**Kevin did it by editing the ingredient name, not the `searchName` override,
+and that turns out to be correct rather than a workaround.** Recorded because a
+session got this wrong first and the reasoning is the useful part:
+
+The board has *two* name fields per meal, and they are not the same thing.
+`meal.items` is the human-readable display list the meal cards render
+(`"Quinoa"`, `"Cod"`, `"Brown Rice"`). `meal.ingredients[].name` / `.raw` is the
+matcher's input, and **the seed already writes USDA-friendly text there** —
+`"1 banana, raw"`, `"6 oz cod, raw"`, `"0.75 cup brown rice, raw"` are all
+original. So `"0.75 cup quinoa, dry"` is the established convention of this
+board, not a corruption of it, and the meal cards are unaffected because they
+never read that field.
+
+That narrows what `searchName` is actually for. It is not "the place search
+terms go" — the ingredient name is already that. It is the escape hatch for the
+case where the wording USDA needs would be *unacceptable* in the places the
+ingredient name does surface: the grocery list (keyed on `ingredient.name`), the
+meal detail modal and the Cronometer export (both `ingredient.raw`). Those read
+`"quinoa, dry"` today, consistent with the `"cod, raw"` already beside them.
+
+**The correction a session made to itself here.** The first reading was that
+editing the name had corrupted the visible board and needed cleaning up — it
+asserted the cards "literally show quinoa, dry". They do not; they show
+`meal.items`. Kevin's own screenshot contradicted the claim within a minute of
+it being made. The lesson is narrow and practical: **this board has two name
+fields and a session that checks only `ingredients` will misread what the user
+sees.** Check `items` before making any claim about what is on screen.
 
 
 ## Replace Supabase sync with Cloudflare KV — code half
@@ -511,11 +558,11 @@ Explicitly **rejected**: the two-minute "just left-align the wrap" fix. See
 item 2 for why — this item survives the design system change because it is
 information architecture, not styling; a cosmetic tweak would not.
 
-**Residual, feeding item 6:** with the toolbar shortened, the header prose is
+**Residual, feeding item 5:** with the toolbar shortened, the header prose is
 now the dominant consumer of the space above the board at 390px — the title
 wraps to two lines and the description to four, roughly 220px before any control
 appears. Shortening that text is a content decision for Kevin, not a session's
-call, and making the header sticky (item 6) would change the calculus anyway.
+call, and making the header sticky (item 5) would change the calculus anyway.
 
 ## Sandbox egress policy
 
