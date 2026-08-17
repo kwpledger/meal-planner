@@ -63,17 +63,22 @@ code that could read Supabase.
    stronger test than a reload, because a private window has no localStorage at
    all, so the board that appeared came entirely from KV rather than from a
    cached local copy. Timestamps matched on both sides.
-7. **← NEXT (whenever). Tear Supabase down.** Step 6 is confirmed from both
-   machines, so this is unblocked: delete
-   the Supabase project, the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`
-   repository secrets (Settings → Secrets and variables → Actions), and the two
-   `VITE_SUPABASE_*` variables in **both** Cloudflare scopes. Also **remove the
-   Supabase GitHub integration** from the repo — it was not on the original
-   deletion list because nothing in the tree referenced it; it surfaced as a
-   "Supabase Preview" check on PR #15, which reported `skipped`. Harmless, but
-   it is the last thread connecting the repo to a project that is going away.
+7. **Tear Supabase down — mostly done.** The **project itself is deleted**;
+   the org is an empty workspace. What is left is dangling references to
+   something that no longer exists, so none of it can break anything:
+   - the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` **repository secrets**
+     (GitHub → Settings → Secrets and variables → Actions). Nothing reads them —
+     the workflow that did was deleted with the migration.
+   - the two `VITE_SUPABASE_*` **variables in both Cloudflare scopes**
+     (Production and Preview each hold their own copy). They are still inlined
+     into every build, so removing them shrinks the bundle by two dead strings
+     and nothing else.
+   - the **Supabase GitHub integration** on the repo. It surfaced as a "Supabase
+     Preview" check on PR #15 reporting `skipped`, which is how it was noticed
+     at all — nothing in the tree references it. It will keep posting a skipped
+     check on every PR until it is removed.
 
-Steps 1–6 were the cutover and are done; step 7 is cleanup that can wait.
+Steps 1–6 were the cutover and are done; the remainder of step 7 is tidying.
 
 **One near-miss worth keeping.** The push in step 6 nearly went the wrong way.
 The desktop was holding an **11,801** board — the measured week *before* the

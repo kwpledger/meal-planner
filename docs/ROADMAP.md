@@ -202,6 +202,26 @@ they apply — don't reorder casually.
   already that — but the escape hatch for when the wording USDA needs would be
   unacceptable in the grocery list, the meal detail modal or the Cronometer
   export, which are the three places `name`/`raw` actually surface.
+- **`items` and `ingredients` have no link and never have.** Confirmed by Kevin,
+  who authored the display tags by hand while editing the JSON: `"Boneless,
+  Skinless Chicken Breast"` carries a comma the ingredient name
+  (`"boneless skinless chicken breast"`) does not, because he typed both
+  separately. Nothing derives one from the other and nothing keeps them in sync,
+  so **an ingredient added through the editor will not appear as a display tag**,
+  and a renamed ingredient leaves its old tag standing. This is a real drift
+  hazard rather than a hypothetical one — it is the mechanism behind the
+  misreading above. Whether to link them is a genuine design question and not
+  obviously "yes": the hand-written tags are better copy than the matcher text
+  would be, which is the entire reason two fields exist.
+- **`searchName` has never been used on the real board.** It is implemented,
+  wired through all three matching entry points, and verified by stripping it
+  from a saved board — but zero ingredients in production carry one, including
+  the two it was designed for, because the ingredient name turned out to be the
+  right place for those. A shipped feature with no production usage is worth
+  saying out loud rather than assuming it is load-bearing: if a case never
+  arrives where the search wording is unacceptable in the grocery list, the
+  honest conclusion is that the field solved a problem that the seed's naming
+  convention had already solved.
 - **Open Food Facts will confidently return branded near-homonyms for generic
   whole foods.** With USDA unavailable it matched "1 medium banana" to *"Banana
   chips"* — roughly a 6x calorie error landing as a resolved "rough estimate".
