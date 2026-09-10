@@ -1,6 +1,7 @@
 # Kevin's Visual Meal Planner
 
 > **Note:** `CLAUDE.md` is a symlink to this file (`AGENTS.md`). One file, two names — edit either path, you are editing this file. Don't replace the symlink with a second copy.
+
 ## What this is
 
 A personal, single-user meal planner that turns a dietician's text-based 7-day meal plan into an interactive visual board — drag/swap meals between days, see macro breakdowns, auto-generate a grocery list, and (as of the latest work) resolve real nutrition data per ingredient instead of hand-typed calorie guesses. Built for Kevin, exploratory/personal in nature — not intended for other users, though nothing stops it from being useful to them.
