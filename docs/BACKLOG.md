@@ -353,6 +353,43 @@ problem and the field can be retired rather than defended.
 Kept for the reasoning and the operational gotchas, not for action.
 
 
+## Dropping a meal on its own day deleted it
+
+Reported from the step-2a preview. Described as "set a card on top of itself
+and it disappears", and it was broader than that: **any** drop onto the meal's
+own day card lost the meal.
+
+`handleDrop`'s reducer has two per-day branches and they are mutually
+exclusive. The `sourceDayId` branch matches first and returns that day with the
+meal filtered out, so the `targetDayId` branch — the only thing that adds it
+back — never ran when the two ids were equal.
+
+The instructive part: an `alreadyExists` check *was* sitting in that second
+branch, clearly written for this exact case, and it was unreachable. The guard
+was in the one place it could never fire. `handleMealClick` gets the equivalent
+identity case right by checking it up front, which is now what `handleDrop`
+does too.
+
+Fixed with an early return, since dropping a meal on the day it already lives
+on is a no-op.
+
+**A second, quieter bug surfaced while extracting it.** `.sort()` mutates, and
+when `alreadyExists` was true the array being sorted *was* `day.meals` — so it
+sorted the board React was rendering, in place. Only reachable with a duplicate
+meal id, but a function advertised as a pure reducer must not mutate its input.
+Fixed by copying before sorting, and there is a test for it.
+
+**This is where the repo got a test runner.** The reducer was a closure inside
+a 2,400-line component, so testing it meant either simulating drag through
+jsdom or extracting the logic. Extracted to `src/boardOperations.js` — which is
+also what the convention in `AGENTS.md` asks for non-UI logic — and covered by
+`src/boardOperations.test.js` under vitest. `App.jsx` lost 46 lines.
+
+Both fixes were verified by removing them again: deleting the same-day guard
+fails exactly 3 of the 9 tests, and restoring the in-place `.sort()` fails
+exactly 1. A regression test nobody has seen fail is not yet evidence of
+anything.
+
 ## The two quinoa/zucchini corrections
 
 

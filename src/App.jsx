@@ -4,6 +4,7 @@ import { migrateDaysToIngredients, mergeIngredientsFromLines, formatIngredientAm
 import { resolvePortionToGrams, computeNutrientsForIngredient, recomputeMealFromIngredients } from './portionResolver';
 import { loadLibrary, matchIngredient } from './ingredientLibrary';
 import { pushToCloud, pullFromCloud } from './cloudSync';
+import { getMealSortValue, moveMealToDay } from './boardOperations';
 
 // Kevin's working plan, not the dietician's document verbatim.
 //
@@ -108,7 +109,6 @@ const colorMap = {
   Dinner: 'bg-rose-100 border-rose-300',
 };
 
-const mealOrder = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
 
 const macroTargets = {
   carbs: 40,
@@ -191,9 +191,6 @@ function AutoMatchPreview({ result }) {
   );
 }
 
-function getMealSortValue(meal) {
-  return mealOrder.indexOf(meal.type);
-}
 
 const STORAGE_KEY = 'kevin-meal-planner-state-v2';
 const STORAGE_UPDATED_AT_KEY = 'kevin-meal-planner-state-v2-updated-at';
@@ -960,30 +957,10 @@ useEffect(() => {
   function handleDrop(targetDayId) {
     if (!draggedMeal) return;
 
-    setDays((currentDays) => {
-      const movingMeal = draggedMeal.meal;
-
-      return currentDays.map((day) => {
-        if (day.id === draggedMeal.sourceDayId) {
-          return {
-            ...day,
-            meals: day.meals.filter((meal) => meal.id !== movingMeal.id),
-          };
-        }
-
-        if (day.id === targetDayId) {
-          const alreadyExists = day.meals.some((meal) => meal.id === movingMeal.id);
-          const updatedMeals = alreadyExists ? day.meals : [...day.meals, movingMeal];
-
-          return {
-            ...day,
-            meals: updatedMeals.sort((a, b) => getMealSortValue(a) - getMealSortValue(b)),
-          };
-        }
-
-        return day;
-      });
-    });
+    // The board transform lives in boardOperations.moveMealToDay, which is
+    // where the same-day no-op guard is and where it is tested. Clearing the
+    // drag state is unconditional: the drag ended either way.
+    setDays((currentDays) => moveMealToDay(currentDays, draggedMeal, targetDayId));
 
     setDraggedMeal(null);
     setDragOverDayId(null);
