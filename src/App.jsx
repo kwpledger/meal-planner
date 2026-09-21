@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { SiteHeader, SiteFooter, SkipLink } from './SiteChrome.jsx';
 import { searchUsdaFoods, searchOpenFoodFacts, getUsdaFoodDetail } from './nutritionApi';
 import { migrateDaysToIngredients, mergeIngredientsFromLines, formatIngredientAmount, parseIngredientLine, searchTermFor, SCHEMA_VERSION } from './ingredientParser';
 import { resolvePortionToGrams, computeNutrientsForIngredient, recomputeMealFromIngredients } from './portionResolver';
@@ -1194,7 +1195,20 @@ useEffect(() => {
   }
 
   return (
-    <div className="min-h-screen bg-surface p-6 print:bg-white print:p-0">
+    /*
+      Chrome, then content. `header` at page level holds the lockup and nothing
+      else - the h1 and its lede are page content and stay in `main`
+      (header-footer-design-system.md 2.1). That distinction is the finding the
+      whole KWP-16 ticket turned on.
+
+      Flex column so the footer sits at the bottom of a short page: min-h-screen
+      moved off the board wrapper and onto this, with `main` doing the growing.
+    */
+    <div className="flex min-h-screen flex-col bg-surface print:block print:bg-white">
+      <SkipLink />
+      <SiteHeader />
+
+      <main id="main" className="flex-1 p-6 print:p-0">
       <div className="print:hidden">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-6">
             <div>
@@ -2404,6 +2418,9 @@ useEffect(() => {
           </div>
         </div>
       )}
+      </main>
+
+      <SiteFooter />
     </div>
   );
 }
