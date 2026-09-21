@@ -960,6 +960,26 @@ useEffect(() => {
   function handleDrop(targetDayId) {
     if (!draggedMeal) return;
 
+    /*
+     * Dropping a meal back on the day it already belongs to is a no-op, and it
+     * has to be caught HERE rather than inside the reducer below.
+     *
+     * The reducer's two branches are mutually exclusive per day. When source
+     * and target are the same day, the `sourceDayId` branch matches first and
+     * returns that day with the meal filtered out - so the `targetDayId`
+     * branch, which is the only thing that adds it back, never runs. The meal
+     * is removed and never restored.
+     *
+     * Without this guard, ANY drop onto the meal's own day card deletes it,
+     * not just a precise drop on the card itself. `handleMealClick` guards its
+     * equivalent identity case explicitly; this did not.
+     */
+    if (draggedMeal.sourceDayId === targetDayId) {
+      setDraggedMeal(null);
+      setDragOverDayId(null);
+      return;
+    }
+
     setDays((currentDays) => {
       const movingMeal = draggedMeal.meal;
 
@@ -972,6 +992,9 @@ useEffect(() => {
         }
 
         if (day.id === targetDayId) {
+          // Defensive against a board that somehow carries one meal id twice.
+          // This is NOT what protects the same-day case - the guard above is;
+          // this branch is unreachable when source and target match.
           const alreadyExists = day.meals.some((meal) => meal.id === movingMeal.id);
           const updatedMeals = alreadyExists ? day.meals : [...day.meals, movingMeal];
 

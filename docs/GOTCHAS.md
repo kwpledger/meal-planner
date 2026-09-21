@@ -19,3 +19,38 @@ being irrelevant until you are already doing the specific thing.
 - **KV lives under Storage & databases → Workers KV in the dashboard**, not under Workers & Pages. And there is no separate "KV namespace binding" menu entry: it is the project's Settings → Bindings → **Add** → KV namespace, with a **Choose environment** dropdown that is how one binding name gets configured for both Production and Preview - the UI will not let you add the same name twice within one environment.
 - **A `wrangler.toml` in a Pages project causes the dashboard configuration to be ignored entirely.** That is why there isn't one - everything else here is configured in the dashboard, and adding the file would be an all-or-nothing switch, not an addition.
 - A **green GitHub Actions run proves the request succeeded, not that the remote service counted it.** That distinction is the entire keep-alive saga.
+
+## A preview URL shows the *preview* KV namespace, and it holds an old test board
+
+This looked like data loss and was not. Worth knowing before it alarms someone
+again.
+
+Pressing **Sync from Cloud** on any `*.pages.dev` preview URL returned a
+**14,000 kcal** board — the dietician's unmeasured baseline — rather than the
+~13,200 measured board that was saved in August.
+
+Nothing had reset. Preview deployments bind `MEAL_PLAN_KV` to
+`meal-planner-sync-preview`, a deliberately separate namespace (see
+`docs/BACKLOG.md` item 1 step 3). Checked directly from a session:
+
+| | board | `updatedAt` |
+|---|---|---|
+| `meal-planner.kwpledger.com` (production) | 13,187 kcal, 94/94 ingredients matched | `2026-08-16T23:48:10Z` |
+| any `*.pages.dev` preview | 14,000 kcal | `2026-08-16T23:30:33Z` |
+
+Eighteen minutes apart. The preview copy is the cutover *test* push from
+August — the branch preview was used to exercise sync end-to-end before the
+real one, and that board is still sitting there. It will keep being served to
+preview URLs until something overwrites it, and **it cannot reach production**.
+
+That separation is the whole point of having two namespaces rather than one:
+the August test could not damage the real board, and it didn't.
+
+**How to check either side from a session** — both hosts are allowed by the
+egress policy, so no browser is needed:
+
+```bash
+curl -sS https://meal-planner.kwpledger.com/api/board | \
+  python3 -c "import json,sys; d=json.load(sys.stdin); \
+  print(d['updatedAt'], sum(m.get('calories',0) for y in d['days'] for m in y['meals']))"
+```
