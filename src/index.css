@@ -302,7 +302,7 @@
  *   slot 5 h=216  Carbs     | bar order, not nearest-hue:
  *   slot 6 h=274  Protein   | none of the three had a near match in the cool
  *   slot 7 h=310  Fat       | run, so there was nothing to preserve
- *   slot 8 h=345  reserved for fiber (macros.fiber is stored and unrendered)
+ *   slot 8 h=345  Fiber     (the goal chip, not a bar - see below)
  *
  * **Lunch is the one card whose colour really changes** - sky blue to orange.
  * Forced, not chosen: it was the only meal in the cool half of the wheel, and
@@ -317,7 +317,7 @@
  * lightness. `-fg` is the high-contrast member of the slot and gives
  * 7.67-8.01:1 light and 9.58-9.90:1 dark. So the bars use `-fg`.
  *
- * THE SLOT'S `-fg` IS THEREFORE NOT USED AS A TEXT COLOUR ANYWHERE HERE, which
+ * THE SLOT'S `-fg` IS NOT USED AS A MEAL-CARD TEXT COLOUR, which
  * departs from the worked example in `categorical.css`. Deliberate: that
  * example assumes coloured text on the tint, and this app has *two* text levels
  * on a meal card where a slot offers one. Measured instead, the existing
@@ -399,6 +399,42 @@
   --color-macro-fat-fg: var(--macro-fat-fg);
   --color-macro-fiber-surface: var(--macro-fiber-surface);
   --color-macro-fiber-fg: var(--macro-fiber-fg);
+
+  /*
+   * STATUS - step 5, the last of the adoption. Consumed directly rather than
+   * through domain tokens, and that asymmetry with categorical is the point:
+   * `status.css` says these "CARRY MEANING, and that meaning is the whole
+   * point", where a `--data-n` slot is defined by carrying none. There is no
+   * app-specific vocabulary to invent on top of "this failed".
+   *
+   * **No local token was needed, and one nearly was.** These tokens ship only
+   * as triples - there is no bare `--danger`. A session (this one) read a
+   * zero-length regex match as evidence of one and told Kevin it existed. It
+   * does not. But `-fg` turned out to serve both roles: paired with its own
+   * `-surface` in a chip (6.90-7.43:1 either theme) *and* bare on the
+   * theme's neutral surfaces (9.69-10.37:1 light, 10.58-11.07:1 dark on a
+   * card; 7.55-9.69:1 on sunken). So bare status text maps straight to `-fg`
+   * and **the whole adoption ends with exactly two local tokens**,
+   * `--surface-sunken` and `--accent-fg`.
+   *
+   * SAME HUES AS CATEGORICAL, SEPARATED BY CHROMA, ON PURPOSE. Danger sits at
+   * hue 27 against `--data-1` at 25; success at 150 against `--data-4` at 150.
+   * Status is authored at strictly higher chroma in every role and the design
+   * repo's verifier fails if that stops being true. So a red meal card and a
+   * red error badge are the same hue family at different urgency - which is
+   * the correct relationship, not a collision to design around. **Don't
+   * "fix" it by moving a status hue**, and never map a status onto `--data-n`
+   * in either direction (SPEC §5.1).
+   */
+  --color-danger-surface: var(--danger-surface);
+  --color-danger-fg: var(--danger-fg);
+  --color-danger-border: var(--danger-border);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-fg: var(--warning-fg);
+  --color-warning-border: var(--warning-border);
+  --color-success-surface: var(--success-surface);
+  --color-success-fg: var(--success-fg);
+  --color-success-border: var(--success-border);
 }
 
 @layer base {

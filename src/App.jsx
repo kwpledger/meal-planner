@@ -117,10 +117,10 @@ const macroTargets = {
 };
 
 const CONFIDENCE_LABELS = {
-  'exact-weight': { label: 'exact weight', className: 'bg-green-100 text-green-800' },
-  'food-portion': { label: 'matched portion', className: 'bg-green-100 text-green-800' },
-  'generic-fallback': { label: 'rough estimate', className: 'bg-yellow-100 text-yellow-800' },
-  unresolved: { label: 'unresolved', className: 'bg-red-100 text-red-800' },
+  'exact-weight': { label: 'exact weight', className: 'bg-success-surface text-success-fg' },
+  'food-portion': { label: 'matched portion', className: 'bg-success-surface text-success-fg' },
+  'generic-fallback': { label: 'rough estimate', className: 'bg-warning-surface text-warning-fg' },
+  unresolved: { label: 'unresolved', className: 'bg-danger-surface text-danger-fg' },
 };
 
 function PortionResolutionPreview({ resolution }) {
@@ -129,7 +129,7 @@ function PortionResolutionPreview({ resolution }) {
   }
 
   if (resolution.status === 'error') {
-    return <div className="mt-2 text-xs text-red-600">{resolution.message}</div>;
+    return <div className="mt-2 text-xs text-danger-fg">{resolution.message}</div>;
   }
 
   const confidence = CONFIDENCE_LABELS[resolution.confidence] || CONFIDENCE_LABELS.unresolved;
@@ -161,7 +161,7 @@ function AutoMatchPreview({ result }) {
   }
 
   if (result.status === 'error') {
-    return <div className="mb-3 text-xs text-red-600">{result.message}</div>;
+    return <div className="mb-3 text-xs text-danger-fg">{result.message}</div>;
   }
 
   const confidence = CONFIDENCE_LABELS[result.confidence] || CONFIDENCE_LABELS.unresolved;
@@ -1357,7 +1357,7 @@ useEffect(() => {
                         setMoreOpen(false);
                         handleReset();
                       }}
-                      className="text-left rounded-xl px-4 py-2 font-semibold text-red-700 hover:bg-red-50"
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-danger-fg hover:bg-danger-surface"
                     >
                       Reset board
                     </button>
@@ -1371,10 +1371,10 @@ useEffect(() => {
             <div
               className={`mb-6 -mt-2 text-sm rounded-2xl px-4 py-2 border ${
                 syncStatus.type === 'error'
-                  ? 'bg-red-50 border-red-200 text-red-700'
+                  ? 'bg-danger-surface border-danger-border text-danger-fg'
                   : syncStatus.type === 'info'
-                  ? 'bg-amber-50 border-amber-200 text-amber-700'
-                  : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  ? 'bg-warning-surface border-warning-border text-warning-fg'
+                  : 'bg-success-surface border-success-border text-success-fg'
               }`}
             >
               {syncStatus.message}
@@ -1818,12 +1818,12 @@ useEffect(() => {
                   <div
                     className={`mb-2 text-xs rounded-lg px-3 py-2 border ${
                       matchStatus.type === 'error'
-                        ? 'bg-red-50 border-red-200 text-red-700'
+                        ? 'bg-danger-surface border-danger-border text-danger-fg'
                         : matchStatus.type === 'busy'
                         ? 'bg-surface border-border text-fg-muted'
                         : matchStatus.type === 'info'
-                        ? 'bg-amber-50 border-amber-200 text-amber-700'
-                        : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                        ? 'bg-warning-surface border-warning-border text-warning-fg'
+                        : 'bg-success-surface border-success-border text-success-fg'
                     }`}
                   >
                     {matchStatus.message}
@@ -1869,7 +1869,7 @@ useEffect(() => {
                           <button
                             type="button"
                             onClick={() => removeIngredientRow(index)}
-                            className="text-fg-muted hover:text-red-600 px-2"
+                            className="text-fg-muted hover:text-danger-fg px-2"
                             aria-label="Remove ingredient"
                           >
                             ✕
@@ -2227,7 +2227,7 @@ useEffect(() => {
                 </p>
 
                 {normalizeState.skippedCount > 0 && (
-                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-4">
+                  <p className="text-xs text-warning-fg bg-warning-surface border border-warning-border rounded-lg p-2 mb-4">
                     {normalizeState.skippedCount} meal{normalizeState.skippedCount === 1 ? '' : 's'} skipped -
                     still {normalizeState.cancelled ? 'unmatched from the cancelled run' : 'have at least one unresolved ingredient'}.
                     Run Normalize again{normalizeState.cancelled ? '' : ', or resolve them from the meal edit modal,'} to include them here.
@@ -2253,7 +2253,15 @@ useEffect(() => {
                               <div className="font-bold text-fg">{comparison.mealName}</div>
                               <div className="text-xs text-fg-muted">{comparison.dayName} • {comparison.mealType}</div>
                             </div>
-                            <div className={`text-sm font-semibold ${comparison.delta > 0 ? 'text-amber-600' : 'text-sky-600'}`}>
+                            {/*
+                              Neutral on purpose. This is a signed delta, not a
+                              status: the board's measured week ran 16% BELOW
+                              the dietician's plan, so "calories went up" is as
+                              often the fix landing as a problem. Colouring it
+                              amber/sky asserted a judgement the app does not
+                              make. The sign carries the direction.
+                            */}
+                            <div className="text-sm font-semibold text-fg">
                               {comparison.delta > 0 ? '+' : ''}{comparison.delta} cal
                             </div>
                           </div>
