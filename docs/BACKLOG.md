@@ -101,15 +101,16 @@ self-evident to the person holding two of them** — the useful instruction is
 "compare the weekly totals on both machines first, and push from the higher-numbered one."
 
 
-## 2. Adopt the shared design system — step 1 and 2a done
+## 2. Adopt the shared design system — step 2 done, accent is next
 
-**In progress.** `@kwpledger/design` is pinned at **v0.5.1**. Typography is
-adopted, and as of 2a so are surfaces and borders. `docs/DESIGN-SYSTEM.md` is
-the wiring, the traps, and the verification; this item is only the order.
+**In progress.** `@kwpledger/design` is pinned at **v0.5.1**. Typography,
+surfaces, borders and text are adopted. `docs/DESIGN-SYSTEM.md` is the wiring,
+the traps, and the verification; this item is only the order.
 
-The hold on visual polish is **over for typography, surfaces and borders, and
-still on for text, accent, categorical and status** — don't invent a colour
-locally that the system already defines.
+The hold on visual polish is **over for typography, surfaces, borders and text,
+and still on for accent, categorical and status** — don't invent a colour
+locally that the system already defines. The one deliberate local definition is
+`--surface-sunken`; see 2b below for the rules that permit it.
 
 The practical test for whether a piece of UI work may proceed meanwhile is
 unchanged and still useful: does it change *what is on screen and where*, or
@@ -131,15 +132,34 @@ grid fix) go ahead regardless.
      header's `backdrop-blur`. The print sheet and `print:bg-white` stay
      literal on purpose. See `docs/DESIGN-SYSTEM.md` for both, and for the
      border-weight collapse that is worth a human look.
-   - **← NEXT. 2b. Text.** ~120 utilities across **six** slate levels
-     (`900/800/700/600/500/400`) onto **two** tokens, `--fg` and `--fg-muted`.
-     Not mechanical: it is a deliberate hierarchy collapse, and v0.5.1 defines
-     no third level. Also decide `bg-slate-100`/`200` here — a third surface
-     level against two surface tokens.
-   **This is the step that makes dark mode real**: the `color-scheme: light`
-   guard comes off at the end of 2b, not before, and 2b is not done until the
-   board is legible in both themes.
-3. **Accent.** ~25 `indigo-*` → `--accent` / `--accent-hover`.
+   - ~~**2b. Text.**~~ **DONE.** 135 utilities, which closes the census exactly
+     (78 + 135 + 32 retained = 245): 49 → `text-fg`, 67 → `text-fg-muted`, 15
+     → a new local `--surface-sunken`, 2 → `bg-surface`, 1 → `hover:bg-border`,
+     1 list-marker dot → `bg-fg-muted`. **The collapse cost nothing**, which was
+     the open question, and it is really five-into-two — `slate-900` lives only
+     in the print sheet. The split landed between 700 and 600, and in all four
+     places `slate-600` and `slate-500` co-occur they also differ in size or
+     weight, so colour was never the sole carrier of that distinction.
+     **No text-level deviation was needed**, though SPEC §10 would have allowed
+     one.
+   - **The `bg-slate-100`/`200` question the plan left open is answered by a
+     local token, not by the existing two.** Progress tracks, status chips and
+     menu-row hover sit *inside* a card and need a surface further from it than
+     the card itself; v0.5.1's `--surface` (page) and `--surface-card` are
+     neither of them recessed relative to a card, and §9 forbids reaching past
+     the semantic layer to a palette value. So `--surface-sunken` is defined in
+     `src/index.css`, which SPEC §10.3 permits with a stated reason, and §11
+     classes as a *safe* addition. **Report it upstream to
+     `kwpledger/kwpledger-site`** — Kevin's instruction — so it can decide
+     whether a recessed surface belongs in the shared system. Derivation,
+     contrast gates and the inversion trap are in `docs/DESIGN-SYSTEM.md`.
+   **2b did NOT make dark mode real, and the plan was wrong about that.** See
+   step 6 — the guard moves to the end of step 4, for a measured reason.
+3. **← NEXT. Accent.** ~25 `indigo-*` → `--accent` / `--accent-hover`, and with
+   them the 7 `bg-slate-800`/`hover:bg-slate-700` inverted buttons plus their 12
+   `text-white` labels, which are a second accent predating the app having one
+   rather than a neutral surface. This step also fixes two of the three dark-mode
+   legibility failures in step 6.
 4. **Categorical.** Domain tokens *in this repo* — `--meal-breakfast` …
    `--macro-fat` — onto `--data-1` … `--data-7`. Seven of eight slots; SPEC
    §4.1 sized the scale against this app, and `categorical.css`'s worked example
@@ -148,18 +168,110 @@ grid fix) go ahead regardless.
    the whole layering exists to enforce. Bridge into Tailwind with `@theme`,
    and remember the theme key must not equal the token name (see
    `docs/DESIGN-SYSTEM.md`).
+
+   **The question to answer before mapping anything, and it is not "which token
+   is nicest":** this app has **two** categorical axes drawing on **one**
+   eight-slot scale — 4 meal types and 3 macro bars. They appear on screen
+   together, so an arbitrary split lets a meal card and a macro bar land on
+   neighbouring hues and read as related when they are not. Decide the
+   assignment on a stated basis (contiguous runs per axis, or maximal hue
+   separation between axes) and record which, because that is exactly the
+   "throughput" the design system asks for — see `docs/DESIGN-SYSTEM.md`, *the
+   bar a local value has to clear*.
+
+   **The eighth slot is already spoken for.** `macros.fiber` is preserved on
+   every meal and renders nowhere; a fiber row on the macro bars is the obvious
+   small feature, and it would make 4 + 4 = 8. So plan the split as if the scale
+   is full rather than treating slot 8 as spare.
 5. **Status.** The ingredient-confidence badges and warnings
    (`amber`/`emerald`/`red`) → `--warning` / `--success` / `--danger`. SPEC §5.4
    authors status at strictly higher chroma than categorical, which is exactly
    the distinction those badges want — and §5.1 forbids mapping a status onto
    `--data-n` in either direction.
-6. **Drop the guard.** Remove `color-scheme: light`, verify both themes.
+6. **Drop the guard — after step 4, not after 2b.** Remove
+   `color-scheme: light`, verify both themes.
+
+   **This moved, and the measurement is the reason.** Step 2 said the guard came
+   off at the end of 2b. It did not, because 2b is what *created* the
+   dependency: tokenized text now follows the theme while the surfaces under it
+   still do not. Dropping the guard today would be worse than before 2b, when
+   the same text was hard-coded slate on those same light panels and stayed
+   readable in a dark-preference browser. `--fg` in dark mode measures:
+
+   | Surface | Fixed by | Contrast |
+   |---|---|---|
+   | meal cards `bg-amber/sky/green/rose-100` | step 4 | **1.01 – 1.08:1** |
+   | match panels `bg-indigo-50` (×2) | step 3 | **1.06:1** |
+   | primary buttons `bg-slate-800` vs the card | step 3 | **1.13:1** |
+
+   1.0:1 is invisible. The buttons are the smaller problem — the white label
+   stays at 14.6:1, so the text is readable and only the button *shape*
+   disappears — but the meal cards are the board's primary content, and they are
+   step 4. Hence the move.
+
+   **The gate to test against, rather than a step number:** no tokenized text
+   sits on a literal light surface. Step 5's status chips do not gate it, since
+   they pair their own text with their own background (`bg-green-100
+   text-green-800`) and stay internally legible in either theme; after step 4
+   they are a bright-chip appearance question, not a legibility one.
+
+   Also note what the guard does *not* buy: `color-scheme` governs only
+   browser-painted chrome, and `prefers-color-scheme` redefines `--surface` and
+   `--fg` underneath regardless. It never light-locked the page.
 
 Steps 2–5 are more than one session each in places; step 2 is the big one.
 
 **Colour is reinforcement, never the sole carrier** — SPEC §8, and already true
 here: meal types, macro bars and match confidence all carry text labels. Any
 colour work must keep them.
+
+### A light/dark toggle — Kevin's request, and it is blocked upstream
+
+Asked for on PR #24, "maybe as a removable dev feature, maybe to keep in the
+final version." **It cannot be built cleanly against v0.5.1, and the reason is
+worth having before anyone tries.**
+
+`base.css` themes *only* through `@media (prefers-color-scheme: dark)`. A media
+query cannot be overridden by a button, so a toggle needs a selector — and the
+pinned system ships none. To build one here today this repo would have to
+redefine **40 tokens** under `:root[data-theme="dark"]`, duplicating the design
+system's own dark block: 7 semantic in `base.css`, 24 categorical, 9 status.
+That is a copy that silently goes stale on every pin bump, which is the exact
+liability pinning a tag exists to avoid. **Don't do it locally.**
+
+**The design system already assumes the capability it doesn't ship**, which is
+what makes this a clean upstream ask rather than a feature request.
+`header-footer-design-system.md` §4.1 says a surface with its own toggle
+"swaps the media query for whatever selector drives the rest of its theme
+(`:root[data-theme="dark"]`, a `.dark` class)" — presuming the consumer has
+one. No consumer does.
+
+**The ask for `kwpledger-site` → `design`:** give each dark block a companion
+selector, so `:root[data-theme="dark"]` sets the same values as the media query
+and `:root[data-theme="light"]` can opt out of it. The usual shape is three
+selectors — the media query guarded by `:root:not([data-theme="light"])`, plus
+an explicit `[data-theme="dark"]` — which leaves system-preference consumers
+completely unaffected. **This travels with the layout note Kevin is already
+considering** (a slider top-right of the header, near the About link): the
+layout note calls for the control, and this makes the control possible.
+
+**Until then the toggle is not a prerequisite for steps 3–5, only a
+convenience** — a large one. It is why 2b's dark-mode failures were found by
+computing contrast ratios rather than by looking, and it would make step 4's
+categorical work checkable by eye.
+
+### Header and footer conformance — Kevin raised it, and §10.1 makes it binding
+
+*"We still have to do the header and footer at some point."* Noted here because
+it has a status the rest of the colour work does not: **SPEC §10 point 1 calls
+`header-footer-design-system.md` "the hard edge of this rule, and it is not
+negotiable."** So unlike the palette, where added colour is explicitly welcome,
+the header/footer is a conform-or-justify surface.
+
+It also interacts with item 5 (making the header sticky) and with the toggle
+above, since the slider's home is the header. Read that doc before designing
+any of the three, rather than doing them in sequence and re-cutting the header
+each time.
 
 
 ## 3. Harden portion normalization

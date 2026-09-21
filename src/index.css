@@ -11,13 +11,33 @@
 @import "@kwpledger/design";
 
 /*
- * .addedbykevin/ is a drop-box for reference material, not source. Tailwind v4
- * auto-scans every tracked file for anything shaped like a utility name, and
- * plain English collides with the utility namespace - the prose "Lora is a
- * static SemiBold" in the style docs was enough to emit a .static rule nothing
- * uses. Excluded so documentation can't mutate the production stylesheet.
+ * PROSE IS NOT SOURCE, AND TAILWIND v4 CANNOT TELL. It auto-scans every tracked
+ * file for anything shaped like a utility name, so documentation mutates the
+ * production stylesheet unless it is excluded.
+ *
+ * `.addedbykevin/` is a drop-box for reference material. The prose "Lora is a
+ * *static* SemiBold" in a style doc there was enough to emit a `.static` rule
+ * nothing uses.
+ *
+ * `docs/` and `.claude/` are worse, and step 2b is how it was found. Writing up
+ * the migration means naming the utilities it *removed* - `bg-slate-100`,
+ * `text-slate-700` and the rest, in a was/became table - and Tailwind duly
+ * re-emitted rules for every one of them. **Documenting the removal partly
+ * un-did it**: the CSS bundle grew 460 bytes for utilities the app no longer
+ * contains. This is the `.addedbykevin` trap arriving from a directory nobody
+ * had thought to exclude.
+ *
+ * `AGENTS.md` and `README.md` are excluded for the same reason - AGENTS.md
+ * quotes the board's grid template and several utility names verbatim.
+ *
+ * The rule to carry forward: **anything that only ever gets read by a human
+ * needs a `@source not`.** Only `src/` and `index.html` are source.
  */
 @source not "../.addedbykevin";
+@source not "../docs";
+@source not "../.claude";
+@source not "../AGENTS.md";
+@source not "../README.md";
 
 /*
  * TYPOGRAPHY ONLY, FOR NOW. This adoption is deliberately staged: the type
@@ -46,17 +66,35 @@
 
 /*
  * base.css sets `color-scheme: light dark` on :root, which opts the browser
- * into dark form controls, scrollbars and canvas default. This app has no dark
- * mode: roughly 200 hard-coded Tailwind neutrals (slate-*, bg-white) still
- * paint it light on every device. Left alone, a dark-preference browser would
- * get dark chrome around a light page - a half-dark state that did not exist
- * before this import.
+ * into dark form controls, scrollbars and canvas default. Left alone, a
+ * dark-preference browser would get dark chrome around a page still painted
+ * light - a half-dark state that did not exist before this import.
  *
- * Note what this override does NOT do: `prefers-color-scheme` reflects the OS
+ * THE GUARD STAYS PAST STEP 2b, AGAINST WHAT THE PLAN SAID, AND THE REASON IS
+ * MEASURED. The original note here promised removal "the moment the neutrals
+ * migrate". They have migrated, and removing it now would be worse than before
+ * 2b, not better: tokenized text follows the theme while the surfaces it sits
+ * on do not yet, so dark mode inverts the foreground and leaves the background
+ * light. Contrast of --fg against those surfaces, in dark:
+ *
+ *   meal cards (bg-amber/sky/green/rose-100, step 4)   1.01 - 1.08:1
+ *   match panels (bg-indigo-50, step 3)                1.06:1
+ *   primary buttons (bg-slate-800, step 3) vs the card 1.13:1
+ *
+ * 1.0:1 is invisible. Before 2b this text was hard-coded slate on those same
+ * light panels and stayed readable in a dark-preference browser; the migration
+ * is what makes it theme-dependent. The board's primary content is on the meal
+ * cards, so **the guard comes off at the end of step 4, not step 2b.**
+ *
+ * Note what the override does NOT do: `prefers-color-scheme` reflects the OS
  * setting, so base.css's dark block still redefines --surface, --fg and friends
- * underneath. That is harmless *only* because nothing here consumes a colour
- * token yet. The moment the neutrals migrate, this line must come off and dark
- * mode has to be handled properly rather than suppressed.
+ * underneath, and `color-scheme` governs only browser-painted chrome. The guard
+ * buys consistent chrome, not a light-locked page - which is exactly why it is
+ * a stopgap and the surfaces still have to be finished.
+ *
+ * Status chips (step 5) are not a gate: they pair their own text with their own
+ * background (`bg-green-100 text-green-800`), so they stay internally legible
+ * throughout. See docs/BACKLOG.md item 2 step 6.
  */
 :root {
   color-scheme: light;
@@ -88,10 +126,60 @@
  * `--color-border` producing `border-border` is deliberately literal rather
  * than prettier: it greps 1:1 against the design-system token name.
  */
+/*
+ * LOCAL TOKEN: --surface-sunken. A deliberate, documented deviation, permitted
+ * by SPEC.md §10 ("added color is fine where it makes sense for what the thing
+ * actually is") and §10.3 ("define the value in your own repo, and say why in
+ * a comment"). **Report this upstream** - if other consumers want a recessed
+ * surface, it belongs in the shared system. SPEC §11 calls adding a semantic
+ * token a *safe* change, so globalising it needs no spec conversation.
+ *
+ * THE FUNCTION IT SERVES, since §10.2 requires function and not preference:
+ * this board has elements that sit *inside* a card - progress-bar tracks,
+ * status chips, and menu-row hover. They need a surface further from the card
+ * than the card itself. v0.5.1 has `--surface` (the page) and `--surface-card`
+ * (the card), and neither is recessed relative to a card. There is nowhere to
+ * map them. Reaching past the semantic layer to a palette value is forbidden
+ * by §9, so the value is defined here.
+ *
+ * DERIVED, NOT EYEBALLED. Authored in OKLCH per §4.3 using the design repo's
+ * own `tools/color.mjs`, placed inside each existing neutral family:
+ *   light  L=91.5% C=0.0084 H=84.6  -> #e5e3dd   (sand-200 L90.7 .. paper-50 L98.5)
+ *   dark   L=28.0% C=0.0410 H=248.3 -> #182b3c   (navy-800 L23.7 .. navy-600 L30.9)
+ * The hex round-trips to H=91.5 / H=246.8, not the authored hue - at this
+ * chroma one 8-bit step swings the angle several degrees, so the hex cannot
+ * hold it. Lightness and chroma, which do the perceptual work, land within
+ * 0.1% and 0.001. docs/DESIGN-SYSTEM.md has the full table.
+ *
+ * NOTE THE INVERSION, which is the system's own and not an inconsistency:
+ * `--border` is *darker* than the card in light mode and *lighter* in dark.
+ * Sunken follows it. A first attempt pushed darker in both and scored 1.07:1
+ * against the dark card - a progress track no one could see.
+ *
+ * GATED AGAINST THE SYSTEM'S OWN PRECEDENT rather than an invented threshold.
+ * WCAG ratios compress badly between two dark surfaces, so the bar used is
+ * "at least as discriminable as this system's existing `--surface` vs
+ * `--surface-card` pair": 1.04:1 light, 1.12:1 dark. Measured here: 1.28:1
+ * light, 1.14:1 dark. Text on it clears AA comfortably in both themes -
+ * `--fg` 13.7:1 / 12.2:1, `--fg-muted` 5.4:1 / 6.2:1.
+ */
+:root {
+  --surface-sunken: #e5e3dd;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-sunken: #182b3c;
+  }
+}
+
 @theme {
   --color-surface: var(--surface);
   --color-surface-card: var(--surface-card);
+  --color-surface-sunken: var(--surface-sunken);
   --color-border: var(--border);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
 }
 
 @layer base {
