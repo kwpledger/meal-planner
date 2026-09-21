@@ -155,12 +155,35 @@ grid fix) go ahead regardless.
      contrast gates and the inversion trap are in `docs/DESIGN-SYSTEM.md`.
    **2b did NOT make dark mode real, and the plan was wrong about that.** See
    step 6 — the guard moves to the end of step 4, for a measured reason.
-3. **← NEXT. Accent.** ~25 `indigo-*` → `--accent` / `--accent-hover`, and with
-   them the 7 `bg-slate-800`/`hover:bg-slate-700` inverted buttons plus their 12
-   `text-white` labels, which are a second accent predating the app having one
-   rather than a neutral surface. This step also fixes two of the three dark-mode
-   legibility failures in step 6.
-4. **Categorical.** Domain tokens *in this repo* — `--meal-breakfast` …
+3. ~~**Accent.**~~ **DONE.** 44 utilities — 25 `indigo-*` plus the 19
+   inverted-button utilities 2a/2b deferred. **This closes the neutral census:**
+   78 + 135 + 19 + 13 deliberately retained = 245, and the 13 are the print
+   sheet and the scrims.
+
+   **It needed a second local token, and not optionally.** `--accent` inverts
+   between themes — teal-700 in light, teal-**300** in dark — so the twelve
+   `text-white` button labels would have shipped at **2.23:1**, and **1.64:1**
+   on hover. Below AA Large. `--accent-fg` is defined in `src/index.css` by the
+   same throughput rule as `--surface-sunken`: *the active theme's extreme
+   neutral on the far side of the accent's lightness* (white in light,
+   `navy-900` in dark; 7.81–11.30:1 across all four states). **Report it
+   upstream with `--surface-sunken`** — an on-accent foreground is a gap any
+   consumer with a dark theme hits.
+
+   **A 2a note said the opposite and was wrong**, which is the reusable part: it
+   recorded that hard-coding white "clears AA comfortably," having measured only
+   the light value. When checking a colour against a semantic token, **check it
+   in both themes** — roughly half of them invert.
+
+   **Two things for a human look, neither a defect.** (a) `bg-indigo-600` and
+   `bg-slate-800` were two eras of the same button rather than a designed
+   distinction, so collapsing them means every primary button in the ingredient
+   editor now reads at the same weight. If that wants a hierarchy, the answer is
+   a secondary *style* — the app already has `bg-surface-card border-border
+   text-fg` — not a second hue; choosing which buttons demote is a design call,
+   so nothing was demoted here. (b) In light mode hover now *darkens*
+   (`--accent-hover` is teal-800), where `indigo-500` used to lighten.
+4. **← NEXT. Categorical.** Domain tokens *in this repo* — `--meal-breakfast` …
    `--macro-fat` — onto `--data-1` … `--data-7`. Seven of eight slots; SPEC
    §4.1 sized the scale against this app, and `categorical.css`'s worked example
    is literally `--meal-breakfast: var(--data-1-surface)`. **Never map a domain
@@ -183,6 +206,19 @@ grid fix) go ahead regardless.
    every meal and renders nowhere; a fiber row on the macro bars is the obvious
    small feature, and it would make 4 + 4 = 8. So plan the split as if the scale
    is full rather than treating slot 8 as spare.
+
+   **This step fixes a live defect, not just a token mapping.** Measured during
+   step 3: **`bg-yellow-400`, the fat macro bar, is 1.19:1 against its track in
+   light mode** — effectively invisible, and it always has been (1.24:1 on the
+   old `bg-slate-200` track, so this is inherited, not caused). Carbs and
+   protein are only marginally better at 1.98:1 and 2.16:1. The value is still
+   readable because every macro row carries a text label, so this degrades the
+   visual rather than losing information — but `--data-n` is contrast-gated
+   where a raw `yellow-400` is not, so **check each fill against
+   `--surface-sunken` in both themes after mapping**, and treat a fill that
+   can't be seen as a failed mapping rather than a faithful one. The same
+   measurement found no *dark*-mode problem: all three fills read better on a
+   dark track (5.2–9.5:1).
 5. **Status.** The ingredient-confidence badges and warnings
    (`amber`/`emerald`/`red`) → `--warning` / `--success` / `--danger`. SPEC §5.4
    authors status at strictly higher chroma than categorical, which is exactly
@@ -200,14 +236,15 @@ grid fix) go ahead regardless.
 
    | Surface | Fixed by | Contrast |
    |---|---|---|
-   | meal cards `bg-amber/sky/green/rose-100` | step 4 | **1.01 – 1.08:1** |
-   | match panels `bg-indigo-50` (×2) | step 3 | **1.06:1** |
-   | primary buttons `bg-slate-800` vs the card | step 3 | **1.13:1** |
+   | meal cards `bg-amber/sky/green/rose-100` | step 4 | **1.01 – 1.08:1** — still open |
+   | ~~match panels `bg-indigo-50` (×2)~~ | step 3 | **fixed** — now `bg-surface-sunken` |
+   | ~~primary buttons `bg-slate-800` vs the card~~ | step 3 | **fixed** — now `bg-accent`, 7.42:1 |
 
-   1.0:1 is invisible. The buttons are the smaller problem — the white label
-   stays at 14.6:1, so the text is readable and only the button *shape*
-   disappears — but the meal cards are the board's primary content, and they are
-   step 4. Hence the move.
+   1.0:1 is invisible. **Step 3 cleared two of the three**, as predicted. The
+   meal cards are the board's primary content and they are step 4, which is why
+   the guard's removal sits there. Step 3 was also checked for *new* adjacency
+   failures and introduced none — the macro fills read better on a dark track
+   than a light one.
 
    **The gate to test against, rather than a step number:** no tokenized text
    sits on a literal light surface. Step 5's status chips do not gate it, since

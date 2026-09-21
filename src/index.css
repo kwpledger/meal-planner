@@ -27,8 +27,35 @@
  * contains. This is the `.addedbykevin` trap arriving from a directory nobody
  * had thought to exclude.
  *
- * `AGENTS.md` and `README.md` are excluded for the same reason - AGENTS.md
- * quotes the board's grid template and several utility names verbatim.
+ * THE LAST LINE MUST BE A GLOB, AND THIS IS THE SHARPEST TRAP OF THE THREE.
+ * Step 2b shipped `@source not "../AGENTS.md"` alongside the two directory
+ * lines. **A bare file path is accepted and silently does nothing** - no
+ * warning, no error, the build just keeps scanning the file. Measured in step
+ * 3: the single word "invert" added to AGENTS.md emitted a `.invert` filter
+ * rule straight into production while that line sat right above it.
+ *
+ *   @source not "../AGENTS.md"    ->  no effect whatsoever
+ *   @source not "../*.md"         ->  works
+ *   @source not "*.md"            ->  no effect (resolves against src/)
+ *
+ * (A recursive md glob works too and would subsume docs/. It is NOT written
+ * out here on purpose: a recursive glob contains a star followed by a slash,
+ * which ends a CSS comment early. Doing exactly that broke this build once -
+ * `CssSyntaxError: Unterminated string`. The full syntax table lives in
+ * docs/DESIGN-SYSTEM.md, where markdown can hold it safely.)
+ *
+ * So the glob below covers AGENTS.md, README.md and `CLAUDE.md` (the symlink)
+ * in one line, and covers any root markdown added later for free. **Don't
+ * "tidy" it back into named files.**
+ *
+ * WORSE: 2b's verification passed for the wrong reason, which is the real
+ * lesson. It checked that the stylesheet was byte-identical with the docs
+ * reverted, and it was - because AGENTS.md happened to contain no
+ * utility-shaped word that wasn't already emitted. A passing test proved those
+ * particular edits didn't leak, not that the exclusion worked. **Test an
+ * exclusion with a deliberate canary** - append a utility the app does not use
+ * (`rotate-45`) to each excluded file, build, and confirm it does not appear.
+ * All four paths here are verified that way as of step 3.
  *
  * The rule to carry forward: **anything that only ever gets read by a human
  * needs a `@source not`.** Only `src/` and `index.html` are source.
@@ -36,8 +63,7 @@
 @source not "../.addedbykevin";
 @source not "../docs";
 @source not "../.claude";
-@source not "../AGENTS.md";
-@source not "../README.md";
+@source not "../*.md";
 
 /*
  * TYPOGRAPHY ONLY, FOR NOW. This adoption is deliberately staged: the type
@@ -173,6 +199,48 @@
   }
 }
 
+/*
+ * LOCAL TOKEN: --accent-fg. Step 3. Also a §10.3 deviation, and this one is
+ * not a nicety - without it the accent buttons fail WCAG AA in dark mode.
+ *
+ * THE 2a NOTE THAT SAID OTHERWISE WAS WRONG, and it is worth knowing why.
+ * docs/DESIGN-SYSTEM.md recorded "white on --accent (teal-700) clears AA
+ * comfortably, so hard-coding it is defensible." That measured *only* the
+ * light value. **`--accent` inverts across themes** - teal-700 (L 43.0%) in
+ * light, teal-300 (L 73.8%) in dark - so a fixed white label goes from 7.81:1
+ * to **2.23:1**, and on the hover state (teal-200) to **1.64:1**. Below even AA
+ * Large. Twelve primary buttons, every one of them unreadable.
+ *
+ * THE DERIVATION IS A RULE, NOT A PICK, which is the bar docs/DESIGN-SYSTEM.md
+ * sets for a local value: **--accent-fg is the active theme's extreme neutral
+ * on the far side of the accent's lightness.** The accent fill crosses the
+ * midpoint between themes, so the foreground crosses the other way:
+ *   light  accent L 43.0% (dark fill)  -> paper-0  L 100.0% -> #ffffff
+ *   dark   accent L 73.8% (light fill) -> navy-900 L  18.8% -> #0a1420
+ * Anyone re-deriving this lands in the same place. All four states clear AA
+ * with room, and every one *improves* on hover, which is the right direction:
+ *   light  #ffffff on teal-700  7.81:1   on teal-800 (hover) 10.08:1
+ *   dark   #0a1420 on teal-300  8.31:1   on teal-200 (hover) 11.30:1
+ *
+ * WHY A LITERAL AND NOT `var(--surface-card)` / `var(--surface)`, which happen
+ * to hold these same two values today: because that coincidence is not a
+ * relationship. "The foreground of the accent" and "the card surface" have no
+ * reason to move together, so aliasing them would make a future upstream
+ * change to --surface-card silently repaint twelve button labels.
+ *
+ * RE-CHECK THIS ON EVERY PIN BUMP. It is pinned to the *current* accent pair;
+ * if --accent moves, re-run the four ratios above before assuming they hold.
+ */
+:root {
+  --accent-fg: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent-fg: #0a1420;
+  }
+}
+
 @theme {
   --color-surface: var(--surface);
   --color-surface-card: var(--surface-card);
@@ -180,6 +248,9 @@
   --color-border: var(--border);
   --color-fg: var(--fg);
   --color-fg-muted: var(--fg-muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
 }
 
 @layer base {

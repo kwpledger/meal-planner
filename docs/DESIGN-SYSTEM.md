@@ -7,26 +7,27 @@ The system's own contract is `docs/SPEC.md` in `kwpledger/kwpledger-design` —
 that is the authority on what the tokens mean. This file only covers this
 consumer.
 
-## Current state: typography, surfaces, borders and text
+## Current state: typography, surfaces, borders, text and accent
 
 **Adopted:** `--font-display` (Lora), `--font-body` (Hanken Grotesk),
-`--fw-display`, `--surface`, `--surface-card`, `--border` (step 2a), `--fg`,
-`--fg-muted` (step 2b), plus one local token, `--surface-sunken`.
+`--fw-display`, `--surface`, `--surface-card`, `--border` (2a), `--fg`,
+`--fg-muted` (2b), `--accent`, `--accent-hover` (step 3), plus two local
+tokens, `--surface-sunken` and `--accent-fg`.
 
-**The neutral census reconciles exactly.** Of the 245 hard-coded neutral
-utilities it found, **213 are migrated and 32 remain**, and every one of the 32
-is deliberate rather than a straggler:
+**The neutral census is now closed.** Of the 245 hard-coded neutral utilities it
+found, **232 are migrated and 13 remain**, and both remaining groups are
+deliberate rather than stragglers:
 
 | Remaining | Count | Why it stays |
 |---|---|---|
 | Print sheet + `print:bg-white` | 9 | Paper is white in every theme — see below |
-| Scrims (`bg-black/50`, `bg-slate-900/40`) | 4 | Must stay dark in both themes; no token |
-| Inverted buttons (`bg-slate-800`, `hover:bg-slate-700`) + `text-white` | 19 | A second accent, not a neutral surface — step 3 |
+| Scrims (`bg-black/50`, `bg-slate-900/40`) | 4 | Must stay dark in **both** themes; anything that inverts turns the dark-mode backdrop white |
 
-**Not adopted yet:** `indigo` as a de-facto accent (step 3),
-`amber`/`sky`/`green`/`rose` for meal types and `blue`/`red`/`yellow` for macros
-(step 4), and the confidence badges (step 5). `docs/BACKLOG.md` item 2 carries
-the order.
+78 (2a) + 135 (2b) + 19 (step 3's inverted buttons) + 13 retained = 245.
+
+**Not adopted yet:** `amber`/`sky`/`green`/`rose` for meal types and
+`blue`/`red`/`yellow` for macros (step 4), and the confidence badges (step 5).
+`docs/BACKLOG.md` item 2 carries the order.
 
 ## What v0.5.1 added, and what it still does not define
 
@@ -49,7 +50,7 @@ design around, not oversights to wait on:
 | Inverted surface | 15 (`bg-slate-800/700/900` + `text-white`) | These sit beside `bg-indigo-600 text-white` doing the same job. They are not a neutral surface — they are a second accent predating the app having one. They belong in step 3, mapped to `--accent`, not to a local inverse token. |
 | Third text level | — | **Turned out not to be needed.** `--fg` and `--fg-muted` are the only two, against six slate levels — but colour was never the sole carrier of the distinction. See step 2b below. |
 | Recessed surface | 15 (`bg-slate-100`/`200` + `hover:`) | `--surface` is the page and `--surface-card` is the card; neither is recessed *relative to a card*, which is where progress tracks and chips sit. **Defined locally as `--surface-sunken`** under SPEC §10.3, and reportable upstream. See step 2b. |
-| On-accent foreground | 12 (`text-white`) | White on `--accent` (teal-700, `#0d5c58`) clears AA comfortably, so hard-coding it is defensible; note it rather than inventing `--accent-fg` locally. |
+| On-accent foreground | 12 (was `text-white`) | ~~White on `--accent` (teal-700, `#0d5c58`) clears AA comfortably, so hard-coding it is defensible.~~ **This was wrong — see step 3.** It measured the light value only. `--accent` inverts to teal-**300** in dark, where white is **2.23:1**. `--accent-fg` *had* to be defined locally. |
 
 **A version bump requires re-copying the fonts** (see below). Between v0.2.0 and
 v0.5.1 the faces were byte-identical, so the copy was a no-op — but running it
@@ -67,6 +68,16 @@ mode.
 
 **Pinned to a tag, never a branch.** A design system that moves under a consumer
 is how a shared system becomes a liability; bumping is a deliberate act.
+
+**The repo is `kwpledger-design`.** Older notes call it
+`kwpledger-designsystem`; that name is wrong and has sent a session looking for
+a repo that does not exist.
+
+**Colours here are *compatible*, not *harmonized*** — moved from `AGENTS.md`
+for space. The board's meal-type pastels and the system's teal coexist without
+having been tuned against each other, and that is the expected state until step
+4 puts the categorical axes on `--data-n`. A mismatch between a token and a
+not-yet-migrated literal is a queue position, not a bug to fix locally.
 
 Two things about the install that look wrong and are not:
 
@@ -177,8 +188,8 @@ Measured with the design repo's own `tools/color.mjs`, `--fg` in dark
 | `bg-sky-100` Lunch card | step 4 | 1.04:1 |
 | `bg-green-100` Snack card | step 4 | 1.08:1 |
 | `bg-rose-100` Dinner card | step 4 | 1.01:1 |
-| `bg-indigo-50` match panels | step 3 | 1.06:1 |
-| `bg-slate-800` button vs `navy-800` card | step 3 | 1.13:1 |
+| ~~`bg-indigo-50` match panels~~ | ~~step 3~~ | **fixed** — now `bg-surface-sunken` |
+| ~~`bg-slate-800` button vs card~~ | ~~step 3~~ | **fixed** — now `bg-accent`, 7.42:1 |
 
 For reference, `--fg` light on `bg-amber-100` is **16.63:1**. So this is not a
 degradation, it is a total loss of the board's primary content.
@@ -450,10 +461,25 @@ directories nobody had thought to exclude. `src/index.css` now carries:
 docs are unusually detailed and quote code freely, which makes the exposure
 larger here than it would be in a typical project.
 
-**Verified the strong way rather than by a byte-delta.** With the exclusions in
-place, the emitted stylesheet is *byte-identical* whether the docs hold 2b's
-write-up or the version from before it — same 31.60 kB, same content hash
-`index-DCavdiMg.css`. Documentation provably cannot reach the bundle any more.
+**⚠️ 2b's verification of this was weaker than it looked, and step 3 caught it.**
+What 2b checked was that the stylesheet came out byte-identical with the docs
+reverted — same 31.60 kB, same hash — and concluded documentation "provably
+cannot reach the bundle any more." **That conclusion was wrong**, for two
+reasons worth separating:
+
+1. `@source not "../AGENTS.md"` **never worked at all.** A bare file path is
+   accepted silently and does nothing. Only the two *directory* lines were real.
+2. The test passed anyway, because AGENTS.md happened to contain no
+   utility-shaped word that wasn't already being emitted. **A passing test
+   proved those particular edits didn't leak, not that the exclusion worked.**
+
+Step 3 broke it immediately by adding one word — "invert", a real Tailwind
+filter utility — to AGENTS.md, which emitted `.invert` into production. See
+step 3's section below for the syntax table and the canary method that replaces
+this test.
+
+This is the repo's own lesson about green CI runs, turned on itself: a passing
+check proves the thing you measured, not the thing you wanted to know.
 
 ### Net effect on the bundle
 
@@ -465,3 +491,208 @@ write-up or the version from before it — same 31.60 kB, same content hash
 
 So 2b *shrinks* the stylesheet — it mostly deletes utility classes, and the
 tokens it consumes were already being shipped.
+
+## Step 3: accent (done)
+
+**44 utilities** — 25 `indigo-*` and the 19 inverted-button utilities that
+2a/2b deliberately deferred.
+
+| Was | Count | Became |
+|---|---|---|
+| `bg-indigo-600` | 7 | `bg-accent` |
+| `bg-slate-800` | 5 | `bg-accent` |
+| `hover:bg-indigo-500` | 7 | `hover:bg-accent-hover` |
+| `hover:bg-slate-700` | 2 | `hover:bg-accent-hover` |
+| `text-white` | 12 | `text-accent-fg` (local — see below) |
+| `bg-indigo-50` | 2 | `bg-surface-sunken` |
+| `border-indigo-200` | 2 | `border-border` |
+| `hover:bg-indigo-50` | 2 | `hover:bg-surface-sunken` |
+| `text-indigo-700` | 2 | `text-accent` |
+| `ring-indigo-400` | 1 | `ring-accent` |
+| `border-indigo-600` | 1 | `border-accent` |
+| `bg-indigo-500` | 1 | `bg-accent` (a progress fill, not a hover) |
+
+### `--accent-fg` — the local token this step *had* to add
+
+Not a nicety. **Without it, all twelve primary buttons fail WCAG AA in dark
+mode**, and the 2a note in the table above said the opposite.
+
+`--accent` inverts across themes — teal-700 at **L 43.0%** in light, teal-300 at
+**L 73.8%** in dark. The fill crosses the lightness midpoint, so a fixed white
+label goes from fine to unreadable:
+
+| | on `--accent` | on `--accent-hover` |
+|---|---|---|
+| white, light | 7.81:1 | 10.08:1 |
+| white, **dark** | **2.23:1** | **1.64:1** |
+
+1.64:1 is below AA Large. The 2a note read "white on `--accent` (teal-700)
+clears AA comfortably" — true, and it measured only one of the two values the
+token takes. **The lesson generalises past this token: when checking a colour
+against a semantic token, check it in both themes**, because roughly half of
+them invert.
+
+**The derivation is a rule, not a pick**, which is the bar set above for a local
+value: *`--accent-fg` is the active theme's extreme neutral on the far side of
+the accent's lightness.* The accent crosses the midpoint, so the foreground
+crosses the other way.
+
+| Theme | Accent | → `--accent-fg` | on accent | on hover |
+|---|---|---|---|---|
+| light | teal-700, L 43.0% (dark fill) | `paper-0` L 100.0% → `#ffffff` | 7.81:1 | 10.08:1 |
+| dark | teal-300, L 73.8% (light fill) | `navy-900` L 18.8% → `#0a1420` | 8.31:1 | 11.30:1 |
+
+Every state clears AA with room, and every one *improves* on hover, which is
+the right direction for a hover to move.
+
+**Why a literal and not `var(--surface-card)` / `var(--surface)`**, which hold
+these exact two values today: because the coincidence is not a relationship.
+"The foreground of the accent" and "the card surface" have no reason to move
+together, so aliasing them would let a future upstream change to
+`--surface-card` silently repaint twelve button labels. **Re-check the four
+ratios on any pin bump** — the token is pinned to the current accent pair.
+
+### Two accents collapsed into one, and it flattens a hierarchy
+
+`bg-indigo-600` and `bg-slate-800` were two eras of the same button, not a
+designed distinction — the indigo set is the nutrition/apply actions (Match all
+unresolved, Recompute, Apply to form, Auto-match & cache, Apply all to meal
+cards, Replace board with cloud copy) and the slate set is form actions (Save,
+Edit meal, Copy Cronometer text, Replace ingredients from text, USDA). `Save`
+and `Apply to form` are the same weight of action and had different colours.
+
+Checked before collapsing, the same way 2b checked the text levels: **no
+indigo and slate button are siblings in one button row.** The closest pairs
+(`USDA` / `Auto-match & cache`, and `Replace ingredients from text` /
+`Recompute`) are in the same panel but different rows.
+
+**The honest consequence: the ingredient editor goes from two button colours to
+one, so every primary button there now reads at the same weight.** That is what
+a single-accent system means. If a hierarchy is wanted, the system's answer is a
+secondary *style* rather than a second hue — and the app already has the
+pattern, in the `bg-surface-card border border-border text-fg` per-row Match
+buttons. **Worth a human look before deciding it needs one;** it was not
+changed here, because picking which of the twelve demote is a design decision,
+not a token mapping.
+
+### The `bg-indigo-50` panels lost their tint on purpose
+
+The two info panels (a match result, and the recompute preview) were
+accent-tinted. v0.5.1 has no accent-tinted surface, and §10.3 is for things
+with genuinely *nowhere* to map — these have somewhere: they are recessed
+panels inside a card, which is exactly `--surface-sunken`. So no third local
+token.
+
+Nothing is lost. Both panels carry text labels ("from cache" / "newly matched",
+"Stored:" / "Computed:"), and the accent is still present in each via the
+`bg-accent` button inside it — the tint was redundant reinforcement.
+
+### The hover direction flipped in light mode, deliberately
+
+`hover:bg-indigo-500` *lightened* an `indigo-600` button. `--accent-hover` is
+teal-800, which is **darker** than teal-700 — so in light mode hover now
+darkens. In dark mode it lightens (teal-200 over teal-300). That is the
+system's own inversion, the same one `--border` and `--surface-sunken` follow,
+and the label contrast improves either way.
+
+### Verified in the emitted CSS
+
+| Check | Result |
+|---|---|
+| `--accent-fg` light | `#fff` in a bare `:root` |
+| `--accent-fg` dark | `#0a1420` inside `@media (prefers-color-scheme:dark)` |
+| Bridge | `--color-accent`, `--color-accent-hover`, `--color-accent-fg`, all reading the token of a *different* name |
+| Utilities | `bg-accent`, `text-accent`, `text-accent-fg`, `border-accent`, `ring-accent` all via `var(--color-…)` — registered |
+| `hover:bg-accent-hover` | compiled inside `@media (hover:hover)`, registered |
+| Stale | no `indigo`, no `bg-slate-800`, no `text-white` anywhere in the bundle |
+| Guard | `color-scheme:light` still emitted |
+| Tests / lint / build | 9 passed · 0 errors, 3 pre-existing warnings · green |
+
+CSS **31.60 → 31.04 kB** raw (7.05 → 6.91 gzipped). Third step running, third
+step shrinking.
+
+### `@source not` takes a glob, not a filename — and fails silently otherwise
+
+**The most valuable thing step 3 found, and it means 2b's exclusion list was
+partly theatre.**
+
+Step 2b shipped five lines: two directories and three file paths. Mid-step-3 the
+bundle grew 210 bytes after edits to nothing but supposedly-excluded docs. The
+cause was a single emitted class, `.invert` — from the word "invert" in a
+sentence added to `AGENTS.md`, which is a real Tailwind filter utility. The
+`@source not "../AGENTS.md"` line was sitting directly above it doing nothing.
+
+Measured, one syntax at a time:
+
+| Directive | Effect |
+|---|---|
+| `@source not "../AGENTS.md"` | **none whatsoever** — accepted, no warning, file still scanned |
+| `@source not "*.md"` | none — resolves against `src/`, not the repo root |
+| `@source not "../*.md"` | **works** |
+| `@source not "../**/*.md"` | works, and subsumes `docs/` |
+
+Directory paths work; bare file paths do not. So the three file lines collapsed
+into one glob, `@source not "../*.md"`, which covers `AGENTS.md`, `README.md`
+and the `CLAUDE.md` symlink together and picks up any root markdown added later.
+**Don't tidy it back into named files.**
+
+> **Why the recursive variant isn't used, and a trap in its own right.** It
+> contains `*` immediately followed by `/`, which **ends a CSS comment**. Writing
+> that glob into the explanatory comment in `src/index.css` broke the build with
+> `CssSyntaxError: Unterminated string`. The table above is safe here because
+> markdown has no such rule. Keep recursive globs out of CSS comments.
+
+**The canary method, which replaces 2b's test.** Append a utility the app does
+not use to each excluded path, build, and confirm it is absent — then remove it.
+Verified as of step 3, with the bundle hash unchanged while all four were
+present:
+
+| Canary | Injected into | Result |
+|---|---|---|
+| `rotate-45` | `AGENTS.md` | blocked |
+| `blur-3xl` | `docs/DESIGN-SYSTEM.md` | blocked |
+| `grayscale` | `.claude/rules/design-tokens-css.md` | blocked |
+| `saturate-150` | `.addedbykevin/` | blocked |
+
+Note what makes this a *test* and 2b's a coincidence: these four words are
+chosen precisely because the app never uses them, so the only way they can
+appear is through the path being scanned. 2b's check relied on whatever the docs
+happened to contain.
+
+> **Clean the canaries up with a file copy, not `git checkout --`.** Restoring
+> them that way reverted two files to `HEAD` and destroyed step 3's
+> documentation for both; it was recovered from copies taken before the test.
+> `git checkout -- <path>` discards *every* uncommitted change to that path, not
+> just the appended line.
+
+**A side effect worth knowing:** `src/App.jsx` and `src/index.css` both contain
+the word "inverts" in comments and emit nothing, because "inverts" is not a
+valid utility while "invert" is. Prose in *source* files is still scanned — it
+is only safe by luck of vocabulary.
+
+### What step 3 did *not* fix, measured
+
+Step 3 clears two of the three dark-mode failures 2b recorded — the
+`bg-indigo-50` panels (now a themed surface) and the invisible button shape
+(now `bg-accent`, 7.42:1 against the dark card). **The meal cards remain, so
+the guard stays until step 4**, exactly as 2b predicted.
+
+Checked for *new* adjacency failures too, since that is how 2b's problem
+arose — the macro-bar fills now sit in a themed `--surface-sunken` track:
+
+| Fill | on light track | on dark track |
+|---|---|---|
+| `bg-blue-400` (carbs) | 1.98:1 | 5.70:1 |
+| `bg-red-400` (protein) | 2.16:1 | 5.24:1 |
+| `bg-yellow-400` (fat) | **1.19:1** | 9.46:1 |
+| `bg-accent` (the match progress bar) | 6.09:1 | 6.50:1 |
+
+No new dark-mode failure — the fills all read *better* on a dark track. But it
+surfaced a live defect that predates all of this: **the fat macro bar is
+effectively invisible in light mode, and always has been.** On the old
+`bg-slate-200` track `yellow-400` measured 1.24:1; on `--surface-sunken` it is
+1.19:1, so this step made a 4% relative change to something already
+imperceptible rather than causing it. The bar's *value* is still readable —
+every macro row carries a text label — so this degrades the visual, it does not
+lose information. Step 4 should fix it for real, since `--data-n` is
+contrast-gated where a raw `yellow-400` is not.
