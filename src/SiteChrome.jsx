@@ -8,6 +8,16 @@
  * reference implementation; this is the same chrome in JSX.
  *
  * Its own module rather than more of App.jsx, which is already ~2,400 lines.
+ *
+ * Accent comes through the `text-accent` utility, not `[var(--accent)]`. This
+ * file originally used the arbitrary form to avoid adding an @theme bridge
+ * while item 2 step 3 was still pending; step 3 has since landed and bridged
+ * --color-accent, so the reason for the workaround is gone.
+ *
+ * Note this is accent as TEXT ON A SURFACE, which is safe in both themes
+ * (7.42-8.31:1 measured) because it inverts WITH the surface. That is a
+ * different case from accent as a FILL, which crosses the lightness midpoint
+ * and needs --accent-fg - see docs/UPSTREAM-REPORT.md 1.
  */
 
 /*
@@ -39,7 +49,7 @@
 function Lockup() {
   return (
     <a
-      className="inline-flex items-center gap-[var(--space-2xs)] text-fg no-underline hover:text-[var(--accent)]"
+      className="inline-flex items-center gap-[var(--space-2xs)] text-fg no-underline hover:text-accent"
       href="https://kwpledger.com"
     >
       {/*
@@ -127,14 +137,14 @@ export function SiteFooter() {
       <div className="flex flex-wrap items-start justify-between gap-[var(--space-s)] px-6 py-[var(--space-s)]">
         <p className="max-w-[var(--measure)]">
           A personal meal planner, and one of several things built at{' '}
-          <a className="underline hover:text-[var(--accent)]" href="https://kwpledger.com">
+          <a className="underline hover:text-accent" href="https://kwpledger.com">
             kwpledger.com
           </a>
           .
         </p>
 
         <p className="text-right">
-          <a className="underline hover:text-[var(--accent)]" href="mailto:hello@kwpledger.com">
+          <a className="underline hover:text-accent" href="mailto:hello@kwpledger.com">
             hello@kwpledger.com
           </a>
           <br />
