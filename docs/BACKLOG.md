@@ -103,7 +103,7 @@ self-evident to the person holding two of them** — the useful instruction is
 
 ## 2. Adopt the shared design system — step 1 done, 5 to go
 
-**In progress.** `@kwpledger/design` is pinned at **v0.2.0** and the typography
+**In progress.** `@kwpledger/design` is pinned at **v0.5.1** and the typography
 is adopted. `docs/DESIGN-SYSTEM.md` is the wiring, the traps, and the
 verification; this item is only the order.
 

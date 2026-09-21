@@ -12,11 +12,37 @@ consumer.
 **Adopted:** `--font-display` (Lora), `--font-body` (Hanken Grotesk),
 `--fw-display`.
 
-**Not adopted:** every colour token. The board still paints itself with roughly
-200 hard-coded Tailwind neutrals (`slate-*`, `bg-white`) plus `indigo` as a
-de-facto accent, `amber`/`sky`/`green`/`rose` for meal types and
-`blue`/`red`/`yellow` for macros. `docs/BACKLOG.md` item 2 carries the order the
-rest goes in.
+**Not adopted:** every colour token. The board still paints itself with **245**
+hard-coded neutral utilities across 20 distinct classes (`slate-*`, `bg-white`,
+`text-white`, `bg-black`) plus `indigo` as a de-facto accent,
+`amber`/`sky`/`green`/`rose` for meal types and `blue`/`red`/`yellow` for
+macros. `docs/BACKLOG.md` item 2 carries the order the rest goes in.
+
+## What v0.5.1 added, and what it still does not define
+
+The pin sat at **v0.2.0** while the backlog was being written against a newer
+system — item 2 step 4 names `--data-1-surface`, a token v0.2.0 did not have.
+Bumping to **v0.5.1** closed that gap.
+
+**New since v0.2.0** (33 tokens, none of which existed when the staging plan was
+written): the full categorical scale `--data-1…8`, each with `-surface`, `-fg`
+and `-border`; and status as `--success` / `--warning` / `--danger`, each with
+the same three. Backlog steps 4 and 5 are therefore *supported* now rather than
+aspirational.
+
+**Still undefined at v0.5.1** — checked directly, not assumed. These are gaps to
+design around, not oversights to wait on:
+
+| Need | Uses here | Why there is no token |
+|---|---|---|
+| Overlay / scrim | 4 (`bg-black/50`, `bg-slate-900/40`) | A modal backdrop must stay dark in **both** themes. Anything that inverts turns the dark-mode backdrop white. Keep these hard-coded and comment why. |
+| Inverted surface | 15 (`bg-slate-800/700/900` + `text-white`) | These sit beside `bg-indigo-600 text-white` doing the same job. They are not a neutral surface — they are a second accent predating the app having one. They belong in step 3, mapped to `--accent`, not to a local inverse token. |
+| Third text level | — | `--fg` and `--fg-muted` are the only two. The board uses six slate levels, so step 2 is a deliberate six-into-two collapse. |
+| On-accent foreground | 12 (`text-white`) | White on `--accent` (teal-700, `#0d5c58`) clears AA comfortably, so hard-coding it is defensible; note it rather than inventing `--accent-fg` locally. |
+
+**A version bump requires re-copying the fonts** (see below). Between v0.2.0 and
+v0.5.1 the faces were byte-identical, so the copy was a no-op — but running it
+is what established that, rather than assuming it.
 
 The staging is deliberate. Typography is the highest-leverage change per line
 touched, and it is the only part that can land without a coherent answer to dark
@@ -25,7 +51,7 @@ mode.
 ## The pin
 
 ```json
-"@kwpledger/design": "github:kwpledger/kwpledger-design#v0.2.0"
+"@kwpledger/design": "github:kwpledger/kwpledger-design#v0.5.1"
 ```
 
 **Pinned to a tag, never a branch.** A design system that moves under a consumer

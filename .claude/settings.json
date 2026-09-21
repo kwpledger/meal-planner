@@ -1,0 +1,17 @@
+{
+  "_comment": "The AGENTS.md word ceiling in Conventions is a repo-wide rule, so its enforcement belongs to the repo rather than to whichever machine is checked out. The hook only reports - PostToolUse runs after the write, so it cannot block one. See .claude/hooks/agents-md-length.mjs.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/agents-md-length.mjs\" --warn 1350 --ceiling 1850",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
