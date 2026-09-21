@@ -371,8 +371,24 @@ identity case right by checking it up front, which is now what `handleDrop`
 does too.
 
 Fixed with an early return, since dropping a meal on the day it already lives
-on is a no-op. Reproduced before and verified after with a standalone
-reducer harness, including that cross-day drops still move correctly.
+on is a no-op.
+
+**A second, quieter bug surfaced while extracting it.** `.sort()` mutates, and
+when `alreadyExists` was true the array being sorted *was* `day.meals` — so it
+sorted the board React was rendering, in place. Only reachable with a duplicate
+meal id, but a function advertised as a pure reducer must not mutate its input.
+Fixed by copying before sorting, and there is a test for it.
+
+**This is where the repo got a test runner.** The reducer was a closure inside
+a 2,400-line component, so testing it meant either simulating drag through
+jsdom or extracting the logic. Extracted to `src/boardOperations.js` — which is
+also what the convention in `AGENTS.md` asks for non-UI logic — and covered by
+`src/boardOperations.test.js` under vitest. `App.jsx` lost 46 lines.
+
+Both fixes were verified by removing them again: deleting the same-day guard
+fails exactly 3 of the 9 tests, and restoring the in-place `.sort()` fails
+exactly 1. A regression test nobody has seen fail is not yet evidence of
+anything.
 
 ## The two quinoa/zucchini corrections
 

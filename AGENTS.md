@@ -22,6 +22,7 @@ src/
   ingredientLibrary.js  USDA/OFF matching orchestrator + localStorage cache.
   nutritionApi.js       Raw fetch wrappers for USDA and Open Food Facts.
   cloudSync.js          pushToCloud/pullFromCloud. Two functions, no config.
+  boardOperations.js    Pure transforms over the `days` array, + its tests.
 
 functions/
   api/board.js          The only server-side code: a Pages Function serving
@@ -45,11 +46,11 @@ Two directories outside `src/` matter:
 - **Nutrition-database lookups are advisory, never authoritative.** The dietician's numbers are the baseline; matched data is never silently written over calories/macros - always Recompute -> preview diff -> Apply. Writing *match* data automatically is safe because it changes nothing visible; touching calories needs explicit confirmation.
 - **"Auto-match, flag for review" over "block until confirmed."** Matching picks its best guess and marks it unverified rather than stopping to ask; verification is a separate, later, optional step (the per-ingredient `verified` checkbox).
 - **The board grid derives its column count from available width, not from breakpoints.** `grid-cols-[repeat(auto-fit,minmax(220px,1fr))]`. The 220px floor is the one tunable knob; measured numbers and the breakpoint version it replaced are in `docs/ROADMAP.md`.
-- **The app is a consumer of `@kwpledger/design`, pinned at v0.5.1.** Typography is adopted; **every colour token is still unadopted.** Tokens layer palette -> semantic -> *domain*, and **a domain token must never reach past the semantic layer to a raw palette value** - that is the one rule the layering exists to enforce. Colours are *compatible*, not *harmonized*: distinct enough to stay categorical, stately rather than neon. Pin a tag, never a branch, and re-copy `public/fonts/` on every bump. The repo is **`kwpledger-design`** (not `kwpledger-designsystem`, which appears in older notes and is wrong). **`docs/DESIGN-SYSTEM.md` is the wiring, the traps, and the four things v0.5.1 still does not define; `docs/BACKLOG.md` item 2 is the order.** Read both before any colour work.
+- **The app is a consumer of `@kwpledger/design`, pinned at v0.5.1.** Typography, surfaces and borders are adopted; text, accent, categorical and status are not. Tokens layer palette -> semantic -> *domain*, and **a domain token must never reach past the semantic layer to a raw palette value** - the one rule the layering exists to enforce. Colours are *compatible*, not *harmonized*. Pin a tag, never a branch, and re-copy `public/fonts/` on every bump. The repo is **`kwpledger-design`** (`kwpledger-designsystem` in older notes is wrong). **Read `docs/DESIGN-SYSTEM.md` and `docs/BACKLOG.md` item 2 before any colour work** - the traps there have each already cost a session.
 - **The test for whether a piece of UI change may proceed**, useful well beyond the design-system question: does it alter *what is on screen and where* (structure, information architecture, reachability - proceed) or *how that looks* (colour, spacing, typography - wait for the system)? The phone-toolbar disclosure passed; a "left-align the wrap" tidy-up was turned down. The first survives a token change, the second was throwaway.
 - **Colour is reinforcement, never the sole carrier.** All three colour-coded axes - meal types, macro bars, match confidence - carry text labels already (verified, not assumed). The palette can therefore change more freely than it looks, and **any colour work must keep those labels.**
 - **The sync endpoint is unauthenticated, deliberately.** A shared-secret header was rejected because it *cannot work* here, not because it wasn't worth the effort: a browser-only SPA cannot hold a secret, so the header would ship in the bundle. The 1 MB body cap and shape validation are the guards that are real rather than theatre. Reasoning and the Cloudflare Access alternative are in `docs/ARCHITECTURE.md`.
-- **Five traps live in `.claude/rules/` and load themselves when you open the file they belong to**: the two non-interchangeable meal name lists, the display-name/search-term split, portion-calibration scope and `CATEGORY_KEYWORDS` order, the stylesheet/JSX token traps, and the Workers runtime. Each is damage you do by *editing a file* - which is why they are scoped rather than carried here, and why command-and-dashboard traps went to `docs/GOTCHAS.md` instead, where no path rule could ever fire. **Editing `App.jsx`, `ingredientParser.js`, `ingredientLibrary.js`, `portionResolver.js`, `index.css` or `functions/api/board.js` without having seen the matching rule? Read it first.**
+- **Five traps live in `.claude/rules/` and load themselves when you open the file they belong to**: the two non-interchangeable meal name lists, the display-name/search-term split, portion-calibration scope and `CATEGORY_KEYWORDS` order, the stylesheet/JSX token traps, and the Workers runtime. Each is damage you do by *editing a file* - which is why command-and-dashboard traps went to `docs/GOTCHAS.md` instead, where no path rule could ever fire. **Editing a file in `src/` or `functions/` without having seen its rule? Read it first.**
 
 ## How to work with Kevin
 
@@ -94,7 +95,10 @@ The board is seeded from **Kevin's working plan, not the dietician's document ve
 npm install
 npm run dev      # local dev server
 npm run build    # production build - run this before committing non-trivial changes
+npm test         # vitest, run once. `npm run test:watch` to keep it running.
 ```
+
+**vitest is set up, and `src/boardOperations.test.js` is the pattern**: pure `days` transforms, no rendering, no jsdom. Board logic extractable from `App.jsx` should be extracted and tested that way. A regression test earns its keep only once you've checked it fails with the fix removed.
 
 `.env` holds exactly one key, `VITE_USDA_API_KEY` (see `.env.example`). Without it, nutrition lookups fail and the core board still works. Sync needs no local configuration - the endpoint is same-origin and the KV binding lives on the deployment.
 
