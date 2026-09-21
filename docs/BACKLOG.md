@@ -101,22 +101,27 @@ self-evident to the person holding two of them** — the useful instruction is
 "compare the weekly totals on both machines first, and push from the higher-numbered one."
 
 
-## 2. Adopt the shared design system — status is the last step
+## 2. Adopt the shared design system — ~~DONE~~, all five steps
 
-**Nearly done.** `@kwpledger/design` is pinned at **v0.5.1**. Typography,
-surfaces, borders, text, accent and categorical are adopted; **only status
-(step 5) is left.** `docs/DESIGN-SYSTEM.md` is the wiring, the traps, and the
-verification; this item is only the order.
+**COMPLETE.** All five steps are done. `@kwpledger/design` is pinned at
+**v0.5.1** and every colour in the app now comes from it, except **13 deliberate
+literals** — 8 in the print sheet, its `print:bg-white` variant, and 4 scrims.
+`docs/DESIGN-SYSTEM.md` is the wiring, the traps, and the verification.
 
-The hold on visual polish is over except for status — don't invent a colour
-locally that the system already defines. Two deliberate local definitions
-exist, `--surface-sunken` (2b) and `--accent-fg` (step 3); both are permitted
-by SPEC §10.3 with a stated reason, both are **pending an upstream report**, and
-the bar each had to clear is in `docs/DESIGN-SYSTEM.md`.
+**The hold on visual polish is over.** Don't invent a colour locally that the
+system already defines. Exactly **two** local definitions exist,
+`--surface-sunken` (2b) and `--accent-fg` (step 3); both are permitted by SPEC
+§10.3 with a stated reason, both are **still pending an upstream report to
+`kwpledger/kwpledger-site`**, and the bar each had to clear is in
+`docs/DESIGN-SYSTEM.md`.
 
-**Dark mode is real as of step 4** and no longer gated. Anything added from here
-must work in both themes — check every new colour in both, because roughly half
-the tokens invert.
+**Dark mode is real and ungated.** Anything added from here must work in both
+themes — check every new colour in both, because roughly half the tokens invert.
+
+> **This item keeps its number rather than moving to Shipped**, against the
+> convention at the top of this file. `AGENTS.md`, `docs/DESIGN-SYSTEM.md` and
+> `.claude/rules/design-tokens-css.md` all point at "item 2", and renumbering
+> would break those pointers for no gain. It is finished; read it as reference.
 
 The practical test for whether a piece of UI work may proceed meanwhile is
 unchanged and still useful: does it change *what is on screen and where*, or
@@ -236,36 +241,57 @@ grid fix) go ahead regardless.
    carried `text-fg`/`text-fg-muted` on literal fills — 1.07:1 in dark, and out
    of sync with the cards the moment those moved. Migrated with the cards. If a
    later step changes a categorical colour, **this panel changes with it.**
-5. **← NEXT. Status.** The confidence badges and warnings
-   (`amber`/`emerald`/`red`) → `--warning` / `--success` / `--danger`. SPEC §5.4
-   authors status at strictly higher chroma than categorical, which is exactly
-   the distinction those badges want — and §5.1 forbids mapping a status onto
-   `--data-n` in either direction.
+5. ~~**Status.**~~ **DONE — and this completes item 2.** 16 sites, 36
+   utilities, onto `--danger` / `--warning` / `--success`. Consumed directly
+   rather than through domain tokens, and the asymmetry with categorical is the
+   point: `status.css` says these *"CARRY MEANING, and that meaning is the whole
+   point"*, where a `--data-n` slot is defined by carrying none. There is no
+   app-specific vocabulary to invent on top of "this failed".
 
-   **This is a legibility fix, not the cosmetic one an earlier draft called
-   it.** Most of the status usage is *self-paired* (`bg-green-100
-   text-green-800`) and stays internally legible in either theme. But **six bare
-   status text colours sit on theme-following surfaces**, which fails the
-   corrected gate in step 6. Measured against `--surface-card` in dark:
+   | Was | Became | Role |
+   |---|---|---|
+   | `bg-green-100 text-green-800` ×2 | `success-surface` + `-fg` | exact weight / matched portion |
+   | `bg-yellow-100 text-yellow-800` | `warning-surface` + `-fg` | rough estimate — "an input that will cause trouble" |
+   | `bg-red-100 text-red-800` | `danger-surface` + `-fg` | unresolved — the lookup failed |
+   | `bg-red-50 border-red-200 text-red-700` ×2 | the `danger` triple | error banners |
+   | `bg-amber-50 …-700` ×3 | the `warning` triple | warnings |
+   | `bg-emerald-50 …-700` ×2 | the `success` triple | all-clear banners |
+   | `text-red-600` ×3, `text-red-700` | `text-danger-fg` | bare error text, Reset board, row remove |
 
-   | Utility | Where | Dark | Note |
-   |---|---|---|---|
-   | `text-red-700` | Reset board, More menu | **2.56:1** | worst; below AA Large |
-   | `text-red-600` | match errors (132, 164, 1872) | 3.42:1 | below AA body |
-   | `text-sky-600` | line 2256 | 4.04:1 | marginal |
-   | `text-amber-600` | line 2256 | 5.19:1 | fine dark, **3.19:1 in light** |
+   **No local token was needed, and one nearly was.** These ship only as
+   *triples* — there is no bare `--danger`. An earlier note in this file said
+   there was; that was a zero-length regex match reading `--danger` as a prefix
+   of `--danger-surface`, and it was reported to Kevin before being caught.
+   Measured instead, **`-fg` serves both roles**: paired with its own
+   `-surface` in a chip (6.90–7.43:1 either theme) *and* bare on the theme's
+   neutral surfaces (9.69–10.37:1 light, 10.58–11.07:1 dark on a card). So
+   **the whole adoption ends with exactly two local tokens**,
+   `--surface-sunken` and `--accent-fg`.
 
-   All four are **pre-existing** — live before any of this work and unaffected
-   by steps 2–4. `status.css` ships a bare `--danger` / `--warning` /
-   `--success` alongside its triples, which is exactly the shape bare text on a
-   neutral surface needs, so each is a one-to-one swap.
+   **The six bare failures step 4 recorded are fixed:** `text-red-700` 2.56:1 →
+   **10.58:1**; `text-red-600` 3.42:1 → 10.58:1; `text-amber-600` 3.19:1 in
+   *light* → 10.16:1.
 
-   Two things to carry in from step 4. **Check which member of the triple the
-   shape wants** — a bare text colour wants the bare token, a filled chip wants
-   `-surface` + `-fg`; step 4 nearly made the bars invisible by reaching for
-   `-surface` on the wrong shape. And **the self-paired chips will read as
-   bright pastel pills on a dark card** until they move, which is appearance
-   rather than legibility, but it is the visible part.
+   **One thing was deliberately NOT mapped, and it is the interesting call.**
+   The Normalize preview coloured its calorie delta `text-amber-600` when
+   positive and `text-sky-600` when negative. **That is a signed difference, not
+   an outcome** — and this board's measured week ran **16% below** the
+   dietician's plan, so "calories went up" is as often the fix landing as a
+   problem. Mapping it to `--warning`/`--success` would assert a dietary
+   judgement the app does not make. Categorical could not take it either, since
+   step 4 filled all eight slots. So it is **`text-fg`**, and the `+`/`−` sign
+   carries the direction — colour as pure reinforcement of something already
+   printed, removed rather than migrated. The reasoning is commented at the
+   line.
+
+   **Status shares hues with categorical on purpose.** Danger sits at hue 27
+   against `--data-1` at 25; success at 150 against `--data-4` at 150. Status is
+   authored at strictly higher chroma in every role — verified live at 0.058 vs
+   0.046 light, 0.062 vs 0.052 dark — and the design repo's verifier fails if
+   that stops being true. A red meal card beside a red error badge is the same
+   hue family at different urgency, which is the correct relationship. **Don't
+   "fix" it**, and never map a status onto `--data-n` in either direction
+   (SPEC §5.1).
 6. ~~**Drop the guard.**~~ **DONE in step 4**, and the reasoning it used to
    carry was wrong in a way worth keeping.
 

@@ -1,24 +1,29 @@
 # Adopting the shared kwp design system
 
-How `@kwpledger/design` is wired into this app, what is deliberately **not**
-adopted yet, and the traps found while wiring it.
+How `@kwpledger/design` is wired into this app and the traps found while wiring
+it. **The adoption is complete** — nothing is left unadopted.
 
 The system's own contract is `docs/SPEC.md` in `kwpledger/kwpledger-design` —
 that is the authority on what the tokens mean. This file only covers this
 consumer.
 
-## Current state: everything but status
+## Current state: adoption complete
 
 **Adopted:** `--font-display` (Lora), `--font-body` (Hanken Grotesk),
 `--fw-display`, `--surface`, `--surface-card`, `--border` (2a), `--fg`,
 `--fg-muted` (2b), `--accent`, `--accent-hover` (step 3), the whole
-`--data-1…8` categorical scale via domain tokens (step 4), plus two local
-tokens, `--surface-sunken` and `--accent-fg`.
+`--data-1…8` categorical scale via domain tokens (step 4), `--danger` /
+`--warning` / `--success` with all three of their values (step 5), plus two
+local tokens, `--surface-sunken` and `--accent-fg`.
 
-**Dark mode is real as of step 4, and `color-scheme: light` is gone.** Meal-card
-text measures 10.47–10.88:1 in dark where it measured 1.07:1 before, verified in
-headless Chromium in both themes. The one residual is six bare status text
-colours — step 5, and the worst is 2.56:1.
+**Dark mode is real and ungated.** Meal-card text measures 10.47–10.88:1 in dark
+where it measured 1.07:1 before, verified in headless Chromium in both themes.
+Step 4's six bare-status residual is fixed: the worst, `text-red-700` at
+**2.56:1**, is now **10.58:1**.
+
+**Exactly two local tokens exist in the finished state** — `--surface-sunken`
+and `--accent-fg`. Both are permitted by SPEC §10.3 with a stated reason, and
+**both are still pending an upstream report** to `kwpledger/kwpledger-site`.
 
 **The neutral census is now closed.** Of the 245 hard-coded neutral utilities it
 found, **232 are migrated and 13 remain**, and both remaining groups are
@@ -31,8 +36,9 @@ deliberate rather than stragglers:
 
 78 (2a) + 135 (2b) + 19 (step 3's inverted buttons) + 13 retained = 245.
 
-**Not adopted yet:** only status — the confidence badges and warnings
-(step 5). `docs/BACKLOG.md` item 2 carries the order and the measurements.
+**Nothing is unadopted.** The only hard-coded colours left are **13 deliberate
+literals**: 8 in the print sheet, its `print:bg-white` variant, and 4 scrims.
+`docs/BACKLOG.md` item 2 carries the order and the measurements.
 
 ## What v0.5.1 added, and what it still does not define
 
@@ -81,9 +87,10 @@ a repo that does not exist.
 **Colours here were *compatible*, not *harmonized*** — moved from `AGENTS.md`
 for space, and largely settled by step 4: the meal-type and macro axes now come
 from `--data-n`, authored at one lightness and chroma against the brand's own
-chroma ceiling. What remains unharmonized is status (step 5). A mismatch between
-a token and a not-yet-migrated literal is a queue position, not a bug to fix
-locally.
+chroma ceiling, and step 5 put status above them in chroma by design. The phrase
+is kept because it describes the *staging*: while a migration is part-done, a
+mismatch between a token and a not-yet-migrated literal is a queue position, not
+a bug to fix locally.
 
 Two things about the install that look wrong and are not:
 
@@ -831,3 +838,103 @@ hole punched in the page."
 CSS **31.04 → 32.48 kB** raw (6.91 → 7.07 gzipped). The first step in this
 sequence to grow the bundle, because it is the first to *consume* tokens that
 were already being shipped rather than delete utilities.
+
+
+## Step 5: status (done) — closing the adoption
+
+16 sites, 36 utilities, onto `--danger` / `--warning` / `--success`.
+
+**Consumed directly, with no domain tokens — and the asymmetry with categorical
+is the point.** `status.css`: these *"CARRY MEANING, and that meaning is the
+whole point"*, where a `--data-n` slot is defined by carrying none. There is no
+app-specific vocabulary to invent on top of "this failed", so the third layer
+has nothing to do here. Mapping a status onto `--data-n` is forbidden in either
+direction (SPEC §5.1), and the stated failure mode is exact: *"error becomes
+re-themeable to whatever hue slot 1 happens to be next year."*
+
+| Was | Became | Role |
+|---|---|---|
+| `bg-green-100 text-green-800` ×2 | `success-surface` + `-fg` | exact weight / matched portion |
+| `bg-yellow-100 text-yellow-800` | `warning-surface` + `-fg` | rough estimate — "an input that will cause trouble" |
+| `bg-red-100 text-red-800` | `danger-surface` + `-fg` | unresolved — the lookup failed |
+| `bg-red-50 border-red-200 text-red-700` ×2 | the `danger` triple | error banners |
+| `bg-amber-50 …-700` ×3 | the `warning` triple | warnings |
+| `bg-emerald-50 …-700` ×2 | the `success` triple | all-clear banners |
+| `text-red-600` ×3, `text-red-700` | `text-danger-fg` | bare error text, Reset board, row remove |
+
+### No third local token — and the claim that one was needed was wrong
+
+Step 4 recorded that `status.css` "ships a bare `--danger` / `--warning` /
+`--success` alongside its triples." **It does not.** That came from a regex
+whose `[a-z-]*` matched zero characters, so `--danger` appeared in the results
+as a prefix of `--danger-surface`. It was reported to Kevin before being caught
+— the third substring-matching error in the same session, after two
+`color-scheme` false readings.
+
+> **The pattern worth naming:** a grep that can match a prefix will "confirm"
+> a token that does not exist, and a grep for `color-scheme:` will match the
+> `prefers-color-scheme:` media feature. **Anchor the pattern** — `[{;]` before
+> a declaration, `:` or `}` after a token name — or the check answers a
+> question you did not ask.
+
+What made a local token unnecessary is that **`-fg` serves both roles**, which
+is worth knowing before reaching for §10.3 again:
+
+| `-fg` used… | light | dark |
+|---|---|---|
+| paired with its own `-surface` (a chip) | 6.90–7.10:1 | 7.41–7.43:1 |
+| **bare, on `--surface-card`** | 9.69–10.37:1 | 10.58–11.07:1 |
+| bare, on `--surface-sunken` | 7.55–8.08:1 | 9.26–9.69:1 |
+
+So the finished adoption carries **exactly two** local tokens,
+`--surface-sunken` and `--accent-fg`.
+
+### The one thing deliberately not mapped
+
+The Normalize preview coloured its calorie delta `text-amber-600` when positive
+and `text-sky-600` when negative. **That is a signed difference, not an
+outcome.** This board's measured week ran **16% below** the dietician's plan and
+the whole of backlog item 3 was correcting that upward — so "calories went up"
+is as often the fix landing as a problem. Amber-for-up asserted a dietary
+judgement the app does not make.
+
+Categorical could not take it either: step 4 filled all eight slots, which is
+the first concrete consequence of the scale being full.
+
+So it is **`text-fg`**, and the `+`/`−` sign carries the direction — colour as
+pure reinforcement of something already printed, **removed rather than
+migrated**. Reasoning is commented at the line so it does not look like an
+oversight.
+
+### Status shares hues with categorical, on purpose
+
+Danger sits at hue 27 against `--data-1` at 25; success at 150 against
+`--data-4` at 150. Status is authored at **strictly higher chroma** in every
+role, and the design repo's verifier fails if that stops being true. Confirmed
+live in the browser:
+
+| | status `-surface` | categorical `-surface` |
+|---|---|---|
+| light | `oklch(88% .058 27)` | `oklch(90% .046 25)` |
+| dark | `oklch(35% .062 27)` | `oklch(32% .052 25)` |
+
+A red meal card beside a red error badge is the same hue family at different
+urgency. `status.css` calls that *"the correct relationship"* — a warning
+**should** out-shout a category. **Don't "fix" it by moving a status hue.**
+
+### Verified, and the adoption closes clean
+
+| Check | light | dark |
+|---|---|---|
+| `-fg` on its own `-surface` | 6.90–7.10:1 | 7.41–7.43:1 |
+| `-fg` bare on a card | 9.69–10.37:1 | 10.58–11.07:1 |
+| `-border` on its `-surface` | 1.47–1.53:1 | 1.85–1.91:1 |
+| `-surface` vs the card under it | 1.40–1.46:1 | 1.43–1.49:1 |
+
+**The gate is met in both directions** — no tokenized text on a literal
+surface, and no literal foreground on a themed surface. A full census of
+`App.jsx` leaves **13 literal colour utilities**, all deliberate: 8 in the print
+sheet, its `print:bg-white` variant, and 4 scrims.
+
+CSS **32.48 → 31.77 kB** raw (7.07 → 6.78 gzipped) — removing 36 literal
+utilities outweighs adding 9 theme entries.

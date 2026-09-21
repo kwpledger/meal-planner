@@ -25,6 +25,40 @@ sides literal (self-paired). The one-directional version ("no tokenized text on
 a literal surface") misses a literal foreground on a themed surface, which is
 the six bare status colours step 5 still owes.
 
+## Status is consumed directly; categorical goes through domain tokens
+
+**Don't add `--status-*` domain tokens.** `--danger`/`--warning`/`--success`
+carry fixed meanings, so there is no app vocabulary to invent on top of "this
+failed" — `App.jsx` uses `text-danger-fg` and friends straight. Categorical is
+the opposite: `--data-n` carries *no* meaning, so it must be pointed at through
+`--meal-*` / `--macro-*`. **Never map a status onto `--data-n` in either
+direction** (SPEC §5.1) — an error that is re-themeable stops looking like one.
+
+**Status and categorical share hues on purpose**, separated by chroma: danger
+at h27 vs `--data-1` at h25, success at h150 vs `--data-4` at h150, with status
+authored at strictly higher chroma in every role. A red meal card beside a red
+error badge is correct. **Don't "fix" it by moving a status hue.**
+
+Status ships **only triples** — there is no bare `--danger`. Bare text takes
+`-fg`, which is legible on the neutral surfaces too (9.69–10.37:1 light,
+10.58–11.07:1 dark on a card) as well as on its own `-surface` (6.90–7.43:1).
+
+## Anchor your greps, or they confirm things that aren't there
+
+Three false readings in one session, all substring matches:
+
+- `grep 'color-scheme:light'` matches `color-scheme:**light** dark` → reported
+  a removed guard as still present.
+- `grep 'color-scheme:dark'` matches `prefers-**color-scheme:dark**`, the media
+  *feature* → reported a phantom declaration.
+- `grep -- '--danger[a-z-]*'` matches `--danger` as a zero-length-suffix prefix
+  of `--danger-surface` → "confirmed" a bare token that does not exist, and it
+  reached the user before being caught.
+
+**Anchor the pattern**: `[{;]color-scheme:` for a declaration, a trailing `:`
+for a token name. Every one of these said the code was wrong when it wasn't —
+the harmless direction, but the same sloppiness reversed ships bugs.
+
 ## Which member of a `--data-n` slot depends on the SHAPE, not the axis
 
 A slot ships `-surface`, `-fg` and `-border`. **Filling a progress bar with
