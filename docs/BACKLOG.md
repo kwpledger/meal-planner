@@ -225,7 +225,7 @@ Steps 2–5 are more than one session each in places; step 2 is the big one.
 here: meal types, macro bars and match confidence all carry text labels. Any
 colour work must keep them.
 
-### A light/dark toggle — Kevin's request, and it is blocked upstream
+### A light/dark toggle — upstream is CLEARED; step 4 is now the block
 
 Asked for on PR #24, "maybe as a removable dev feature, maybe to keep in the
 final version." **It cannot be built cleanly against v0.5.1, and the reason is
@@ -246,21 +246,47 @@ what makes this a clean upstream ask rather than a feature request.
 (`:root[data-theme="dark"]`, a `.dark` class)" — presuming the consumer has
 one. No consumer does.
 
-**The ask for `kwpledger-site` → `design`:** give each dark block a companion
-selector, so `:root[data-theme="dark"]` sets the same values as the media query
-and `:root[data-theme="light"]` can opt out of it. The usual shape is three
-selectors — the media query guarded by `:root:not([data-theme="light"])`, plus
-an explicit `[data-theme="dark"]` — which leaves system-preference consumers
-completely unaffected. **This travels with the layout note Kevin is already
-considering** (a slider top-right of the header, near the About link): the
-layout note calls for the control, and this makes the control possible.
+**The ask above was made and granted.** Kevin chose it on 2026-09-21 and it
+ships as `kwpledger-design` **v0.6.0**: each dark register is authored under
+both `:root:not([data-theme="light"])` inside the media query and an explicit
+`:root[data-theme="dark"]` rule, with `color-scheme` pinned under both explicit
+values. SPEC §9.1 is the contract. Two gates keep the duplicated register
+honest — drift between disagreeing copies, and set-parity between the blocks,
+the latter because a token declared in only one block has nothing to disagree
+with. **Everything above this paragraph is now history rather than a blocker.**
+
+**But the constraint that actually governs this repo was never upstream, and it
+is still in force.** `.claude/rules/design-tokens-css.md` measured it: in dark
+mode `--fg` reads **1.01–1.08:1** on the meal cards and **1.06:1** on the match
+panels. Invisible — worse than the hard-coded slate it replaced. Tokenized text
+follows the theme; the surfaces under it do not yet. Step 3 fixes two of the
+three failures, step 4 the rest, and the `color-scheme: light` guard comes off
+at the end of step 4.
+
+**So shipping a user-facing toggle today would let people opt into a page whose
+meal-card text is invisible.** The upstream half is done; the local half is
+steps 3 and 4, in the order already written.
+
+**What is buildable now is the dev-only form Kevin originally floated** — "maybe
+as a removable dev feature". Gated to `import.meta.env.DEV` it ships to nobody,
+and it is precisely the instrument steps 3–4 lack: 2b's dark-mode failures had
+to be found by computing contrast ratios because there was no way to look. That
+is the one form of this that is not blocked, and it makes the thing that blocks
+it cheaper to fix.
+
+**Unresolved, and a real design question rather than a detail:** whether the
+control is two states or three. Two cannot express "follow my OS", which is the
+state every visitor arrives in and the one the `:not()` guard exists to
+preserve. Three (system / light / dark) is the honest control. Also unresolved:
+whether the choice persists, and if so how it survives a reload without a flash
+of the wrong theme.
 
 **Until then the toggle is not a prerequisite for steps 3–5, only a
 convenience** — a large one. It is why 2b's dark-mode failures were found by
 computing contrast ratios rather than by looking, and it would make step 4's
 categorical work checkable by eye.
 
-### Header and footer conformance — Kevin raised it, and §10.1 makes it binding
+### ~~Header and footer conformance~~ — SHIPPED 2026-09-21
 
 *"We still have to do the header and footer at some point."* Noted here because
 it has a status the rest of the colour work does not: **SPEC §10 point 1 calls
@@ -268,10 +294,29 @@ it has a status the rest of the colour work does not: **SPEC §10 point 1 calls
 negotiable."** So unlike the palette, where added colour is explicitly welcome,
 the header/footer is a conform-or-justify surface.
 
-It also interacts with item 5 (making the header sticky) and with the toggle
-above, since the slider's home is the header. Read that doc before designing
-any of the three, rather than doing them in sequence and re-cutting the header
-each time.
+**Shipped.** `src/SiteChrome.jsx` carries the skip link, the lockup as one link
+home, the full-bleed closing rule, and the footer; `App.jsx` wraps its content
+in `<main id="main">`. §5 puts a `*.kwpledger.com` project page in the **full
+control** tier — everything in §2–§4, no latitude — and kwpledger.com's
+`BaseLayout.astro` was the reference.
+
+Three points worth keeping:
+
+- **§2.1 is the finding the whole ticket turned on.** `<header>` at page level
+  holds the lockup and *nothing else*; the `<h1>` and its lede are page content
+  and stayed in `<main>`. That is why this was not simply "move the title into a
+  header".
+- **Register is two files, never a filter.** The black mark measures 0.0% of its
+  ink box above 3:1 on our dark surface. Both ship and `dark:` hides one — which
+  becomes the `[data-theme]` selector once the toggle above lands, in one place.
+- **`--accent` is used for the lockup hover**, which §3 requires, even though
+  accent is otherwise held for step 3. Consuming a token the system defines is
+  not the same act as inventing a colour locally, and §10.1 does not bend for a
+  migration order.
+
+**Note on item 5.** It reads as though it interacts with this, and it does not:
+item 5 is about the app's own heading prose above the board, not site chrome.
+The two are separate cuts.
 
 
 ## 3. Harden portion normalization
