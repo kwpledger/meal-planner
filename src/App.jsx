@@ -125,7 +125,7 @@ const CONFIDENCE_LABELS = {
 
 function PortionResolutionPreview({ resolution }) {
   if (resolution.status === 'loading') {
-    return <div className="mt-2 text-xs text-slate-500">Resolving portion...</div>;
+    return <div className="mt-2 text-xs text-fg-muted">Resolving portion...</div>;
   }
 
   if (resolution.status === 'error') {
@@ -140,13 +140,13 @@ function PortionResolutionPreview({ resolution }) {
         <span className={`px-2 py-0.5 rounded-full font-semibold ${confidence.className}`}>
           {confidence.label}
         </span>
-        <span className="text-slate-600">
+        <span className="text-fg-muted">
           {resolution.grams != null ? `${Math.round(resolution.grams)} g` : 'no grams resolved'}
         </span>
       </div>
 
       {resolution.nutrients && (
-        <div className="mt-1 text-slate-600">
+        <div className="mt-1 text-fg-muted">
           {resolution.nutrients.calories} cal • C {resolution.nutrients.carbs}g • P{' '}
           {resolution.nutrients.protein}g • F {resolution.nutrients.fat}g
         </div>
@@ -157,7 +157,7 @@ function PortionResolutionPreview({ resolution }) {
 
 function AutoMatchPreview({ result }) {
   if (result.status === 'loading') {
-    return <div className="mb-3 text-xs text-slate-500">Matching...</div>;
+    return <div className="mb-3 text-xs text-fg-muted">Matching...</div>;
   }
 
   if (result.status === 'error') {
@@ -169,21 +169,21 @@ function AutoMatchPreview({ result }) {
   return (
     <div className="mb-3 rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-bold text-slate-800">{result.entry.matchedFoodName}</span>
-        <span className="text-slate-500">{result.fromCache ? 'from cache' : 'newly matched'}</span>
+        <span className="font-bold text-fg">{result.entry.matchedFoodName}</span>
+        <span className="text-fg-muted">{result.fromCache ? 'from cache' : 'newly matched'}</span>
       </div>
 
-      <div className="text-slate-500 mt-1">
+      <div className="text-fg-muted mt-1">
         Source: {result.entry.source === 'usda' ? `USDA${result.entry.dataType ? ` • ${result.entry.dataType}` : ''}` : 'Open Food Facts'}
       </div>
 
       <div className="flex items-center gap-2 mt-2">
         <span className={`px-2 py-0.5 rounded-full font-semibold ${confidence.className}`}>{confidence.label}</span>
-        <span className="text-slate-600">{result.grams != null ? `${Math.round(result.grams)} g` : 'no grams resolved'}</span>
+        <span className="text-fg-muted">{result.grams != null ? `${Math.round(result.grams)} g` : 'no grams resolved'}</span>
       </div>
 
       {result.nutrients && (
-        <div className="mt-1 text-slate-600">
+        <div className="mt-1 text-fg-muted">
           {result.nutrients.calories} cal • C {result.nutrients.carbs}g • P {result.nutrients.protein}g • F {result.nutrients.fat}g
         </div>
       )}
@@ -1194,26 +1194,26 @@ useEffect(() => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 p-6 print:bg-white print:p-0">
+    <div className="min-h-screen bg-surface p-6 print:bg-white print:p-0">
       <div className="print:hidden">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-6">
             <div>
-              <h1 className="text-4xl text-slate-800">Kevin’s Visual Meal Planner</h1>
-              <p className="text-slate-600 mt-2 max-w-3xl">
+              <h1 className="text-4xl text-fg">Kevin’s Visual Meal Planner</h1>
+              <p className="text-fg-muted mt-2 max-w-3xl">
                 Drag meals between days, or enable swap mode to exchange meals by clicking two cards. Click a meal normally to view ingredient amounts.
               </p>
             </div>
 
             <div className="flex gap-3 items-center flex-wrap justify-end">
               <div className="bg-surface-card rounded-2xl shadow px-5 py-3 border border-border text-right">
-                <div className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Weekly total</div>
-                <div className="text-2xl font-bold text-slate-800">{weeklyCalories.toLocaleString()} cal</div>
+                <div className="text-xs uppercase tracking-wide text-fg-muted font-semibold">Weekly total</div>
+                <div className="text-2xl font-bold text-fg">{weeklyCalories.toLocaleString()} cal</div>
               </div>
 
               <select
                 value={proteinFilter}
                 onChange={(event) => setProteinFilter(event.target.value)}
-                className="rounded-2xl border border-border bg-surface-card px-4 py-3 text-slate-700 font-medium shadow-sm"
+                className="rounded-2xl border border-border bg-surface-card px-4 py-3 text-fg font-medium shadow-sm"
               >
                 <option value="All">All Proteins</option>
                 <option value="Chicken">Chicken</option>
@@ -1224,7 +1224,7 @@ useEffect(() => {
 
               <button
                 onClick={() => window.print()}
-                className="rounded-2xl bg-surface-card text-slate-800 px-5 py-3 font-semibold shadow border border-border hover:bg-surface active:scale-95 transition"
+                className="rounded-2xl bg-surface-card text-fg px-5 py-3 font-semibold shadow border border-border hover:bg-surface active:scale-95 transition"
               >
                 Print prep sheet
               </button>
@@ -1251,7 +1251,7 @@ useEffect(() => {
                   onClick={() => setMoreOpen((current) => !current)}
                   aria-haspopup="menu"
                   aria-expanded={moreOpen}
-                  className="rounded-2xl bg-surface-card text-slate-800 px-5 py-3 font-semibold shadow border border-border hover:bg-surface active:scale-95 transition"
+                  className="rounded-2xl bg-surface-card text-fg px-5 py-3 font-semibold shadow border border-border hover:bg-surface active:scale-95 transition"
                 >
                   More {moreOpen ? '▲' : '▼'}
                 </button>
@@ -1267,7 +1267,7 @@ useEffect(() => {
                         setMoreOpen(false);
                         setSwapMode((current) => !current);
                       }}
-                      className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100"
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-fg hover:bg-surface-sunken"
                     >
                       Swap mode: {swapMode ? 'ON' : 'OFF'}
                     </button>
@@ -1280,12 +1280,12 @@ useEffect(() => {
                         setMoreOpen(false);
                         exportMealPlan();
                       }}
-                      className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100"
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-fg hover:bg-surface-sunken"
                     >
                       Export JSON
                     </button>
 
-                    <label className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100 cursor-pointer">
+                    <label className="text-left rounded-xl px-4 py-2 font-semibold text-fg hover:bg-surface-sunken cursor-pointer">
                       Import JSON
                       <input
                         type="file"
@@ -1305,7 +1305,7 @@ useEffect(() => {
                         handleSyncToCloud();
                       }}
                       disabled={syncBusy !== null}
-                      className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-50"
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-fg hover:bg-surface-sunken disabled:opacity-50"
                     >
                       {syncBusy === 'push' ? 'Syncing...' : 'Sync to Cloud'}
                     </button>
@@ -1317,7 +1317,7 @@ useEffect(() => {
                         handleSyncFromCloud();
                       }}
                       disabled={syncBusy !== null}
-                      className="text-left rounded-xl px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-50"
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-fg hover:bg-surface-sunken disabled:opacity-50"
                     >
                       {syncBusy === 'pull' ? 'Syncing...' : 'Sync from Cloud'}
                     </button>
@@ -1429,18 +1429,18 @@ useEffect(() => {
                   <div className="mb-4 sticky top-0 bg-surface-card/95 backdrop-blur rounded-2xl pb-3 z-10">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h2 className="text-2xl text-slate-800">{day.day}</h2>
-                        <p className="text-sm text-slate-500">{day.protein}</p>
+                        <h2 className="text-2xl text-fg">{day.day}</h2>
+                        <p className="text-sm text-fg-muted">{day.protein}</p>
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <div className="text-xs bg-slate-200 px-3 py-1 rounded-full text-slate-700 font-semibold">
+                        <div className="text-xs bg-surface-sunken px-3 py-1 rounded-full text-fg font-semibold">
                           {dailyCalories} cal
                         </div>
-                        <div className="text-[11px] text-slate-400">{day.meals.length} cards</div>
+                        <div className="text-[11px] text-fg-muted">{day.meals.length} cards</div>
 
                         <button
                           onClick={() => toggleCollapsed(day.id)}
-                          className="text-xs rounded-full bg-slate-200 hover:bg-slate-300 px-3 py-1 font-semibold text-slate-700 transition"
+                          className="text-xs rounded-full bg-surface-sunken hover:bg-border px-3 py-1 font-semibold text-fg transition"
                         >
                           {isCollapsed ? 'Expand' : 'Collapse'}
                         </button>
@@ -1451,17 +1451,17 @@ useEffect(() => {
                   {!isCollapsed && (
                   <>
                   <div className="mb-4 bg-surface rounded-2xl p-3 border border-border">
-                    <div className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">
+                    <div className="text-xs font-bold uppercase tracking-wide text-fg-muted mb-3">
                       Daily Macro Balance
                     </div>
 
                     <div className="space-y-3">
                       <div>
-                        <div className="flex justify-between text-[11px] font-semibold text-slate-600 mb-1">
+                        <div className="flex justify-between text-[11px] font-semibold text-fg-muted mb-1">
                           <span>Carbs</span>
                           <span>{macroPercents.carbs}% • {dayMacros.carbs}g</span>
                         </div>
-                        <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
+                        <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
                           <div
                             className="h-full bg-blue-400 rounded-full transition-all"
                             style={{ width: `${macroPercents.carbs}%` }}
@@ -1470,11 +1470,11 @@ useEffect(() => {
                       </div>
 
                       <div>
-                        <div className="flex justify-between text-[11px] font-semibold text-slate-600 mb-1">
+                        <div className="flex justify-between text-[11px] font-semibold text-fg-muted mb-1">
                           <span>Protein</span>
                           <span>{macroPercents.protein}% • {dayMacros.protein}g</span>
                         </div>
-                        <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
+                        <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
                           <div
                             className="h-full bg-red-400 rounded-full transition-all"
                             style={{ width: `${macroPercents.protein}%` }}
@@ -1483,11 +1483,11 @@ useEffect(() => {
                       </div>
 
                       <div>
-                        <div className="flex justify-between text-[11px] font-semibold text-slate-600 mb-1">
+                        <div className="flex justify-between text-[11px] font-semibold text-fg-muted mb-1">
                           <span>Fat</span>
                           <span>{macroPercents.fat}% • {dayMacros.fat}g</span>
                         </div>
-                        <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
+                        <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
                           <div
                             className="h-full bg-yellow-400 rounded-full transition-all"
                             style={{ width: `${macroPercents.fat}%` }}
@@ -1496,14 +1496,14 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    <div className="mt-3 text-[10px] text-slate-400">
+                    <div className="mt-3 text-[10px] text-fg-muted">
                       Target: {macroTargets.carbs}% carbs • {macroTargets.protein}% protein • {macroTargets.fat}% fat
                     </div>
                   </div>
                   
                   <div className="space-y-3">
                     {day.meals.length === 0 && (
-                      <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center text-slate-400">
+                      <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center text-fg-muted">
                         Drop meals here
                       </div>
                     )}
@@ -1522,14 +1522,14 @@ useEffect(() => {
                       >
                         <div className="flex justify-between items-start gap-2 mb-2">
                           <div>
-                            <div className="text-[11px] uppercase tracking-wide text-slate-500 font-bold">
+                            <div className="text-[11px] uppercase tracking-wide text-fg-muted font-bold">
                               {meal.type}
                             </div>
-                            <h3 className="text-base leading-tight text-slate-800">
+                            <h3 className="text-base leading-tight text-fg">
                               {meal.name}
                             </h3>
                           </div>
-                          <div className="text-xs font-bold text-slate-700 whitespace-nowrap">
+                          <div className="text-xs font-bold text-fg whitespace-nowrap">
                             {meal.calories} cal
                           </div>
                         </div>
@@ -1538,7 +1538,7 @@ useEffect(() => {
                           {meal.items.map((item) => (
                             <span
                               key={`${meal.id}-${item}`}
-                              className="bg-surface-card/70 text-slate-700 text-[11px] px-2 py-1 rounded-full"
+                              className="bg-surface-card/70 text-fg text-[11px] px-2 py-1 rounded-full"
                             >
                               {item}
                             </span>
@@ -1556,26 +1556,26 @@ useEffect(() => {
 
           <div className="mt-8 grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="bg-surface-card rounded-3xl shadow-lg p-6 border border-border">
-              <h2 className="text-2xl text-slate-800 mb-2">Auto Grocery Aggregation</h2>
-              <p className="text-sm text-slate-500 mb-4">
+              <h2 className="text-2xl text-fg mb-2">Auto Grocery Aggregation</h2>
+              <p className="text-sm text-fg-muted mb-4">
                 Built from the current board. Rearrange meals and this list follows the new weekly layout.
               </p>
 
               <div className="max-h-[520px] overflow-y-auto pr-2 space-y-3">
                 {groceryList.map(({ ingredient, uses }) => (
                   <details key={ingredient} className="bg-surface rounded-2xl border border-border p-3">
-                    <summary className="cursor-pointer font-bold text-slate-800 capitalize flex justify-between gap-3">
+                    <summary className="cursor-pointer font-bold text-fg capitalize flex justify-between gap-3">
                       <span>{ingredient}</span>
-                      <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">
+                      <span className="text-xs font-semibold text-fg-muted whitespace-nowrap">
                         {uses.length} use{uses.length === 1 ? '' : 's'}
                       </span>
                     </summary>
 
-                    <ul className="mt-3 space-y-2 text-sm text-slate-600">
+                    <ul className="mt-3 space-y-2 text-sm text-fg-muted">
                       {uses.map((use) => (
                         <li key={`${use.day}-${use.mealType}-${use.original}`} className="border-t border-border pt-2 first:border-t-0 first:pt-0">
-                          <div className="font-semibold text-slate-700">{use.amount}</div>
-                          <div className="text-xs text-slate-500">
+                          <div className="font-semibold text-fg">{use.amount}</div>
+                          <div className="text-xs text-fg-muted">
                             {use.day} • {use.mealType} • {use.mealName}
                           </div>
                         </li>
@@ -1587,8 +1587,8 @@ useEffect(() => {
             </div>
 
             <div className="bg-surface-card rounded-3xl shadow-lg p-6 border border-border">
-              <h2 className="text-2xl text-slate-800 mb-4">Cronometer Helper</h2>
-              <p className="text-sm text-slate-500 mb-4">
+              <h2 className="text-2xl text-fg mb-4">Cronometer Helper</h2>
+              <p className="text-sm text-fg-muted mb-4">
                 Use this as a copy/paste checklist for entering foods manually. The calories and macros are planner estimates, not verified Cronometer values.
               </p>
 
@@ -1602,32 +1602,32 @@ useEffect(() => {
               <textarea
                 readOnly
                 value={cronometerText}
-                className="w-full h-[360px] rounded-2xl border border-border bg-surface p-4 text-xs font-mono text-slate-700"
+                className="w-full h-[360px] rounded-2xl border border-border bg-surface p-4 text-xs font-mono text-fg"
               />
             </div>
 
             <div className="bg-surface-card rounded-3xl shadow-lg p-6 border border-border">
-              <h2 className="text-2xl text-slate-800 mb-4">Quick Visual Rules</h2>
+              <h2 className="text-2xl text-fg mb-4">Quick Visual Rules</h2>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-amber-100 rounded-2xl p-4 border border-amber-300">
-                <div className="text-sm text-slate-500">Breakfast</div>
-                <div className="font-bold text-slate-800">8:30 AM</div>
+                <div className="text-sm text-fg-muted">Breakfast</div>
+                <div className="font-bold text-fg">8:30 AM</div>
               </div>
 
               <div className="bg-sky-100 rounded-2xl p-4 border border-sky-300">
-                <div className="text-sm text-slate-500">Lunch</div>
-                <div className="font-bold text-slate-800">12–1 PM</div>
+                <div className="text-sm text-fg-muted">Lunch</div>
+                <div className="font-bold text-fg">12–1 PM</div>
               </div>
 
               <div className="bg-green-100 rounded-2xl p-4 border border-green-300">
-                <div className="text-sm text-slate-500">Snack</div>
-                <div className="font-bold text-slate-800">3:30–4 PM</div>
+                <div className="text-sm text-fg-muted">Snack</div>
+                <div className="font-bold text-fg">3:30–4 PM</div>
               </div>
 
               <div className="bg-rose-100 rounded-2xl p-4 border border-rose-300">
-                <div className="text-sm text-slate-500">Dinner</div>
-                <div className="font-bold text-slate-800">Before 7 PM</div>
+                <div className="text-sm text-fg-muted">Dinner</div>
+                <div className="font-bold text-fg">Before 7 PM</div>
               </div>
             </div>
 
@@ -1711,13 +1711,13 @@ useEffect(() => {
           <div className="bg-surface-card rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
       
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl text-slate-800">
+              <h2 className="text-2xl text-fg">
                 Edit Meal
               </h2>
       
               <button
                 onClick={() => setEditingMeal(null)}
-                className="text-slate-500 hover:text-slate-700 text-xl"
+                className="text-fg-muted hover:text-fg text-xl"
               >
                 ✕
               </button>
@@ -1726,7 +1726,7 @@ useEffect(() => {
             <div className="space-y-4">
       
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">
+                <label className="block text-sm font-medium text-fg-muted mb-1">
                   Meal Name
                 </label>
       
@@ -1741,7 +1741,7 @@ useEffect(() => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">
+                  <label className="block text-sm font-medium text-fg-muted mb-1">
                     Calories
                   </label>
       
@@ -1756,7 +1756,7 @@ useEffect(() => {
                 </div>
       
                 <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">
+                  <label className="block text-sm font-medium text-fg-muted mb-1">
                     Carbs
                   </label>
       
@@ -1771,7 +1771,7 @@ useEffect(() => {
                 </div>
       
                 <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">
+                  <label className="block text-sm font-medium text-fg-muted mb-1">
                     Protein
                   </label>
       
@@ -1786,7 +1786,7 @@ useEffect(() => {
                 </div>
       
                 <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">
+                  <label className="block text-sm font-medium text-fg-muted mb-1">
                     Fat
                   </label>
       
@@ -1804,7 +1804,7 @@ useEffect(() => {
       
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-sm font-medium text-slate-600">Ingredients</label>
+                  <label className="block text-sm font-medium text-fg-muted">Ingredients</label>
                   <button
                     type="button"
                     onClick={handleMatchAllRows}
@@ -1820,7 +1820,7 @@ useEffect(() => {
                       matchStatus.type === 'error'
                         ? 'bg-red-50 border-red-200 text-red-700'
                         : matchStatus.type === 'busy'
-                        ? 'bg-surface border-border text-slate-600'
+                        ? 'bg-surface border-border text-fg-muted'
                         : matchStatus.type === 'info'
                         ? 'bg-amber-50 border-amber-200 text-amber-700'
                         : 'bg-emerald-50 border-emerald-200 text-emerald-700'
@@ -1869,7 +1869,7 @@ useEffect(() => {
                           <button
                             type="button"
                             onClick={() => removeIngredientRow(index)}
-                            className="text-slate-400 hover:text-red-600 px-2"
+                            className="text-fg-muted hover:text-red-600 px-2"
                             aria-label="Remove ingredient"
                           >
                             ✕
@@ -1880,20 +1880,20 @@ useEffect(() => {
                           <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${confidence.className}`}>
                             {confidence.label}
                           </span>
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-fg-muted">
                             {ingredient.grams != null ? `${Math.round(ingredient.grams)} g` : 'no grams yet'}
                           </span>
                           {ingredient.matchedFoodName && (
-                            <span className="text-xs text-slate-400">· {ingredient.matchedFoodName}</span>
+                            <span className="text-xs text-fg-muted">· {ingredient.matchedFoodName}</span>
                           )}
                           <button
                             type="button"
                             onClick={() => handleMatchRow(index)}
-                            className="text-xs rounded-lg bg-surface-card border border-border px-2 py-1 font-semibold text-slate-700 hover:bg-slate-100"
+                            className="text-xs rounded-lg bg-surface-card border border-border px-2 py-1 font-semibold text-fg hover:bg-surface-sunken"
                           >
                             Match
                           </button>
-                          <label className="flex items-center gap-1 text-xs text-slate-500 ml-auto">
+                          <label className="flex items-center gap-1 text-xs text-fg-muted ml-auto">
                             <input
                               type="checkbox"
                               checked={ingredient.verified}
@@ -1914,11 +1914,11 @@ useEffect(() => {
                           value={ingredient.searchName ?? ''}
                           onChange={(e) => updateIngredientRow(index, { searchName: e.target.value || null })}
                           placeholder={`search USDA as… (default: ${ingredient.name || 'ingredient name'})`}
-                          className="mt-2 w-full rounded-lg border border-dashed border-border p-2 text-xs text-slate-600"
+                          className="mt-2 w-full rounded-lg border border-dashed border-border p-2 text-xs text-fg-muted"
                         />
 
                         {ingredient.prepNote && (
-                          <div className="text-[11px] text-slate-400 mt-1">note: {ingredient.prepNote}</div>
+                          <div className="text-[11px] text-fg-muted mt-1">note: {ingredient.prepNote}</div>
                         )}
                       </div>
                     );
@@ -1928,13 +1928,13 @@ useEffect(() => {
                 <button
                   type="button"
                   onClick={addIngredientRow}
-                  className="mt-2 text-xs rounded-lg border border-dashed border-border px-3 py-2 text-slate-500 hover:bg-surface w-full"
+                  className="mt-2 text-xs rounded-lg border border-dashed border-border px-3 py-2 text-fg-muted hover:bg-surface w-full"
                 >
                   + Add ingredient
                 </button>
 
                 <div className="mt-3 rounded-xl border border-border bg-surface p-2">
-                  <label className="block text-xs font-medium text-slate-500 mb-1">
+                  <label className="block text-xs font-medium text-fg-muted mb-1">
                     Or paste ingredients as text (one per line, replaces the list above)
                   </label>
                   <textarea
@@ -1965,10 +1965,10 @@ useEffect(() => {
 
                 {recomputePreview && (
                   <div className="mt-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs">
-                    <div className="text-slate-600">
+                    <div className="text-fg-muted">
                       Stored: {editForm.calories} cal · C {editForm.carbs}g P {editForm.protein}g F {editForm.fat}g
                     </div>
-                    <div className="text-slate-800 font-semibold mt-1">
+                    <div className="text-fg font-semibold mt-1">
                       Computed: {recomputePreview.calories} cal · C {recomputePreview.macros.carbs}g P{' '}
                       {recomputePreview.macros.protein}g F {recomputePreview.macros.fat}g
                     </div>
@@ -1983,7 +1983,7 @@ useEffect(() => {
                       <button
                         type="button"
                         onClick={() => setRecomputePreview(null)}
-                        className="rounded-lg border border-border px-3 py-1 font-semibold text-slate-700"
+                        className="rounded-lg border border-border px-3 py-1 font-semibold text-fg"
                       >
                         Dismiss
                       </button>
@@ -1995,7 +1995,7 @@ useEffect(() => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1">
+              <label className="block text-sm font-medium text-fg-muted mb-1">
                 Display Tags (one per line)
               </label>
 
@@ -2014,15 +2014,15 @@ useEffect(() => {
                 className="w-full rounded-xl border border-border p-3"
               />
 
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-fg-muted mt-1">
                 These are the short labels shown on the meal card. They do not affect grocery aggregation.
               </p>
             </div>
       
             <div className="border-t border-border pt-4">
-              <h3 className="text-slate-800 mb-2">Nutrition Lookup</h3>
+              <h3 className="text-fg mb-2">Nutrition Lookup</h3>
 
-              <p className="text-sm text-slate-500 mb-3">
+              <p className="text-sm text-fg-muted mb-3">
                 Search for a food, then manually copy values into the meal fields if they look useful.
                 These results are estimates and may be per 100g.
               </p>
@@ -2053,7 +2053,7 @@ useEffect(() => {
                 <button
                   type="button"
                   onClick={() => handleNutritionLookup("off")}
-                  className="rounded-xl bg-surface-card border border-border text-slate-800 px-4 py-2 font-semibold"
+                  className="rounded-xl bg-surface-card border border-border text-fg px-4 py-2 font-semibold"
                 >
                   Open Food Facts
                 </button>
@@ -2070,7 +2070,7 @@ useEffect(() => {
               {autoMatchResult && <AutoMatchPreview result={autoMatchResult} />}
 
               {nutritionLookupStatus && (
-                <div className="text-sm text-slate-500 mb-3">{nutritionLookupStatus}</div>
+                <div className="text-sm text-fg-muted mb-3">{nutritionLookupStatus}</div>
               )}
 
               {nutritionResults.length > 0 && (
@@ -2080,18 +2080,18 @@ useEffect(() => {
                       key={`${result.source}-${result.id}`}
                       className="rounded-xl border border-border bg-surface p-3"
                     >
-                      <div className="font-bold text-slate-800">{result.name}</div>
+                      <div className="font-bold text-fg">{result.name}</div>
                       {result.brand && (
-                        <div className="text-xs text-slate-500">{result.brand}</div>
+                        <div className="text-xs text-fg-muted">{result.brand}</div>
                       )}
 
-                      <div className="text-sm text-slate-600 mt-2">
+                      <div className="text-sm text-fg-muted mt-2">
                         {result.calories ?? "?"} kcal • C {result.carbs ?? "?"}g • P{" "}
                         {result.protein ?? "?"}g • F {result.fat ?? "?"}g
-                        <span className="text-slate-400"> (per 100g)</span>
+                        <span className="text-fg-muted"> (per 100g)</span>
                       </div>
 
-                      <div className="text-xs text-slate-400 mt-1">
+                      <div className="text-xs text-fg-muted mt-1">
                         Source: {result.source}
                         {result.dataType && ` • ${result.dataType}`}
                         {result.servingSize && ` • serving: ${result.servingSize}`}
@@ -2100,7 +2100,7 @@ useEffect(() => {
                       <button
                         type="button"
                         onClick={() => handleResolvePortion(result)}
-                        className="mt-2 text-xs rounded-lg bg-surface-card border border-border px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-100"
+                        className="mt-2 text-xs rounded-lg bg-surface-card border border-border px-3 py-1.5 font-semibold text-fg hover:bg-surface-sunken"
                       >
                         Resolve portion for "{nutritionQuery || result.name}"
                       </button>
@@ -2170,17 +2170,17 @@ useEffect(() => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-surface-card rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl text-slate-800">Normalize portions</h2>
+              <h2 className="text-2xl text-fg">Normalize portions</h2>
               <button
                 onClick={() => setNormalizeState(null)}
-                className="text-slate-500 hover:text-slate-700 text-xl"
+                className="text-fg-muted hover:text-fg text-xl"
               >
                 ✕
               </button>
             </div>
 
             {normalizeState.status === 'no-targets' && (
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-fg-muted">
                 Every ingredient on the board already has a resolved match. Use "Re-weigh portions" to
                 recalculate their gram weights against the current portion table without re-querying USDA,
                 or edit a meal and use "Match" to re-resolve one ingredient.
@@ -2188,7 +2188,7 @@ useEffect(() => {
             )}
 
             {normalizeState.status === 'no-reweigh-targets' && (
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-fg-muted">
                 Nothing to re-weigh. Every estimated portion on the board already matches what the current
                 portion table would produce. Ingredients measured in grams or ounces, and those with real
                 per-food portion data, are deliberately left alone.
@@ -2197,10 +2197,10 @@ useEffect(() => {
 
             {normalizeState.status === 'running' && (
               <div>
-                <p className="text-sm text-slate-600 mb-3">
+                <p className="text-sm text-fg-muted mb-3">
                   Matching ingredients against USDA / Open Food Facts... {normalizeState.current}/{normalizeState.total}
                 </p>
-                <div className="h-2 rounded-full bg-slate-200 overflow-hidden mb-4">
+                <div className="h-2 rounded-full bg-surface-sunken overflow-hidden mb-4">
                   <div
                     className="h-full bg-indigo-500 rounded-full transition-all"
                     style={{ width: `${Math.round((normalizeState.current / normalizeState.total) * 100)}%` }}
@@ -2208,7 +2208,7 @@ useEffect(() => {
                 </div>
                 <button
                   onClick={cancelNormalizeBoard}
-                  className="rounded-xl border border-border px-4 py-2 font-semibold text-slate-700"
+                  className="rounded-xl border border-border px-4 py-2 font-semibold text-fg"
                 >
                   Cancel
                 </button>
@@ -2217,7 +2217,7 @@ useEffect(() => {
 
             {normalizeState.status === 'review' && (
               <div>
-                <p className="text-sm text-slate-600 mb-4">
+                <p className="text-sm text-fg-muted mb-4">
                   {normalizeState.cancelled && 'Stopped early - '}
                   {normalizeState.reweighed
                     ? `${normalizeState.reweighed} estimated portion${normalizeState.reweighed === 1 ? '' : 's'} re-weighed against the current portion table - no lookups were made. `
@@ -2235,7 +2235,7 @@ useEffect(() => {
                 )}
 
                 {normalizeState.comparisons.length === 0 ? (
-                  <p className="text-sm text-slate-500 mb-4">No meaningful differences found.</p>
+                  <p className="text-sm text-fg-muted mb-4">No meaningful differences found.</p>
                 ) : (
                   <>
                     <button
@@ -2250,26 +2250,26 @@ useEffect(() => {
                         <div key={comparison.mealId} className="rounded-xl border border-border p-3">
                           <div className="flex items-center justify-between gap-2">
                             <div>
-                              <div className="font-bold text-slate-800">{comparison.mealName}</div>
-                              <div className="text-xs text-slate-500">{comparison.dayName} • {comparison.mealType}</div>
+                              <div className="font-bold text-fg">{comparison.mealName}</div>
+                              <div className="text-xs text-fg-muted">{comparison.dayName} • {comparison.mealType}</div>
                             </div>
                             <div className={`text-sm font-semibold ${comparison.delta > 0 ? 'text-amber-600' : 'text-sky-600'}`}>
                               {comparison.delta > 0 ? '+' : ''}{comparison.delta} cal
                             </div>
                           </div>
 
-                          <div className="text-xs text-slate-500 mt-2">
+                          <div className="text-xs text-fg-muted mt-2">
                             Stored: {comparison.stored.calories} cal · C {comparison.stored.macros.carbs}g P{' '}
                             {comparison.stored.macros.protein}g F {comparison.stored.macros.fat}g
                           </div>
-                          <div className="text-xs text-slate-700 font-semibold mt-1">
+                          <div className="text-xs text-fg font-semibold mt-1">
                             Computed: {comparison.computed.calories} cal · C {comparison.computed.macros.carbs}g P{' '}
                             {comparison.computed.macros.protein}g F {comparison.computed.macros.fat}g
                           </div>
 
                           <button
                             onClick={() => applyNormalizeComparison(comparison)}
-                            className="mt-2 text-xs rounded-lg bg-surface-card border border-border px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-100"
+                            className="mt-2 text-xs rounded-lg bg-surface-card border border-border px-3 py-1.5 font-semibold text-fg hover:bg-surface-sunken"
                           >
                             Apply this meal
                           </button>
@@ -2287,22 +2287,22 @@ useEffect(() => {
       {pullPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-surface-card rounded-3xl shadow-2xl w-full max-w-md p-6">
-            <h2 className="text-2xl text-slate-800 mb-4">Pull from cloud?</h2>
+            <h2 className="text-2xl text-fg mb-4">Pull from cloud?</h2>
 
-            <p className="text-sm text-slate-600 mb-4">
+            <p className="text-sm text-fg-muted mb-4">
               This will replace your current board with the cloud copy. Nothing has been changed yet.
             </p>
 
             <div className="space-y-2 text-sm mb-6">
               <div className="rounded-xl border border-border p-3">
-                <div className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Cloud copy</div>
-                <div className="text-slate-800">
+                <div className="text-xs uppercase tracking-wide text-fg-muted font-semibold">Cloud copy</div>
+                <div className="text-fg">
                   {pullPreview.cloudUpdatedAt ? new Date(pullPreview.cloudUpdatedAt).toLocaleString() : 'Unknown'}
                 </div>
               </div>
               <div className="rounded-xl border border-border p-3">
-                <div className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Your local copy</div>
-                <div className="text-slate-800">
+                <div className="text-xs uppercase tracking-wide text-fg-muted font-semibold">Your local copy</div>
+                <div className="text-fg">
                   {pullPreview.localUpdatedAt ? new Date(pullPreview.localUpdatedAt).toLocaleString() : 'Unknown'}
                 </div>
               </div>
@@ -2337,16 +2337,16 @@ useEffect(() => {
           >
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
-                <div className="text-xs uppercase tracking-wide text-slate-500 font-bold">
+                <div className="text-xs uppercase tracking-wide text-fg-muted font-bold">
                   {selectedMeal.day} • {selectedMeal.type}
                 </div>
-                <h2 className="text-2xl text-slate-800 mt-1">{selectedMeal.name}</h2>
-                <div className="text-sm text-slate-500 mt-1">{selectedMeal.calories} calories</div>
+                <h2 className="text-2xl text-fg mt-1">{selectedMeal.name}</h2>
+                <div className="text-sm text-fg-muted mt-1">{selectedMeal.calories} calories</div>
               </div>
 
               <button
                 onClick={() => setSelectedMeal(null)}
-                className="rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 w-9 h-9 font-bold"
+                className="rounded-full bg-surface hover:bg-surface-sunken text-fg w-9 h-9 font-bold"
                 aria-label="Close meal details"
               >
                 ×
@@ -2354,11 +2354,11 @@ useEffect(() => {
             </div>
 
             <div className={`rounded-2xl border-2 p-4 ${colorMap[selectedMeal.type]}`}>
-              <h3 className="text-slate-800 mb-3">Ingredient amounts</h3>
+              <h3 className="text-fg mb-3">Ingredient amounts</h3>
               <ul className="space-y-2">
                 {selectedMeal.ingredients.map((ingredient) => (
-                  <li key={ingredient.id} className="flex items-start gap-2 text-slate-700">
-                    <span className="mt-1.5 h-2 w-2 rounded-full bg-slate-600 shrink-0" />
+                  <li key={ingredient.id} className="flex items-start gap-2 text-fg">
+                    <span className="mt-1.5 h-2 w-2 rounded-full bg-fg-muted shrink-0" />
                     <span>{ingredient.raw}</span>
                   </li>
                 ))}
@@ -2390,7 +2390,7 @@ useEffect(() => {
               </button>
             </div>
 
-            <div className="mt-5 text-sm text-slate-500">
+            <div className="mt-5 text-sm text-fg-muted">
               Tip: click outside this card or press the × to close it.
             </div>
           </div>

@@ -7,18 +7,26 @@ The system's own contract is `docs/SPEC.md` in `kwpledger/kwpledger-design` —
 that is the authority on what the tokens mean. This file only covers this
 consumer.
 
-## Current state: typography, plus surfaces and borders
+## Current state: typography, surfaces, borders and text
 
 **Adopted:** `--font-display` (Lora), `--font-body` (Hanken Grotesk),
-`--fw-display`, and as of step 2a `--surface`, `--surface-card`, `--border`.
+`--fw-display`, `--surface`, `--surface-card`, `--border` (step 2a), `--fg`,
+`--fg-muted` (step 2b), plus one local token, `--surface-sunken`.
 
-**Not adopted yet:** the rest of the colour set. Of the 245 hard-coded neutral
-utilities the census found, **78 are migrated and ~167 remain** — the six slate
-*text* levels (2b), `bg-slate-100`/`200` as a third surface level, `indigo` as a
-de-facto accent (step 3), `amber`/`sky`/`green`/`rose` for meal types (step 4)
-and `blue`/`red`/`yellow` for macros. Plus 5 print-only utilities that stay
-literal on purpose, and 4 scrims with no token to move to.
-`docs/BACKLOG.md` item 2 carries the order.
+**The neutral census reconciles exactly.** Of the 245 hard-coded neutral
+utilities it found, **213 are migrated and 32 remain**, and every one of the 32
+is deliberate rather than a straggler:
+
+| Remaining | Count | Why it stays |
+|---|---|---|
+| Print sheet + `print:bg-white` | 9 | Paper is white in every theme — see below |
+| Scrims (`bg-black/50`, `bg-slate-900/40`) | 4 | Must stay dark in both themes; no token |
+| Inverted buttons (`bg-slate-800`, `hover:bg-slate-700`) + `text-white` | 19 | A second accent, not a neutral surface — step 3 |
+
+**Not adopted yet:** `indigo` as a de-facto accent (step 3),
+`amber`/`sky`/`green`/`rose` for meal types and `blue`/`red`/`yellow` for macros
+(step 4), and the confidence badges (step 5). `docs/BACKLOG.md` item 2 carries
+the order.
 
 ## What v0.5.1 added, and what it still does not define
 
@@ -39,7 +47,8 @@ design around, not oversights to wait on:
 |---|---|---|
 | Overlay / scrim | 4 (`bg-black/50`, `bg-slate-900/40`) | A modal backdrop must stay dark in **both** themes. Anything that inverts turns the dark-mode backdrop white. Keep these hard-coded and comment why. |
 | Inverted surface | 15 (`bg-slate-800/700/900` + `text-white`) | These sit beside `bg-indigo-600 text-white` doing the same job. They are not a neutral surface — they are a second accent predating the app having one. They belong in step 3, mapped to `--accent`, not to a local inverse token. |
-| Third text level | — | `--fg` and `--fg-muted` are the only two. The board uses six slate levels, so step 2 is a deliberate six-into-two collapse. |
+| Third text level | — | **Turned out not to be needed.** `--fg` and `--fg-muted` are the only two, against six slate levels — but colour was never the sole carrier of the distinction. See step 2b below. |
+| Recessed surface | 15 (`bg-slate-100`/`200` + `hover:`) | `--surface` is the page and `--surface-card` is the card; neither is recessed *relative to a card*, which is where progress tracks and chips sit. **Defined locally as `--surface-sunken`** under SPEC §10.3, and reportable upstream. See step 2b. |
 | On-accent foreground | 12 (`text-white`) | White on `--accent` (teal-700, `#0d5c58`) clears AA comfortably, so hard-coding it is defensible; note it rather than inventing `--accent-fg` locally. |
 
 **A version bump requires re-copying the fonts** (see below). Between v0.2.0 and
@@ -139,18 +148,51 @@ applies.
 ```
 
 `base.css` sets `color-scheme: light dark`, which opts the browser into dark form
-controls, scrollbars and canvas default. With ~200 hard-coded light neutrals
-still in place, that produces dark chrome around a light page — a half-dark state
-that did not exist before the import.
+controls, scrollbars and canvas default. With light neutrals still in place, that
+produces dark chrome around a light page — a half-dark state that did not exist
+before the import.
 
-**What the guard does not do:** `prefers-color-scheme` reflects the OS setting,
-so `base.css`'s dark block still redefines `--surface`, `--fg` and the rest
-underneath. That is harmless *only* because nothing here consumes a colour token
-yet.
+**What the guard does not do, and this is the part that misled two plans:**
+`color-scheme` governs only browser-*painted* chrome — scrollbars, form
+controls, the canvas default. `prefers-color-scheme` reflects the OS setting
+regardless, so `base.css`'s dark block still redefines `--surface`, `--fg` and
+the rest underneath, and every utility bridged through `@theme` follows it. The
+guard has never light-locked the page and cannot be made to.
 
-**Remove this line in the same change that migrates the neutrals**, and handle
-dark mode properly rather than suppressing it. Leaving it in place after that
-point would ship a system that has a dark theme and refuses to use it.
+### It does not come off after step 2b, and it is worth knowing why the plan thought it would
+
+Both the backlog and the comment in `index.css` said the guard came off "the
+moment the neutrals migrate". They migrated in step 2b and it stayed, because
+**2b is what created the dependency**. Before it, this text was hard-coded slate
+on hard-coded light panels: a dark-preference browser got a fully light page and
+readable text. Now the text follows the theme and the panels under it do not
+yet, so dark mode inverts the foreground and leaves the background alone.
+
+Measured with the design repo's own `tools/color.mjs`, `--fg` in dark
+(`navy-50`, `#e6ecf2`):
+
+| Surface | Fixed by | Contrast |
+|---|---|---|
+| `bg-amber-100` Breakfast card | step 4 | 1.07:1 |
+| `bg-sky-100` Lunch card | step 4 | 1.04:1 |
+| `bg-green-100` Snack card | step 4 | 1.08:1 |
+| `bg-rose-100` Dinner card | step 4 | 1.01:1 |
+| `bg-indigo-50` match panels | step 3 | 1.06:1 |
+| `bg-slate-800` button vs `navy-800` card | step 3 | 1.13:1 |
+
+For reference, `--fg` light on `bg-amber-100` is **16.63:1**. So this is not a
+degradation, it is a total loss of the board's primary content.
+
+The buttons are the mildest of the three: their `text-white` label still reads
+at 14.6:1, so only the button *shape* vanishes. The meal cards are the severe
+one, and they are step 4 — which is why the guard's removal moved to the end of
+step 4 rather than step 3.
+
+**Test the gate, not the step number: no tokenized text may sit on a literal
+light surface.** Step 5's status chips don't gate it — they pair their own
+foreground with their own background (`bg-green-100 text-green-800`), so they
+stay internally legible in either theme. After step 4 they are a bright-chip
+appearance question, not a legibility one.
 
 ## Verified
 
@@ -203,12 +245,12 @@ translucent token.** Steps 3, 4 and 5 all plausibly do.
 
 ### The print sheet is deliberately not tokenized
 
-Lines ~1666–1730 of `App.jsx` (`hidden print:block`) and the `print:bg-white` on
+The `hidden print:block` block in `App.jsx` (~lines 1643–1707) and the `print:bg-white` on
 the page wrapper keep literal colours. Paper is white in every theme, and
 `prefers-color-scheme` behaviour while printing is inconsistent across browsers
 — so a tokenized print sheet risks handing a dark-mode user a black page.
-4 utilities in the block plus 1 variant were skipped on purpose; they are not
-stragglers.
+8 utilities in the block plus 1 variant are skipped on purpose; they are not
+stragglers. (2a skipped 4 of them; 2b's text pass skipped the other 4.)
 
 ### Two border levels collapsed into one, and it is visible
 
@@ -228,7 +270,162 @@ That is forced by the token set rather than chosen, and it is the one part of
 
 ### Still light-only
 
-`color-scheme: light` stays pinned. Surfaces and borders now follow the theme,
-but ~120 text utilities and the accent do not, so a dark-mode render would be
-warm-dark panels with near-black text on them. The guard comes off at the end of
-step 2b, not before.
+`color-scheme: light` stays pinned — see the guard section above for the
+measured reason it survives step 2b as well.
+
+## Step 2b: text, and one local token (done)
+
+**135 literal neutral utilities removed**, which closes the census exactly:
+78 (2a) + 135 (2b) + 32 deliberately retained = **245**.
+
+| Was | Count | Became |
+|---|---|---|
+| `text-slate-800` | 32 | `text-fg` |
+| `text-slate-700` (+2 `hover:`) | 17 | `text-fg` |
+| `text-slate-500` | 34 | `text-fg-muted` |
+| `text-slate-600` | 25 | `text-fg-muted` |
+| `text-slate-400` | 8 | `text-fg-muted` |
+| `hover:bg-slate-100` / `-200` | 9 | `hover:bg-surface-sunken` |
+| `bg-slate-200` | 6 | `bg-surface-sunken` |
+| `bg-slate-100` | 2 | `bg-surface` — the page wrapper and the modal close button, both of which sit *under* a card rather than inside one |
+| `hover:bg-slate-300` | 1 | `hover:bg-border` — a chip already on sunken needed one step further |
+| `bg-slate-600` | 1 | `bg-fg-muted` — the ingredient list-marker dot, a text-weight mark rendered as a shape |
+
+### The collapse cost nothing, and that was not the expected answer
+
+This was the step flagged as "not mechanical", and the open question was whether
+two tokens could carry six slate levels. They can, and it is really a
+**five-into-two** collapse: `slate-900` appears only in the print sheet, which
+stays literal, so the text pass never had to place it.
+
+The split landed between **700 and 600** — `800`/`700` are titles, headings and
+the labels of light-surfaced controls; `600`/`500`/`400` are captions, secondary
+numbers and helper text.
+
+What made it safe is that **colour was never the sole carrier of the
+distinction.** Checked rather than assumed: in all four places `slate-600` and
+`slate-500` appear side by side, they *also* differ in size or weight.
+Collapsing them to one colour leaves the hierarchy intact — exactly the
+labels-not-colour argument in `AGENTS.md`, applied to type instead of to badges.
+
+**So no text-level deviation was needed**, even though SPEC §10 explicitly
+permits one. Worth recording as a near-miss: adding `--fg-subtle` and friends
+was the obvious move and would have been four tokens of debt for a distinction
+the layout was already making.
+
+**Don't confuse `text-slate-700` with the inverted buttons.** Both look like
+"control foreground", but `text-slate-700` is a dark label on a light control
+and belongs to `--fg`; `bg-slate-800 text-white` is a dark *surface* with a
+light label, which is a second accent and goes to step 3. Only the latter is
+deferred.
+
+### `--surface-sunken`: a deliberate local token, and it should go upstream
+
+The `bg-slate-100`/`200` question the plan deferred into this step does **not**
+resolve onto the existing two surface tokens.
+
+**The function, since SPEC §10.2 asks for function and not preference:** this
+board has elements that sit *inside* a card — progress-bar tracks, status chips,
+menu-row hover. They need a surface further from the card than the card itself.
+v0.5.1 has `--surface` (the page) and `--surface-card` (the card), and **neither
+is recessed relative to a card.** There is nowhere to map them, and §9 forbids
+reaching past the semantic layer to a palette value. So the value is defined in
+`src/index.css`, which §10.3 permits with a stated reason.
+
+**Authored in OKLCH per §4.3**, using the design repo's own `tools/color.mjs`,
+and placed inside each existing neutral family rather than invented beside it:
+
+| Theme | Authored | hex | Bracketed by |
+|---|---|---|---|
+| light | L 91.5% C 0.0084 H 84.6 | `#e5e3dd` | `sand-200` L 90.7 … `paper-50` L 98.5, C 0.0087 |
+| dark | L 28.0% C 0.0410 H 248.3 | `#182b3c` | `navy-800` L 23.7 … `navy-600` L 30.9, C 0.0363–0.0431 |
+
+**Hue does not survive the round trip, and that is expected rather than a slip.**
+`#e5e3dd` reads back as L 91.6 C 0.0083 **H 91.5** against the 84.6 authored, and
+`#182b3c` as L 28.1 C 0.0402 **H 246.8** against 248.3. At chroma this low a
+single step in one 8-bit channel swings the hue angle several degrees, so the
+hex cannot hold it. Lightness and chroma — the two that carry the perceptual
+work here — land within 0.1% and 0.001. The values above are what was authored;
+the hex is what ships. Anyone re-deriving these will see the same drift.
+
+**Note the inversion — it is the system's own, not an inconsistency.**
+`--border` is *darker* than the card in light mode and *lighter* in dark.
+Sunken follows it. A first attempt pushed darker in both themes and scored
+**1.07:1** against the dark card: a progress track no one could see.
+
+**Gated against the system's own precedent rather than an invented threshold.**
+WCAG ratios compress badly between two dark surfaces, so a made-up "1.2:1
+minimum" is meaningless here. The bar used instead is *at least as discriminable
+as this system's existing `--surface` vs `--surface-card` pair* — 1.04:1 light,
+1.12:1 dark. Measured: **1.28:1 light, 1.14:1 dark**. Text on it clears AA
+comfortably either way: `--fg` 13.7:1 / 12.2:1, `--fg-muted` 5.4:1 / 6.2:1.
+
+> **Report this upstream to `kwpledger/kwpledger-site`.** Kevin's explicit
+> instruction, and the reason it is cheap to act on: SPEC §11 classes adding a
+> semantic token as a **safe** change, so globalising a recessed surface needs
+> no spec conversation — only a decision about whether other consumers want it.
+> If they do, this local block deletes and the utility name stays identical.
+
+### The bridge grew, and the `@theme` rule from 2a still holds
+
+`--color-fg`, `--color-fg-muted` and `--color-surface-sunken` were added to the
+same plain `@theme` block. Not `inline` — for the opacity-modifier reason in 2a,
+which applies to every step that follows.
+
+### Verified in the emitted CSS, not just the source
+
+Checked in `dist/assets/index-*.css` after `npm run build`, because "the
+stylesheet says so" was exactly what the `@theme inline` trap defeated in 2a:
+
+| Check | Result |
+|---|---|
+| `--surface-sunken` light value | `#e5e3dd`, in a bare `:root` *after* the design system's dark block closes |
+| `--surface-sunken` dark value | `#182b3c`, inside `@media (prefers-color-scheme:dark){:root{…}}` — so it overrides |
+| Bridge | `--color-fg:var(--fg)`, `--color-fg-muted:var(--fg-muted)`, `--color-surface-sunken:var(--surface-sunken)` |
+| Utilities | all four compile through `var(--color-…)`, i.e. **registered**, so an opacity modifier would survive |
+| `color-scheme:light` | still emitted on `:root` |
+| Tests / lint / build | 9 passed · 3 pre-existing warnings, 0 errors · green |
+
+### Writing this file up partly un-did the migration
+
+The most useful thing 2b found, and it was found by watching the bundle size
+rather than by reasoning.
+
+Documenting the step means naming the utilities it *removed* — `bg-slate-100`,
+`text-slate-700` and the rest, in the was/became table above. **Tailwind v4
+scans every tracked file for utility-shaped strings**, so it read the table as
+usage and re-emitted a rule for every entry. The CSS grew **32.29 → 32.75 kB**
+the moment the docs were written, for utilities `App.jsx` no longer contains.
+
+This is exactly the `.addedbykevin` trap the repo already knew about (a prose
+"Lora is a *static* SemiBold" emitting a `.static` rule), arriving from
+directories nobody had thought to exclude. `src/index.css` now carries:
+
+```css
+@source not "../.addedbykevin";
+@source not "../docs";
+@source not "../.claude";
+@source not "../AGENTS.md";
+@source not "../README.md";
+```
+
+**The general rule: anything that only ever gets read by a human needs a
+`@source not`.** Only `src/` and `index.html` are source. This repo's handoff
+docs are unusually detailed and quote code freely, which makes the exposure
+larger here than it would be in a typical project.
+
+**Verified the strong way rather than by a byte-delta.** With the exclusions in
+place, the emitted stylesheet is *byte-identical* whether the docs hold 2b's
+write-up or the version from before it — same 31.60 kB, same content hash
+`index-DCavdiMg.css`. Documentation provably cannot reach the bundle any more.
+
+### Net effect on the bundle
+
+| | raw | gzipped |
+|---|---|---|
+| after 2a (docs leaking) | 31.99 kB | 7.09 kB |
+| after 2b, before the exclusions | 32.75 kB | 7.22 kB |
+| after 2b, with the exclusions | **31.60 kB** | **7.05 kB** |
+
+So 2b *shrinks* the stylesheet — it mostly deletes utility classes, and the
+tokens it consumes were already being shipped.
