@@ -14,67 +14,42 @@ Single-page React 19 + Vite app, no router. The only backend is one Cloudflare P
 
 ```
 src/
-  App.jsx              Everything UI-related lives here (~2,400 lines): the
-                        board, day cards, meal cards, edit modal, ingredient
-                        row editor, grocery/Cronometer panels, print sheet,
-                        normalize/re-weigh flows, the More toolbar menu,
-                        cloud sync UI. One big component (MealPlanBoard) -
-                        not split into subcomponents yet. The hard-coded
-                        seed board (`initialDays`) sits at the top.
-  ingredientParser.js   Free-text ingredient line parsing ("0.75 cup oats"
-                        -> {amount, unit, name}), searchTermFor() for the
-                        display-name/search-name split, the
-                        details->ingredients migration for old saved boards,
-                        and SCHEMA_VERSION.
-  portionResolver.js    Converts a parsed amount/unit into grams for a
-                        matched food (exact weight units, USDA food-portion
-                        data, or a crude generic fallback table), then
-                        scales per-100g nutrients to that weight.
-  ingredientLibrary.js  The USDA/Open Food Facts matching orchestrator +
-                        localStorage-backed cache, keyed by normalized
-                        ingredient name so a repeated ingredient (chicken,
-                        olive oil, etc.) is only looked up once.
-  nutritionApi.js       Raw fetch wrappers for USDA FoodData Central and
-                        Open Food Facts.
-  cloudSync.js          pushToCloud/pullFromCloud - the whole client-side
-                        cloud sync surface, two functions, no configuration.
+  App.jsx              All UI, ~2,400 lines, one component (MealPlanBoard).
+                        The seed board (`initialDays`) is at the top.
+  ingredientParser.js   Line parsing, searchTermFor(), the old-board
+                        migration, SCHEMA_VERSION.
+  portionResolver.js    amount+unit -> grams -> scaled nutrients.
+  ingredientLibrary.js  USDA/OFF matching orchestrator + localStorage cache.
+  nutritionApi.js       Raw fetch wrappers for USDA and Open Food Facts.
+  cloudSync.js          pushToCloud/pullFromCloud. Two functions, no config.
 
 functions/
-  api/board.js          The only server-side code in the project: a Cloudflare
-                        Pages Function serving GET/PUT on /api/board against a
-                        KV namespace. Deployed by Pages automatically from the
-                        directory name; not part of the Vite build.
+  api/board.js          The only server-side code: a Pages Function serving
+                        GET/PUT on /api/board against KV.
 ```
 
 State lives in `App.jsx`'s `days` array (7 days -> meals -> structured `ingredients`), persisted to `localStorage` on every change. There is no server-side source of truth by default - see "Design decisions" below.
 
 Two directories outside `src/` matter:
 
-- **`functions/`** - Cloudflare Pages Functions, routed by file path (`functions/api/board.js` → `/api/board`). Pages picks the directory up automatically on deploy; there is no build step and Vite neither sees nor bundles it. It runs on Workers, not in the browser and not in Node - so no React, no `import.meta.env`, and its only configuration is the `MEAL_PLAN_KV` binding set in the Cloudflare dashboard. **There is no longer a `.github/` directory**; the repo's only workflow was the Supabase keep-alive, deleted with that migration.
-- **`.addedbykevin/`** - a drop-box for binaries and reference material Kevin passes in (logos, fonts, design-token snapshots). Tracked deliberately - gitignoring it would defeat the purpose. **It is not source.** `src/index.css` carries an `@source not "../.addedbykevin"` rule because Tailwind v4 auto-scans every tracked file for utility-shaped strings, and ordinary English collides with the utility namespace - the prose "Lora is a *static* SemiBold" in a doc there was enough to emit a `.static` rule into production CSS. Don't remove that exclusion.
+- **`functions/`** - Cloudflare Pages Functions, routed by file path. Runs on Workers: no React, no `import.meta.env`, configured only by the `MEAL_PLAN_KV` binding. `.claude/rules/pages-function.md` loads the constraints when you open it. **There is no longer a `.github/` directory**; the repo's only workflow was the Supabase keep-alive, deleted with that migration.
+- **`.addedbykevin/`** - a drop-box for binaries and reference material Kevin passes in. Tracked deliberately; gitignoring it would defeat the purpose. **It is not source**, and `src/index.css` carries `@source not "../.addedbykevin"` because Tailwind v4 scans every tracked file for utility-shaped strings - the prose "Lora is a *static* SemiBold" in a doc there emitted a `.static` rule into production CSS. Don't remove that exclusion.
 
 ## Design decisions and why
 
-- **Visual board over a text/spreadsheet view.** The whole point of this project was turning a dietician PDF into something Kevin could actually look at and rearrange, not just read. Color-coded meal-type cards, drag/drop, and swap mode all serve that.
-- **localStorage as primary store, not a database, by default.** This is a single-user tool; a real backend was explicitly avoided until it was actually needed (see cloud sync below). Simpler to reason about, nothing to keep running, no auth to manage.
-- **Cloud sync is a thin JSON-blob push/pull, not a real backend.** When localStorage's single-browser limitation became a real problem (multiple PCs), the considered alternative was a normalized schema (separate tables for days/meals/ingredients). That was explicitly rejected as overkill for a personal project. The blob shape has now survived a complete backend swap without changing, which is the strongest evidence that call was right.
-- **Sync runs on Cloudflare KV because Supabase's free tier could not be kept awake.** Not a design preference - free-tier projects auto-pause after ~7 days of inactivity, and two separate keep-alive strategies (a read, then a daily write) were both demonstrably ignored while the workflow ran green throughout. KV meters requests rather than pausing for idleness, so the failure class is gone rather than mitigated. **The lesson that outlives it: a green CI run proves the request succeeded, not that the remote service counted it.** Full evidence in `docs/BACKLOG.md` (Shipped) and `docs/ROADMAP.md`; don't re-litigate the keep-alive.
-- **Manual, explicit sync direction (push/pull buttons), not automatic/continuous sync.** Automatic sync needs real conflict resolution (what happens when two devices both have unsynced edits?). Manual push/pull with a visible before-you-overwrite confirmation was chosen instead - simpler, and matches the mental model of the pre-existing Export/Import JSON feature.
-- **Nutrition-database lookups (USDA/Open Food Facts) are advisory, never authoritative.** The dietician's numbers are the baseline; auto-matched ingredient data is deliberately never silently written over calories/macros - there's always an explicit "Recompute" -> preview diff -> "Apply" step. This shows up repeatedly: the bulk Normalize action writes ingredient match data automatically (safe - doesn't change what's visible) but requires explicit per-meal or apply-all confirmation before touching calories/macros.
-- **"Auto-match, flag for review" over "block until confirmed."** When ingredient matching can't find a clean match, it picks its best guess and marks it unverified rather than stopping to ask - matching data gets populated automatically, verification is a separate, later, optional step (the `verified` checkbox per ingredient).
-- **The board grid derives its column count from available width, not from breakpoints.** Implemented: `grid-cols-[repeat(auto-fit,minmax(220px,1fr))]`. The old `grid-cols-1 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7` declared the *column count* at fixed pixel thresholds while card *width* stayed fluid; the intent was the opposite. Measured before/after numbers are in `docs/ROADMAP.md`. The 220px floor is the one tunable knob - raising it drops columns sooner, lowering it brings seven-across down below the ~1684px it now needs.
-- **The app will be reconciled with the shared `kwpledger.com` design system, but not by flattening its colors.** Strategy agreed, deliberately deferred. Three token layers: palette -> semantic (from the shared system) -> *domain* (this app's own `--meal-breakfast`, `--macro-carbs`), where domain tokens map onto a shared neutral categorical scale (`--data-1..n`) rather than reaching past the semantic layer to raw palette values. Tailwind v4's `@theme` bridges CSS custom properties into utilities, so the inline-utility convention survives. Typography (Lora display / Hanken Grotesk body) is higher leverage than color and goes first. Kevin's constraint: colors should be *compatible*, not *harmonized* - distinct enough to stay categorical, stately rather than neon. Pick them in OKLCH, not HSB, so equal lightness actually means equal perceived lightness, and choose dark-mode values at the same time. Source material is in `.addedbykevin/style-docs/`.
-- **The shared design system is attached and typography is adopted.** `@kwpledger/design` is pinned at **v0.5.1** (`docs/DESIGN-SYSTEM.md` covers the wiring, what that version added, and the four things it still does not define). Lora display / Hanken Grotesk body are live; **every colour token is still unadopted** - 245 hard-coded neutral utilities plus indigo/amber/sky/rose/green. `docs/BACKLOG.md` item 2 carries the remaining order. Pin a tag, never a branch: a design system that moves under a consumer is how a shared system becomes a liability - and re-copy `public/fonts/` on every bump. The repo is **`kwpledger-design`** (not `kwpledger-designsystem`, which appears in older notes and is wrong).
-- **`src/index.css` pins `color-scheme: light` on purpose, and it must come off with the neutrals.** `base.css` sets `color-scheme: light dark`, which would give a dark-preference browser dark scrollbars and form controls around a page still painted with light Tailwind utilities. The guard is safe only while no colour token is consumed - `prefers-color-scheme` still redefines `--surface`/`--fg` underneath regardless.
-- **A `font-bold` on a heading is a bug here, not a style choice.** Lora ships as a *static* SemiBold - 600 is the only real weight, and asking for 700 makes the browser synthesise a fake bold. `--fw-display` exists to prevent exactly that, and Tailwind utilities outrank `@layer base`, so the utility has to be absent rather than overridden.
-- **The test for whether a piece of UI work may proceed** - useful beyond the design-system question, so keep it: does the change alter *what is on screen and where* (structure, information architecture, reachability - proceed) or *how that looks* (colour, spacing, typography, tokens - wait for the system)? This is why the phone-toolbar fix went ahead as a "More" disclosure while the one-line "left-align the wrap" tidy-up was explicitly turned down; the first survives a design-system change, the second was throwaway.
-- **Color in this app is reinforcement, never the sole carrier.** All three color-coded axes - meal types, macro bars, ingredient-match confidence - already have text labels beside them. This was checked directly, correcting an earlier assumption that the macro bars were an unlabeled stacked chart; they are three separately labeled rows. It means the palette can change more freely than it looks, and it means any future color work must keep those labels.
-- **Full-page forced-width layout was tried and rejected.** An earlier version wrapped the whole board (including the header) in a `min-w-[1750px]` + `overflow-x-auto` container, meant to let the 7-day row scroll horizontally on narrow screens. In practice it forced the *entire page* - header included - to never be narrower than 1750px, breaking mobile and normal window resizing entirely. Removed in favor of the existing Tailwind responsive grid breakpoints doing their job unobstructed. (Mobile-friendliness is still an open issue for other reasons - see `docs/ROADMAP.md`.)
-- **The sync endpoint is unauthenticated, deliberately.** Carried over from the open RLS policies it replaces: single-user tool, and the worst case is someone overwriting one board that also lives in localStorage and in Export JSON. A shared-secret header was rejected because it *cannot work* here, not because it wasn't worth the effort - a browser-only SPA cannot hold a secret, so the header would ship in the bundle. The function's 1 MB body cap and shape validation are the guards that are real rather than theatre. If a gate is ever genuinely needed, the honest answer is Cloudflare Access in front of the route.
-- **A meal carries two name lists and they are not interchangeable.** `meal.items` is the human-readable display list the meal cards render (`"Quinoa"`, `"Cod"`, `"Brown Rice"`); `meal.ingredients[].name`/`.raw` is the matcher's input, and the seed deliberately writes USDA-friendly text there - `"1 banana, raw"`, `"6 oz cod, raw"`, `"0.75 cup brown rice, raw"` are all original. **Check `items` before making any claim about what is on screen**: a session inspecting only `ingredients` concluded the visible board had been corrupted with search terms, and it had not, because the cards never read that field. **The two lists have no link and never have** - Kevin typed the display tags by hand, which is why `"Boneless, Skinless Chicken Breast"` carries a comma the ingredient name doesn't. Nothing keeps them in sync, so an ingredient added through the editor gets no display tag. Linking them is a real design question rather than an obvious fix: the hand-written tags are better copy than the matcher text, which is why there are two fields.
-- **An ingredient's display name and its search term are separate fields.** USDA's search is poor at generic whole foods - "sweet potato" returns *Sweet potato tots, school*, "banana" returns *Banana, baked*. The wording that works is knowledge the human has and the matcher doesn't, and before `searchName` existed the only place to put it was the display name, so fixing what the matcher saw meant corrupting what the board showed. `searchTermFor(ingredient)` resolves `searchName` -> `raw` -> `name`, and all three matching entry points go through it. The field is optional and its absence behaves exactly as before, which is why it needed no migration and no `SCHEMA_VERSION` bump - a bump would make an older client *refuse* a board carrying the field rather than ignore it, the wrong failure for a two-machine setup.
-- **A portion calibration is only valid for the food it was measured against.** `flaked: 81g/cup` was derived from real rolled-oats data, then the board's ingredient changed to *steel cut* oats and the `oat` keyword routed those to it too - roughly 2x wrong in the opposite direction. The keyword that routes to a constant has to be at least as specific as the measurement behind it. This is also why `CATEGORY_KEYWORDS` order is load-bearing and commented at each constraint.
-- **"Normalize" and "Re-weigh" are deliberately different actions.** Normalize matches *unresolved* ingredients and costs network calls. Re-weigh recomputes grams for *already-matched* ingredients against the current portion table, purely locally. The split exists because Normalize's `unresolved`-only filter meant a fully-matched board could not receive a table recalibration at all - it silently kept old weights and read ~624 kcal/week low. Re-weigh only touches `generic-fallback` rows: `exact-weight` comes from the unit itself, and `food-portion` came from USDA portion data that isn't stored on the ingredient, so recomputing it would downgrade a real measurement to a guess.
+- **Visual board over a text/spreadsheet view.** The point was turning a dietician PDF into something Kevin could look at and rearrange, not just read. Colour-coded cards, drag/drop and swap mode all serve that.
+- **localStorage is the primary store, not a database.** Single-user tool; a real backend was avoided until genuinely needed. Nothing to keep running, no auth to manage.
+- **Cloud sync is a thin JSON-blob push/pull, not a real backend.** A normalized schema was considered and rejected as overkill. The blob shape then survived a complete backend swap unchanged, which is the strongest evidence that call was right.
+- **Sync runs on Cloudflare KV because Supabase's free tier could not be kept awake.** Not a preference - two keep-alive strategies were demonstrably ignored while the workflow ran green throughout. **The lesson that outlives it: a green CI run proves the request succeeded, not that the remote service counted it.** Evidence in `docs/BACKLOG.md` (Shipped); don't re-litigate the keep-alive.
+- **Sync direction is manual and explicit (push/pull buttons), never automatic.** Continuous sync would need real conflict resolution for two devices with unsynced edits. Manual push/pull with a before-you-overwrite confirmation matches the Export/Import mental model already there.
+- **Nutrition-database lookups are advisory, never authoritative.** The dietician's numbers are the baseline; matched data is never silently written over calories/macros - always Recompute -> preview diff -> Apply. Writing *match* data automatically is safe because it changes nothing visible; touching calories needs explicit confirmation.
+- **"Auto-match, flag for review" over "block until confirmed."** Matching picks its best guess and marks it unverified rather than stopping to ask; verification is a separate, later, optional step (the per-ingredient `verified` checkbox).
+- **The board grid derives its column count from available width, not from breakpoints.** `grid-cols-[repeat(auto-fit,minmax(220px,1fr))]`. The 220px floor is the one tunable knob; measured numbers and the breakpoint version it replaced are in `docs/ROADMAP.md`.
+- **The app is a consumer of `@kwpledger/design`, pinned at v0.5.1.** Typography is adopted; **every colour token is still unadopted.** Tokens layer palette -> semantic -> *domain*, and **a domain token must never reach past the semantic layer to a raw palette value** - that is the one rule the layering exists to enforce. Colours are *compatible*, not *harmonized*: distinct enough to stay categorical, stately rather than neon. Pin a tag, never a branch, and re-copy `public/fonts/` on every bump. The repo is **`kwpledger-design`** (not `kwpledger-designsystem`, which appears in older notes and is wrong). **`docs/DESIGN-SYSTEM.md` is the wiring, the traps, and the four things v0.5.1 still does not define; `docs/BACKLOG.md` item 2 is the order.** Read both before any colour work.
+- **The test for whether a piece of UI change may proceed**, useful well beyond the design-system question: does it alter *what is on screen and where* (structure, information architecture, reachability - proceed) or *how that looks* (colour, spacing, typography - wait for the system)? The phone-toolbar disclosure passed; a "left-align the wrap" tidy-up was turned down. The first survives a token change, the second was throwaway.
+- **Colour is reinforcement, never the sole carrier.** All three colour-coded axes - meal types, macro bars, match confidence - carry text labels already (verified, not assumed). The palette can therefore change more freely than it looks, and **any colour work must keep those labels.**
+- **The sync endpoint is unauthenticated, deliberately.** A shared-secret header was rejected because it *cannot work* here, not because it wasn't worth the effort: a browser-only SPA cannot hold a secret, so the header would ship in the bundle. The 1 MB body cap and shape validation are the guards that are real rather than theatre. Reasoning and the Cloudflare Access alternative are in `docs/ARCHITECTURE.md`.
+- **Five traps live in `.claude/rules/` and load themselves when you open the file they belong to**: the two non-interchangeable meal name lists, the display-name/search-term split, portion-calibration scope and `CATEGORY_KEYWORDS` order, the stylesheet/JSX token traps, and the Workers runtime. Each is damage you do by *editing a file* - which is why they are scoped rather than carried here, and why command-and-dashboard traps went to `docs/GOTCHAS.md` instead, where no path rule could ever fire. **Editing `App.jsx`, `ingredientParser.js`, `ingredientLibrary.js`, `portionResolver.js`, `index.css` or `functions/api/board.js` without having seen the matching rule? Read it first.**
 
 ## How to work with Kevin
 
@@ -94,30 +69,24 @@ Also: narrate your reasoning back to him, including routine results like a green
 - Never silently overwrite a number the user is looking at. Any action that changes stored calories/macros/board data should have an explicit trigger and, where practical, a before/after preview.
 - Before touching the `days` data shape, check `migrateDaysToIngredients` in `ingredientParser.js` - it's the app's forward-compatibility mechanism (runs on localStorage load, JSON import, and cloud pull) and needs to keep handling old shapes if the shape changes again.
 - Run `npm run build` after non-trivial changes - this repo has caught real structural/JSX errors this way repeatedly.
+- **Four rules govern this file's length** (Kevin, 2026-09-20), the same in every
+  repo of mine that has one. **(1) Soft limit 1,350 words** - past it, weigh each
+  addition, and look for what can be cut safely or preserved by moving it to a
+  `docs/` reference. **(2) Hard limit 1,850** - past it, cut or move *now*, not
+  later. **(3) The four-minute rule is _a_ primary decider**, not the only one: if
+  a session will not need it in the first four minutes after handoff, it is a
+  high-tier candidate for preservation by move. **(4) No `docs/` file carries a
+  word limit** - reference, not handoff, so moving costs nothing. A PostToolUse
+  hook measures this file on every write (`.claude/hooks/agents-md-length.mjs`);
+  it reports but cannot block.
 
 ## Current state
 
-Working end-to-end: the 7-day board, drag/drop + swap mode, print sheet, grocery aggregation, Cronometer text export, Export/Import JSON, structured per-ingredient editing with USDA/OFF matching (single, bulk, and a local re-weigh pass), per-ingredient search-name overrides, and the phone toolbar disclosure. Deployed favicon and page title are the real kwp logo mark.
+Working end-to-end: the board, drag/drop + swap, print sheet, grocery aggregation, Cronometer export, Export/Import JSON, per-ingredient editing with USDA/OFF matching (single, bulk, re-weigh), search-name overrides, the phone toolbar disclosure, and **cloud sync on Cloudflare KV, verified across two devices**.
 
-**Cloud sync now runs on Cloudflare KV and is verified end to end** - pushed from the desktop, pulled on the phone, matching timestamps, on the real board. The only thing left of that migration is tearing Supabase down (`docs/BACKLOG.md` item 1, step 7); nothing reads it any more, so it is cleanup rather than work.
+**Work order lives in `docs/BACKLOG.md`** - live work above a divider, finished below, so the top heading is always the next thing to pick up. Don't ask which item to do; read the file.
 
-**Work order lives in `docs/BACKLOG.md`** - live work above a divider, finished work below, so the top heading is always the next thing to pick up. `docs/ROADMAP.md` stays the deep explanation of what is broken and why.
-
-The board is currently seeded from **Kevin's working plan, not the dietician's document verbatim** - her 2026-07-31 revision plus his own naming pass (ingredient wording USDA can match, consistent casing, and the substitutions he had already made in life). Her macros remain the displayed baseline; measured values only replace them through an explicit apply.
-
-### Things that cost real time to learn
-
-- The environment's network policy is edited at claude.ai/code via the session menu's **Edit environment**, and the change applies to the *already-running* session - no restart needed. It currently allows `api.nal.usda.gov`, `world.openfoodfacts.org`, `meal-planner.kwpledger.com` and `*.pages.dev`.
-- **Chromium cannot traverse the session proxy** (`ERR_CONNECTION_RESET` where `curl` succeeds on the same host). Headless-browser testing runs against a local `npm run preview`; `curl` handles anything deployed.
-- **A PR's Cloudflare branch preview is a `*.pages.dev` host, which the egress policy already allows** - so `curl` can exercise a deployed Pages Function from a session the moment the preview build finishes. This was written off as impossible once ("nothing can be verified against the real deployment") on the strength of the Chromium finding; that limitation is about *browsers*, and an API endpoint needs no browser.
-- Deployed `VITE_*` configuration can be checked from a session with `curl` alone - fetch `index.html`, extract the hashed asset path, inspect the bundle - **masking any long token before printing** so a real key never reaches the transcript. That answers "is it set in production?" without opening a dashboard.
-- **Cloudflare Pages scopes environment variables separately for Production and Preview** - and **KV bindings the same way**. A value or binding set on only one scope produces a preview that behaves nothing like production.
-- **Neither takes effect until a redeploy** - and for bindings this is not the obvious answer. A Worker reads its bindings at *request* time, so the instinct is that adding one to a Pages project fixes a running deployment. It does not: **a Pages deployment captures its bindings when it is built**, so a deployment created before the binding existed will keep answering as if it were still missing, however correct the dashboard looks. Cloudflare's own wording is "once configured, the binding must be redeployed to take effect." This cost a real round trip - the docs here asserted the opposite, Kevin bound the namespace correctly in both scopes, and the app still reported it unbound. Retry the deployment or push a commit.
-- **KV lives under Storage & databases → Workers KV in the dashboard**, not under Workers & Pages. And there is no separate "KV namespace binding" menu entry: it is the project's Settings → Bindings → **Add** → KV namespace, with a **Choose environment** dropdown that is how one binding name gets configured for both Production and Preview - the UI will not let you add the same name twice within one environment.
-- **A `wrangler.toml` in a Pages project causes the dashboard configuration to be ignored entirely.** That is why there isn't one - everything else here is configured in the dashboard, and adding the file would be an all-or-nothing switch, not an addition.
-- A **green GitHub Actions run proves the request succeeded, not that the remote service counted it.** That distinction is the entire keep-alive saga.
-
-See `docs/ROADMAP.md` for everything known-broken or unfinished.
+The board is seeded from **Kevin's working plan, not the dietician's document verbatim** - her 2026-07-31 revision plus his naming pass. Her macros remain the displayed baseline; measured values replace them only through an explicit apply.
 
 ### Running it
 
@@ -127,10 +96,8 @@ npm run dev      # local dev server
 npm run build    # production build - run this before committing non-trivial changes
 ```
 
-`.env` now holds exactly one key, `VITE_USDA_API_KEY` (see `.env.example`). Without it, nutrition lookups fail and the core board still works. Sync needs no local configuration at all - the endpoint is same-origin and the KV binding lives on the deployment.
+`.env` holds exactly one key, `VITE_USDA_API_KEY` (see `.env.example`). Without it, nutrition lookups fail and the core board still works. Sync needs no local configuration - the endpoint is same-origin and the KV binding lives on the deployment.
 
-**`npm run dev` cannot sync**, and that is expected rather than broken: Vite's dev server does not serve Pages Functions, so `/api/board` returns the SPA's `index.html` with a 200. `cloudSync.js` checks the content type and says so by name, because "unexpected token <" is the worst possible description of "you're not running a Pages deployment". Use `npx wrangler pages dev dist` after a build if sync genuinely needs exercising locally.
+**`npm run dev` cannot sync**, and that is expected rather than broken - Vite does not serve Pages Functions. Use `npx wrangler pages dev dist` after a build if sync needs exercising locally. **Missing configuration must degrade to a failing button with a readable message, never a page that doesn't render**; both are explained in `docs/ARCHITECTURE.md`.
 
-A degradation principle worth keeping, learned the hard way from the module this replaced: `supabaseClient.js` called `createClient(undefined, undefined)`, which threw during *module evaluation* - before React mounted - so a missing `.env` produced a blank white page with the error visible only in the devtools console. Missing or broken configuration must degrade to a failing button with a readable message, never to a page that doesn't render.
-
-See `docs/ARCHITECTURE.md` for the cloud sync and deployment details, and `docs/ROADMAP.md` for known issues.
+See `docs/ARCHITECTURE.md` for sync and deployment, `docs/GOTCHAS.md` for the operational traps that cost real time, and `docs/ROADMAP.md` for known issues.

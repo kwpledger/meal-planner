@@ -83,3 +83,18 @@ Carried forward from the old implementation's worst habit, which cost real debug
 - **Env vars for the build**: `VITE_USDA_API_KEY` only, set per-project in the Cloudflare dashboard, not derived from anything in this repo. Vite bakes `VITE_*` vars in at **build time**, so setting one in Cloudflare requires a fresh build/deploy to take effect - changing the dashboard value alone does nothing until the next build. This bit Kevin twice already. **The KV binding behaves the same way** for a different underlying reason (see above): the value is not inlined into anything, but the deployment captures which bindings it has when it is built. The practical rule is the same for both - change it in the dashboard, then redeploy.
 
 To redeploy without a code change (e.g., after only updating a Cloudflare env var): Cloudflare dashboard → Workers & Pages → meal-planner → Deployments → latest deployment → **Retry deployment**.
+
+## Configuration must degrade to a failing button, never a blank page
+
+Learned the hard way from the module the KV client replaced. `supabaseClient.js`
+called `createClient(undefined, undefined)`, which threw during *module
+evaluation* — before React mounted. A missing `.env` therefore produced a blank
+white page with the error visible only in the devtools console, which reads as
+"the app is broken" rather than "one key is missing".
+
+**Missing or broken configuration must degrade to a failing button with a
+readable message.** `cloudSync.js` follows this: it checks the response content
+type and names the actual problem, because "unexpected token <" is the worst
+possible description of "you are not running a Pages deployment". That check is
+also why the dev-server case is diagnosed rather than crashing — see "The one
+thing that got worse" above.
