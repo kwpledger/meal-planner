@@ -103,10 +103,10 @@ const initialDays = [
 ];
 
 const colorMap = {
-  Breakfast: 'bg-amber-100 border-amber-300',
-  Lunch: 'bg-sky-100 border-sky-300',
-  Snack: 'bg-green-100 border-green-300',
-  Dinner: 'bg-rose-100 border-rose-300',
+  Breakfast: 'bg-meal-breakfast border-meal-breakfast-border',
+  Lunch: 'bg-meal-lunch border-meal-lunch-border',
+  Snack: 'bg-meal-snack border-meal-snack-border',
+  Dinner: 'bg-meal-dinner border-meal-dinner-border',
 };
 
 
@@ -1463,7 +1463,7 @@ useEffect(() => {
                         </div>
                         <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
                           <div
-                            className="h-full bg-blue-400 rounded-full transition-all"
+                            className="h-full bg-macro-carbs-fg rounded-full transition-all"
                             style={{ width: `${macroPercents.carbs}%` }}
                           />
                         </div>
@@ -1476,7 +1476,7 @@ useEffect(() => {
                         </div>
                         <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
                           <div
-                            className="h-full bg-red-400 rounded-full transition-all"
+                            className="h-full bg-macro-protein-fg rounded-full transition-all"
                             style={{ width: `${macroPercents.protein}%` }}
                           />
                         </div>
@@ -1489,7 +1489,7 @@ useEffect(() => {
                         </div>
                         <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
                           <div
-                            className="h-full bg-yellow-400 rounded-full transition-all"
+                            className="h-full bg-macro-fat-fg rounded-full transition-all"
                             style={{ width: `${macroPercents.fat}%` }}
                           />
                         </div>
@@ -1610,32 +1610,32 @@ useEffect(() => {
               <h2 className="text-2xl text-fg mb-4">Quick Visual Rules</h2>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-amber-100 rounded-2xl p-4 border border-amber-300">
+              <div className="bg-meal-breakfast rounded-2xl p-4 border border-meal-breakfast-border">
                 <div className="text-sm text-fg-muted">Breakfast</div>
                 <div className="font-bold text-fg">8:30 AM</div>
               </div>
 
-              <div className="bg-sky-100 rounded-2xl p-4 border border-sky-300">
+              <div className="bg-meal-lunch rounded-2xl p-4 border border-meal-lunch-border">
                 <div className="text-sm text-fg-muted">Lunch</div>
                 <div className="font-bold text-fg">12–1 PM</div>
               </div>
 
-              <div className="bg-green-100 rounded-2xl p-4 border border-green-300">
+              <div className="bg-meal-snack rounded-2xl p-4 border border-meal-snack-border">
                 <div className="text-sm text-fg-muted">Snack</div>
                 <div className="font-bold text-fg">3:30–4 PM</div>
               </div>
 
-              <div className="bg-rose-100 rounded-2xl p-4 border border-rose-300">
+              <div className="bg-meal-dinner rounded-2xl p-4 border border-meal-dinner-border">
                 <div className="text-sm text-fg-muted">Dinner</div>
                 <div className="font-bold text-fg">Before 7 PM</div>
               </div>
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <div className="px-4 py-2 rounded-full bg-blue-100 text-blue-800 font-medium">40% Carbs</div>
-              <div className="px-4 py-2 rounded-full bg-red-100 text-red-800 font-medium">30% Protein</div>
-              <div className="px-4 py-2 rounded-full bg-yellow-100 text-yellow-800 font-medium">30% Fat</div>
-              <div className="px-4 py-2 rounded-full bg-green-100 text-green-800 font-medium">25g Fiber Goal</div>
+              <div className="px-4 py-2 rounded-full bg-macro-carbs-surface text-macro-carbs-fg font-medium">40% Carbs</div>
+              <div className="px-4 py-2 rounded-full bg-macro-protein-surface text-macro-protein-fg font-medium">30% Protein</div>
+              <div className="px-4 py-2 rounded-full bg-macro-fat-surface text-macro-fat-fg font-medium">30% Fat</div>
+              <div className="px-4 py-2 rounded-full bg-macro-fiber-surface text-macro-fiber-fg font-medium">25g Fiber Goal</div>
             </div>
             </div>
           </div>

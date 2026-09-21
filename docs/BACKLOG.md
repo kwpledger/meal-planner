@@ -101,16 +101,22 @@ self-evident to the person holding two of them** — the useful instruction is
 "compare the weekly totals on both machines first, and push from the higher-numbered one."
 
 
-## 2. Adopt the shared design system — step 2 done, accent is next
+## 2. Adopt the shared design system — status is the last step
 
-**In progress.** `@kwpledger/design` is pinned at **v0.5.1**. Typography,
-surfaces, borders and text are adopted. `docs/DESIGN-SYSTEM.md` is the wiring,
-the traps, and the verification; this item is only the order.
+**Nearly done.** `@kwpledger/design` is pinned at **v0.5.1**. Typography,
+surfaces, borders, text, accent and categorical are adopted; **only status
+(step 5) is left.** `docs/DESIGN-SYSTEM.md` is the wiring, the traps, and the
+verification; this item is only the order.
 
-The hold on visual polish is **over for typography, surfaces, borders and text,
-and still on for accent, categorical and status** — don't invent a colour
-locally that the system already defines. The one deliberate local definition is
-`--surface-sunken`; see 2b below for the rules that permit it.
+The hold on visual polish is over except for status — don't invent a colour
+locally that the system already defines. Two deliberate local definitions
+exist, `--surface-sunken` (2b) and `--accent-fg` (step 3); both are permitted
+by SPEC §10.3 with a stated reason, both are **pending an upstream report**, and
+the bar each had to clear is in `docs/DESIGN-SYSTEM.md`.
+
+**Dark mode is real as of step 4** and no longer gated. Anything added from here
+must work in both themes — check every new colour in both, because roughly half
+the tokens invert.
 
 The practical test for whether a piece of UI work may proceed meanwhile is
 unchanged and still useful: does it change *what is on screen and where*, or
@@ -119,12 +125,12 @@ grid fix) go ahead regardless.
 
 1. ~~**Typography.**~~ **DONE.** Pinned dependency, fonts copied to
    `public/fonts/` with `OFL-NOTICE.txt`, `--font-display` / `--font-body` /
-   `--fw-display` consumed via `@layer base`, and `color-scheme: light` pinned
-   so the dark block cannot half-apply. `font-bold` removed from all 19 heading
-   elements — Lora is a static SemiBold and 700 was making the browser
-   synthesise a fake bold.
-2. **Neutrals — 2a done, 2b next.** The census found 245 neutral utilities, not
-   the ~200 estimated. Split because only 2a is mechanical:
+   `--fw-display` consumed via `@layer base`, and `color-scheme: light` pinned.
+   **That guard was believed to stop the dark block half-applying; it did not** —
+   see step 6. `font-bold` removed from all 19 heading elements — Lora is a
+   static SemiBold and 700 was making the browser synthesise a fake bold.
+2. ~~**Neutrals.**~~ **DONE (2a + 2b).** The census found 245 neutral utilities,
+   not the ~200 estimated. Split because only 2a was mechanical:
    - ~~**2a. Surfaces and borders.**~~ **DONE.** 78 utilities →
      `--surface`, `--surface-card`, `--border`, bridged with a plain `@theme`
      block. **Use `@theme`, never `@theme inline`** — inline drops opacity
@@ -183,78 +189,113 @@ grid fix) go ahead regardless.
    text-fg` — not a second hue; choosing which buttons demote is a design call,
    so nothing was demoted here. (b) In light mode hover now *darkens*
    (`--accent-hover` is teal-800), where `indigo-500` used to lighten.
-4. **← NEXT. Categorical.** Domain tokens *in this repo* — `--meal-breakfast` …
-   `--macro-fat` — onto `--data-1` … `--data-7`. Seven of eight slots; SPEC
-   §4.1 sized the scale against this app, and `categorical.css`'s worked example
-   is literally `--meal-breakfast: var(--data-1-surface)`. **Never map a domain
-   token past the semantic layer to a raw palette value** — that is the one rule
-   the whole layering exists to enforce. Bridge into Tailwind with `@theme`,
-   and remember the theme key must not equal the token name (see
-   `docs/DESIGN-SYSTEM.md`).
+4. ~~**Categorical.**~~ **DONE.** 11 utilities onto all **eight** slots via
+   domain tokens in `src/index.css`, every one pointing at a `--data-n-*` slot
+   and nothing else. **This is the step that made dark mode real** — meal-card
+   text went from **1.07:1 to 10.47–10.88:1**, verified in headless Chromium in
+   both themes, not just computed.
 
-   **The question to answer before mapping anything, and it is not "which token
-   is nicest":** this app has **two** categorical axes drawing on **one**
-   eight-slot scale — 4 meal types and 3 macro bars. They appear on screen
-   together, so an arbitrary split lets a meal card and a macro bar land on
-   neighbouring hues and read as related when they are not. Decide the
-   assignment on a stated basis (contiguous runs per axis, or maximal hue
-   separation between axes) and record which, because that is exactly the
-   "throughput" the design system asks for — see `docs/DESIGN-SYSTEM.md`, *the
-   bar a local value has to clear*.
+   **The split: warm run = meals, cool run = macros — and it fixed a live
+   collision rather than just picking a basis.** Measured against each other,
+   the old literals were nearly the same hues: Breakfast `amber-100` h=96 vs Fat
+   `yellow-400` h=92 (**4° apart**), Dinner h=13 vs Protein h=22, Lunch h=237 vs
+   Carbs h=255. Three of four meal types shared a hue family with a macro; only
+   lightness and shape kept them apart. Contiguous runs make axis membership
+   legible from hue alone, and the cross-axis boundaries land on the scale's two
+   widest gaps.
 
-   **The eighth slot is already spoken for.** `macros.fiber` is preserved on
-   every meal and renders nowhere; a fiber row on the macro bars is the obvious
-   small feature, and it would make 4 + 4 = 8. So plan the split as if the scale
-   is full rather than treating slot 8 as spare.
+   Within a run: keep the colour a thing already has where the run allows,
+   otherwise use that axis's canonical order — the data decides which. Meals had
+   three near-matches (total displacement 205° against 437° for a meal-order
+   mapping); macros had none, so slot order follows bar order. **Lunch is the
+   one card whose colour really changes** — sky blue to orange, forced because it
+   was the only meal in the cool half.
 
-   **This step fixes a live defect, not just a token mapping.** Measured during
-   step 3: **`bg-yellow-400`, the fat macro bar, is 1.19:1 against its track in
-   light mode** — effectively invisible, and it always has been (1.24:1 on the
-   old `bg-slate-200` track, so this is inherited, not caused). Carbs and
-   protein are only marginally better at 1.98:1 and 2.16:1. The value is still
-   readable because every macro row carries a text label, so this degrades the
-   visual rather than losing information — but `--data-n` is contrast-gated
-   where a raw `yellow-400` is not, so **check each fill against
-   `--surface-sunken` in both themes after mapping**, and treat a fill that
-   can't be seen as a failed mapping rather than a faithful one. The same
-   measurement found no *dark*-mode problem: all three fills read better on a
-   dark track (5.2–9.5:1).
-5. **Status.** The ingredient-confidence badges and warnings
+   **The trap, and it is the opposite of obvious: a bar must not use
+   `-surface`.** Filling the macro bars with the slot's tint measures **1.04:1**
+   against `--surface-sunken` — *worse* than the `yellow-400` it replaces. The
+   tint and the track sit at nearly the same lightness. `-fg` is the
+   high-contrast member and gives **7.67–8.01:1 light, 9.58–9.90:1 dark**. So
+   **the shape decides which slot value, not the axis**: a meal card and a
+   legend chip are pale filled cards (`-surface` + `-border`/`-fg`); a bar is a
+   saturated mark in a recessed track (`-fg`).
+
+   **The slot's `-fg` is not used as a text colour on the meal cards**, which
+   departs from `categorical.css`'s worked example. Deliberate: that example
+   assumes coloured text on the tint, and a meal card has *two* text levels
+   where a slot offers one. Measured instead, the existing neutral tokens clear
+   AA on every tint in both themes (`--fg` 10.47–13.22:1, `--fg-muted`
+   5.01–5.50:1), so the card text did not move and the hierarchy survived.
+
+   **Slot 8 was already claimed, not reserved** — correcting the note this item
+   used to carry. `macros.fiber` renders no bar, but the "25g Fiber Goal" chip
+   is on screen in Quick Visual Rules, so fiber has had a colour all along.
+
+   **Quick Visual Rules is not the print sheet**, and assuming it was nearly
+   shipped a bug. Its four meal swatches are the legend *for* the cards and
+   carried `text-fg`/`text-fg-muted` on literal fills — 1.07:1 in dark, and out
+   of sync with the cards the moment those moved. Migrated with the cards. If a
+   later step changes a categorical colour, **this panel changes with it.**
+5. **← NEXT. Status.** The confidence badges and warnings
    (`amber`/`emerald`/`red`) → `--warning` / `--success` / `--danger`. SPEC §5.4
    authors status at strictly higher chroma than categorical, which is exactly
    the distinction those badges want — and §5.1 forbids mapping a status onto
    `--data-n` in either direction.
-6. **Drop the guard — after step 4, not after 2b.** Remove
-   `color-scheme: light`, verify both themes.
 
-   **This moved, and the measurement is the reason.** Step 2 said the guard came
-   off at the end of 2b. It did not, because 2b is what *created* the
-   dependency: tokenized text now follows the theme while the surfaces under it
-   still do not. Dropping the guard today would be worse than before 2b, when
-   the same text was hard-coded slate on those same light panels and stayed
-   readable in a dark-preference browser. `--fg` in dark mode measures:
+   **This is a legibility fix, not the cosmetic one an earlier draft called
+   it.** Most of the status usage is *self-paired* (`bg-green-100
+   text-green-800`) and stays internally legible in either theme. But **six bare
+   status text colours sit on theme-following surfaces**, which fails the
+   corrected gate in step 6. Measured against `--surface-card` in dark:
 
-   | Surface | Fixed by | Contrast |
-   |---|---|---|
-   | meal cards `bg-amber/sky/green/rose-100` | step 4 | **1.01 – 1.08:1** — still open |
-   | ~~match panels `bg-indigo-50` (×2)~~ | step 3 | **fixed** — now `bg-surface-sunken` |
-   | ~~primary buttons `bg-slate-800` vs the card~~ | step 3 | **fixed** — now `bg-accent`, 7.42:1 |
+   | Utility | Where | Dark | Note |
+   |---|---|---|---|
+   | `text-red-700` | Reset board, More menu | **2.56:1** | worst; below AA Large |
+   | `text-red-600` | match errors (132, 164, 1872) | 3.42:1 | below AA body |
+   | `text-sky-600` | line 2256 | 4.04:1 | marginal |
+   | `text-amber-600` | line 2256 | 5.19:1 | fine dark, **3.19:1 in light** |
 
-   1.0:1 is invisible. **Step 3 cleared two of the three**, as predicted. The
-   meal cards are the board's primary content and they are step 4, which is why
-   the guard's removal sits there. Step 3 was also checked for *new* adjacency
-   failures and introduced none — the macro fills read better on a dark track
-   than a light one.
+   All four are **pre-existing** — live before any of this work and unaffected
+   by steps 2–4. `status.css` ships a bare `--danger` / `--warning` /
+   `--success` alongside its triples, which is exactly the shape bare text on a
+   neutral surface needs, so each is a one-to-one swap.
 
-   **The gate to test against, rather than a step number:** no tokenized text
-   sits on a literal light surface. Step 5's status chips do not gate it, since
-   they pair their own text with their own background (`bg-green-100
-   text-green-800`) and stay internally legible in either theme; after step 4
-   they are a bright-chip appearance question, not a legibility one.
+   Two things to carry in from step 4. **Check which member of the triple the
+   shape wants** — a bare text colour wants the bare token, a filled chip wants
+   `-surface` + `-fg`; step 4 nearly made the bars invisible by reaching for
+   `-surface` on the wrong shape. And **the self-paired chips will read as
+   bright pastel pills on a dark card** until they move, which is appearance
+   rather than legibility, but it is the visible part.
+6. ~~**Drop the guard.**~~ **DONE in step 4**, and the reasoning it used to
+   carry was wrong in a way worth keeping.
 
-   Also note what the guard does *not* buy: `color-scheme` governs only
-   browser-painted chrome, and `prefers-color-scheme` redefines `--surface` and
-   `--fg` underneath regardless. It never light-locked the page.
+   **`color-scheme: light` never held dark mode back.** Steps 2b and 3 both
+   treated it as the thing standing between a dark-preference browser and a
+   broken board, and moved its removal around on that basis. It governs only
+   browser-*painted* chrome — scrollbars, form controls, the canvas default —
+   while `prefers-color-scheme` reflects the OS setting regardless. Verified in
+   headless Chromium **with the guard still in place**: `prefersDark: true`,
+   `--surface: #0a1420`, `--fg: #e6ecf2`, `--accent: #5fbdb4`,
+   `--meal-breakfast: oklch(32% .052 105)`. Every token already resolved to its
+   dark value.
+
+   The consequence is not academic: **the meal-card 1.07:1 failure was live in
+   production** for any dark-preference browser from step 2b's merge until step
+   4 fixed it. The caveat was written down correctly each time ("the guard buys
+   consistent chrome, not a light-locked page") and the operational conclusion
+   drawn from it was still wrong three steps running. **A caveat you don't act
+   on is not a mitigation.**
+
+   **The gate was also stated one-directionally**, which step 4 exposed. It read
+   *"no tokenized text may sit on a literal light surface"* and missed the
+   mirror image — a literal foreground on a theme-following surface, which is
+   exactly the six bare status colours in step 5. Corrected:
+
+   > **Every foreground/background pair needs either both sides
+   > theme-following, or both sides literal (self-paired).**
+
+   Re-adding the guard would fix nothing; it would only put light scrollbars
+   around an otherwise dark page.
 
 Steps 2–5 are more than one session each in places; step 2 is the big one.
 

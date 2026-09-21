@@ -91,40 +91,59 @@
  */
 
 /*
- * base.css sets `color-scheme: light dark` on :root, which opts the browser
- * into dark form controls, scrollbars and canvas default. Left alone, a
- * dark-preference browser would get dark chrome around a page still painted
- * light - a half-dark state that did not exist before this import.
+ * THE `color-scheme: light` GUARD IS GONE AS OF STEP 4. Kept here as a record,
+ * because re-adding it would be a regression rather than a safety measure.
  *
- * THE GUARD STAYS PAST STEP 2b, AGAINST WHAT THE PLAN SAID, AND THE REASON IS
- * MEASURED. The original note here promised removal "the moment the neutrals
- * migrate". They have migrated, and removing it now would be worse than before
- * 2b, not better: tokenized text follows the theme while the surfaces it sits
- * on do not yet, so dark mode inverts the foreground and leaves the background
- * light. Contrast of --fg against those surfaces, in dark:
+ * base.css sets `color-scheme: light dark`. From step 1 to step 3 this repo
+ * overrode it, because tokenized text followed the theme while the surfaces
+ * under it did not - dark mode inverted the foreground and left the background
+ * light. Measured then, with --fg in dark:
  *
- *   meal cards (bg-amber/sky/green/rose-100, step 4)   1.01 - 1.08:1
- *   match panels (bg-indigo-50, step 3)                1.06:1
- *   primary buttons (bg-slate-800, step 3) vs the card 1.13:1
+ *   meal cards (bg-amber/sky/green/rose-100)   1.01 - 1.08:1   <- step 4 fixed
+ *   match panels (bg-indigo-50)                1.06:1          <- step 3 fixed
+ *   primary buttons (bg-slate-800) vs the card 1.13:1          <- step 3 fixed
  *
- * 1.0:1 is invisible. Before 2b this text was hard-coded slate on those same
- * light panels and stayed readable in a dark-preference browser; the migration
- * is what makes it theme-dependent. The board's primary content is on the meal
- * cards, so **the guard comes off at the end of step 4, not step 2b.**
+ * THE GUARD NEVER HELD DARK MODE BACK, AND THAT IS THE CORRECTION THAT MATTERS.
+ * Steps 2b and 3 treated it as the thing standing between a dark-preference
+ * browser and a broken board. It was not. `color-scheme` governs only
+ * browser-*painted* chrome - scrollbars, form controls, the canvas default -
+ * and `prefers-color-scheme` reflects the OS setting regardless. Verified in
+ * headless Chromium with the guard still in place: `prefersDark: true`,
+ * `--surface: #0a1420`, `--fg: #e6ecf2`, `--accent: #5fbdb4`,
+ * `--meal-breakfast: oklch(32% .052 105)`. **Every token already resolved to
+ * its dark value.** So the meal-card failure above was live in production for
+ * any dark-preference browser from step 2b's merge until this step fixed it,
+ * and re-adding the guard would fix nothing - it would only put light
+ * scrollbars around an otherwise dark page.
  *
- * Note what the override does NOT do: `prefers-color-scheme` reflects the OS
- * setting, so base.css's dark block still redefines --surface, --fg and friends
- * underneath, and `color-scheme` governs only browser-painted chrome. The guard
- * buys consistent chrome, not a light-locked page - which is exactly why it is
- * a stopgap and the surfaces still have to be finished.
+ * THE GATE WAS ALSO STATED ONE-DIRECTIONALLY, and step 4 exposed that. It read
+ * "no tokenized text may sit on a literal light surface", which misses the
+ * mirror image: **a literal foreground on a theme-following surface.** The
+ * corrected gate: *every foreground/background pair needs either both sides
+ * theme-following, or both sides literal (self-paired).*
  *
- * Status chips (step 5) are not a gate: they pair their own text with their own
- * background (`bg-green-100 text-green-800`), so they stay internally legible
- * throughout. See docs/BACKLOG.md item 2 step 6.
+ * WHAT IS STILL LITERAL:
+ *   - the print sheet (9 utilities), behind `print:` - paper is white in every
+ *     theme, and `prefers-color-scheme` while printing is inconsistent across
+ *     browsers, so tokenizing it risks handing a dark-mode user a black page.
+ *   - the four scrims (`bg-black/50`, `bg-slate-900/40`) - a modal backdrop
+ *     must stay dark in *both* themes; anything that inverts turns the
+ *     dark-mode backdrop white.
+ *   - the status chips and banners, which are self-paired
+ *     (`bg-green-100 text-green-800`) and so stay internally legible.
+ *   - **six BARE status text colours, which are a real residual.** These fail
+ *     the corrected gate: a literal colour on a themed surface. Measured
+ *     against `--surface-card` in dark:
+ *       text-red-700  (Reset board, More menu)   2.56:1  <- worst
+ *       text-red-600  (match errors)             3.42:1
+ *       text-sky-600  (2256)                     4.04:1
+ *       text-amber-600 (2256)                    5.19:1  ok, but 3.19:1 in LIGHT
+ *     Step 5 fixes them, and `status.css` ships a bare `--danger` / `--warning`
+ *     / `--success` alongside its triples, which is exactly the shape bare text
+ *     on a neutral surface needs. **So step 5 is a legibility fix, not the
+ *     cosmetic one an earlier draft of this comment called it.** All four are
+ *     pre-existing and were live before this step too.
  */
-:root {
-  color-scheme: light;
-}
 
 /*
  * COLOUR BRIDGE - step 2a of docs/BACKLOG.md item 2 (neutrals: borders and
@@ -241,6 +260,117 @@
   }
 }
 
+/*
+ * DOMAIN TOKENS - step 4 (categorical). These are the only tokens in this file
+ * that are *this app's* vocabulary rather than the system's, which is exactly
+ * what the third layer is for: `categorical.css` says "the design system must
+ * never learn what a meal type is."
+ *
+ * EVERY VALUE POINTS AT A `--data-n-*` SLOT AND NOTHING ELSE. Reaching past the
+ * semantic layer to a raw palette value here is the one rule the whole layering
+ * exists to enforce (§9), and it is the failure mode the scale was added to
+ * prevent - an app with several equal-weight categories has nowhere to point,
+ * so it grabs a palette value on day one.
+ *
+ * THE SPLIT: WARM RUN = MEALS, COOL RUN = MACROS, and it fixes a live
+ * collision rather than just tidying. These two axes appear on screen at the
+ * same time, and measured against each other the old literals were nearly the
+ * same hues:
+ *
+ *   Breakfast amber-100 h=96  <->  Fat     yellow-400 h=92   (4 degrees apart)
+ *   Dinner    rose-100  h=13  <->  Protein red-400    h=22   (9)
+ *   Lunch     sky-100   h=237 <->  Carbs   blue-400   h=255  (18)
+ *
+ * Three of the four meal types shared a hue family with a macro; only
+ * lightness and shape kept them apart. Contiguous runs make axis membership
+ * legible from hue on its own - warm is "which meal", cool is "which macro" -
+ * and the two cross-axis boundaries land on the scale's two widest gaps
+ * (150->216 is 66 degrees, 310->25 is 75).
+ *
+ * WITHIN A RUN: keep the colour a thing already has where the run allows it,
+ * otherwise use that axis's own canonical order. The data decides which, not
+ * taste. Meals had three near-matches in the warm run so they keep them
+ * (total hue displacement 205 degrees against 437 for a meal-order mapping);
+ * macros had none - all three were warm or blue - so there was no identity to
+ * preserve and slot order follows the order the bars render in, which also
+ * leaves slot 8 for fiber as the natural fourth row.
+ *
+ *   slot 1 h=25   Dinner    (was rose-100,  h=13,  moves 12)
+ *   slot 2 h=60   Lunch     (was sky-100,   h=237, moves 177 - the one real change)
+ *   slot 3 h=105  Breakfast (was amber-100, h=96,  moves 9)
+ *   slot 4 h=150  Snack     (was green-100, h=157, moves 7)
+ *   slot 5 h=216  Carbs     | bar order, not nearest-hue:
+ *   slot 6 h=274  Protein   | none of the three had a near match in the cool
+ *   slot 7 h=310  Fat       | run, so there was nothing to preserve
+ *   slot 8 h=345  reserved for fiber (macros.fiber is stored and unrendered)
+ *
+ * **Lunch is the one card whose colour really changes** - sky blue to orange.
+ * Forced, not chosen: it was the only meal in the cool half of the wheel, and
+ * the cool half now belongs to the macros.
+ *
+ * NOTE WHICH SLOT VALUE EACH USE TAKES - the obvious mapping is a regression.
+ * A meal card is the shape the scale was designed for (a pale filled card), so
+ * it takes `-surface` and `-border`. A macro bar is the opposite shape: a
+ * saturated mark inside a recessed track. Filling it with `-surface` measures
+ * **1.04:1** against `--surface-sunken`, *worse* than the raw `yellow-400` it
+ * replaces (1.19:1), because the tint and the track sit at nearly the same
+ * lightness. `-fg` is the high-contrast member of the slot and gives
+ * 7.67-8.01:1 light and 9.58-9.90:1 dark. So the bars use `-fg`.
+ *
+ * THE SLOT'S `-fg` IS THEREFORE NOT USED AS A TEXT COLOUR ANYWHERE HERE, which
+ * departs from the worked example in `categorical.css`. Deliberate: that
+ * example assumes coloured text on the tint, and this app has *two* text levels
+ * on a meal card where a slot offers one. Measured instead, the existing
+ * neutral text tokens clear AA on every tint in both themes - `--fg`
+ * 10.47-13.22:1, `--fg-muted` 5.01-5.50:1 - so the card text does not move and
+ * the title/detail hierarchy survives. Collapsing it would have repeated step
+ * 2b's six-into-two one level down, for nothing.
+ */
+:root {
+  --meal-dinner: var(--data-1-surface);
+  --meal-dinner-border: var(--data-1-border);
+  --meal-lunch: var(--data-2-surface);
+  --meal-lunch-border: var(--data-2-border);
+  --meal-breakfast: var(--data-3-surface);
+  --meal-breakfast-border: var(--data-3-border);
+  --meal-snack: var(--data-4-surface);
+  --meal-snack-border: var(--data-4-border);
+
+  /*
+   * Macros carry the full triple, because this axis renders in TWO shapes and
+   * they need different members of the slot. The bar is a saturated mark in a
+   * recessed track, so it uses `-fg`; the legend chip is a pale filled card
+   * with dark text, so it uses `-surface` + `-fg`. Same axis, same slot,
+   * different value - **the shape decides, not the axis.**
+   */
+  --macro-carbs-surface: var(--data-5-surface);
+  --macro-carbs-fg: var(--data-5-fg);
+  --macro-protein-surface: var(--data-6-surface);
+  --macro-protein-fg: var(--data-6-fg);
+  --macro-fat-surface: var(--data-7-surface);
+  --macro-fat-fg: var(--data-7-fg);
+
+  /*
+   * Slot 8 is CLAIMED, not reserved - correcting a note in docs/BACKLOG.md.
+   * `macros.fiber` renders nowhere as a bar, but the "25g Fiber Goal" chip is
+   * already on screen in Quick Visual Rules, so fiber has had a colour all
+   * along. Its cost: slot 8 (h=345) sits 40 degrees from Dinner (h=25), which
+   * closes the 75-degree cross-axis gap the run split was chosen for. Accepted
+   * because the two are a small pill and a large card, both labelled - but if a
+   * fiber *bar* is ever added, re-check that pairing.
+   */
+  --macro-fiber-surface: var(--data-8-surface);
+  --macro-fiber-fg: var(--data-8-fg);
+}
+
+/*
+ * No dark-mode block for the domain tokens, and that is the point of pointing
+ * at slots rather than values: `categorical.css` redefines every `--data-n-*`
+ * inside its own `prefers-color-scheme` block, so these follow both themes
+ * through one indirection. A dark override here would be a second copy to keep
+ * in sync - the liability described at the top of this file.
+ */
+
 @theme {
   --color-surface: var(--surface);
   --color-surface-card: var(--surface-card);
@@ -251,6 +381,24 @@
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-fg: var(--accent-fg);
+
+  /* Keys deliberately literal against the token names so they grep 1:1. */
+  --color-meal-breakfast: var(--meal-breakfast);
+  --color-meal-breakfast-border: var(--meal-breakfast-border);
+  --color-meal-lunch: var(--meal-lunch);
+  --color-meal-lunch-border: var(--meal-lunch-border);
+  --color-meal-snack: var(--meal-snack);
+  --color-meal-snack-border: var(--meal-snack-border);
+  --color-meal-dinner: var(--meal-dinner);
+  --color-meal-dinner-border: var(--meal-dinner-border);
+  --color-macro-carbs-surface: var(--macro-carbs-surface);
+  --color-macro-carbs-fg: var(--macro-carbs-fg);
+  --color-macro-protein-surface: var(--macro-protein-surface);
+  --color-macro-protein-fg: var(--macro-protein-fg);
+  --color-macro-fat-surface: var(--macro-fat-surface);
+  --color-macro-fat-fg: var(--macro-fat-fg);
+  --color-macro-fiber-surface: var(--macro-fiber-surface);
+  --color-macro-fiber-fg: var(--macro-fiber-fg);
 }
 
 @layer base {
