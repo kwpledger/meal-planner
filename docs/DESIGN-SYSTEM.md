@@ -7,12 +7,18 @@ The system's own contract is `docs/SPEC.md` in `kwpledger/kwpledger-design` —
 that is the authority on what the tokens mean. This file only covers this
 consumer.
 
-## Current state: typography, surfaces, borders, text and accent
+## Current state: everything but status
 
 **Adopted:** `--font-display` (Lora), `--font-body` (Hanken Grotesk),
 `--fw-display`, `--surface`, `--surface-card`, `--border` (2a), `--fg`,
-`--fg-muted` (2b), `--accent`, `--accent-hover` (step 3), plus two local
+`--fg-muted` (2b), `--accent`, `--accent-hover` (step 3), the whole
+`--data-1…8` categorical scale via domain tokens (step 4), plus two local
 tokens, `--surface-sunken` and `--accent-fg`.
+
+**Dark mode is real as of step 4, and `color-scheme: light` is gone.** Meal-card
+text measures 10.47–10.88:1 in dark where it measured 1.07:1 before, verified in
+headless Chromium in both themes. The one residual is six bare status text
+colours — step 5, and the worst is 2.56:1.
 
 **The neutral census is now closed.** Of the 245 hard-coded neutral utilities it
 found, **232 are migrated and 13 remain**, and both remaining groups are
@@ -25,9 +31,8 @@ deliberate rather than stragglers:
 
 78 (2a) + 135 (2b) + 19 (step 3's inverted buttons) + 13 retained = 245.
 
-**Not adopted yet:** `amber`/`sky`/`green`/`rose` for meal types and
-`blue`/`red`/`yellow` for macros (step 4), and the confidence badges (step 5).
-`docs/BACKLOG.md` item 2 carries the order.
+**Not adopted yet:** only status — the confidence badges and warnings
+(step 5). `docs/BACKLOG.md` item 2 carries the order and the measurements.
 
 ## What v0.5.1 added, and what it still does not define
 
@@ -48,7 +53,7 @@ design around, not oversights to wait on:
 |---|---|---|
 | Overlay / scrim | 4 (`bg-black/50`, `bg-slate-900/40`) | A modal backdrop must stay dark in **both** themes. Anything that inverts turns the dark-mode backdrop white. Keep these hard-coded and comment why. |
 | Inverted surface | 15 (`bg-slate-800/700/900` + `text-white`) | These sit beside `bg-indigo-600 text-white` doing the same job. They are not a neutral surface — they are a second accent predating the app having one. They belong in step 3, mapped to `--accent`, not to a local inverse token. |
-| Third text level | — | **Turned out not to be needed.** `--fg` and `--fg-muted` are the only two, against six slate levels — but colour was never the sole carrier of the distinction. See step 2b below. |
+| Third text level | — | **Not needed.** `--fg` and `--fg-muted` are the only two, against six slate levels — but colour was never the sole carrier of the distinction. See step 2b below. |
 | Recessed surface | 15 (`bg-slate-100`/`200` + `hover:`) | `--surface` is the page and `--surface-card` is the card; neither is recessed *relative to a card*, which is where progress tracks and chips sit. **Defined locally as `--surface-sunken`** under SPEC §10.3, and reportable upstream. See step 2b. |
 | On-accent foreground | 12 (was `text-white`) | ~~White on `--accent` (teal-700, `#0d5c58`) clears AA comfortably, so hard-coding it is defensible.~~ **This was wrong — see step 3.** It measured the light value only. `--accent` inverts to teal-**300** in dark, where white is **2.23:1**. `--accent-fg` *had* to be defined locally. |
 
@@ -73,11 +78,12 @@ is how a shared system becomes a liability; bumping is a deliberate act.
 `kwpledger-designsystem`; that name is wrong and has sent a session looking for
 a repo that does not exist.
 
-**Colours here are *compatible*, not *harmonized*** — moved from `AGENTS.md`
-for space. The board's meal-type pastels and the system's teal coexist without
-having been tuned against each other, and that is the expected state until step
-4 puts the categorical axes on `--data-n`. A mismatch between a token and a
-not-yet-migrated literal is a queue position, not a bug to fix locally.
+**Colours here were *compatible*, not *harmonized*** — moved from `AGENTS.md`
+for space, and largely settled by step 4: the meal-type and macro axes now come
+from `--data-n`, authored at one lightness and chroma against the brand's own
+chroma ceiling. What remains unharmonized is status (step 5). A mismatch between
+a token and a not-yet-migrated literal is a queue position, not a bug to fix
+locally.
 
 Two things about the install that look wrong and are not:
 
@@ -150,60 +156,61 @@ applies.
 **Anything that sets a display-font weight must use `--fw-display`.** A
 `font-bold` on a Lora element is a bug, not a style choice.
 
-## The `color-scheme` guard, and when to remove it
+## The `color-scheme` guard — removed in step 4, and it never did what three steps thought
 
-`src/index.css` pins:
+`src/index.css` used to pin `:root { color-scheme: light; }`. It is gone.
 
-```css
-:root { color-scheme: light; }
+**The correction that matters: the guard never held dark mode back.** Steps 2b
+and 3 both treated it as the thing standing between a dark-preference browser
+and a broken board, and moved its removal around on that basis. `color-scheme`
+governs only browser-*painted* chrome — scrollbars, form controls, the canvas
+default — while `prefers-color-scheme` reflects the OS setting regardless.
+
+Verified in headless Chromium **with the guard still in place**:
+
+```
+prefersDark: true
+--surface:        #0a1420           (the dark value)
+--fg:             #e6ecf2           (the dark value)
+--accent:         #5fbdb4           (teal-300, the dark value)
+--meal-breakfast: oklch(32% .052 105)   (the dark slot)
 ```
 
-`base.css` sets `color-scheme: light dark`, which opts the browser into dark form
-controls, scrollbars and canvas default. With light neutrals still in place, that
-produces dark chrome around a light page — a half-dark state that did not exist
-before the import.
+Every token already resolved to its dark value. The guard changed exactly one
+thing: `colorScheme`.
 
-**What the guard does not do, and this is the part that misled two plans:**
-`color-scheme` governs only browser-*painted* chrome — scrollbars, form
-controls, the canvas default. `prefers-color-scheme` reflects the OS setting
-regardless, so `base.css`'s dark block still redefines `--surface`, `--fg` and
-the rest underneath, and every utility bridged through `@theme` follows it. The
-guard has never light-locked the page and cannot be made to.
+**This was not academic.** The meal-card 1.07:1 failure was live in production
+for any dark-preference browser from step 2b's merge until step 4 fixed it —
+roughly the whole of steps 2b and 3. The caveat was written down correctly every
+time ("the guard buys consistent chrome, not a light-locked page") and the
+operational conclusion drawn from it was still wrong three steps running.
+**A caveat you don't act on is not a mitigation.**
 
-### It does not come off after step 2b, and it is worth knowing why the plan thought it would
+Re-adding it would fix nothing; it would put light scrollbars around an
+otherwise dark page.
 
-Both the backlog and the comment in `index.css` said the guard came off "the
-moment the neutrals migrate". They migrated in step 2b and it stayed, because
-**2b is what created the dependency**. Before it, this text was hard-coded slate
-on hard-coded light panels: a dark-preference browser got a fully light page and
-readable text. Now the text follows the theme and the panels under it do not
-yet, so dark mode inverts the foreground and leaves the background alone.
+### The gate was stated one-directionally, and step 4 exposed that
 
-Measured with the design repo's own `tools/color.mjs`, `--fg` in dark
-(`navy-50`, `#e6ecf2`):
+The removal criterion read *"no tokenized text may sit on a literal light
+surface."* That misses the mirror image — **a literal foreground on a
+theme-following surface** — which is exactly the six bare status text colours
+still outstanding. Corrected:
 
-| Surface | Fixed by | Contrast |
+> **Every foreground/background pair needs either both sides theme-following,
+> or both sides literal (self-paired).**
+
+What is still literal, and why:
+
+| Literal | Count | Status |
 |---|---|---|
-| `bg-amber-100` Breakfast card | step 4 | 1.07:1 |
-| `bg-sky-100` Lunch card | step 4 | 1.04:1 |
-| `bg-green-100` Snack card | step 4 | 1.08:1 |
-| `bg-rose-100` Dinner card | step 4 | 1.01:1 |
-| ~~`bg-indigo-50` match panels~~ | ~~step 3~~ | **fixed** — now `bg-surface-sunken` |
-| ~~`bg-slate-800` button vs card~~ | ~~step 3~~ | **fixed** — now `bg-accent`, 7.42:1 |
+| Print sheet, behind `print:` | 9 | Stays. Paper is white in every theme, and `prefers-color-scheme` while printing is inconsistent across browsers — tokenizing risks a black page. |
+| Scrims (`bg-black/50`, `bg-slate-900/40`) | 4 | Stays. A backdrop must be dark in **both** themes; anything that inverts turns it white. |
+| Self-paired status chips and banners | many | Step 5. Internally legible either way; they will read as bright pastel pills on a dark card until they move. |
+| **Bare status text colours** | 6 | **Step 5, and a real residual.** `text-red-700` is **2.56:1** on a dark card; `text-red-600` 3.42:1; `text-sky-600` 4.04:1; `text-amber-600` is fine in dark but **3.19:1 in light**. All pre-existing. |
 
-For reference, `--fg` light on `bg-amber-100` is **16.63:1**. So this is not a
-degradation, it is a total loss of the board's primary content.
-
-The buttons are the mildest of the three: their `text-white` label still reads
-at 14.6:1, so only the button *shape* vanishes. The meal cards are the severe
-one, and they are step 4 — which is why the guard's removal moved to the end of
-step 4 rather than step 3.
-
-**Test the gate, not the step number: no tokenized text may sit on a literal
-light surface.** Step 5's status chips don't gate it — they pair their own
-foreground with their own background (`bg-green-100 text-green-800`), so they
-stay internally legible in either theme. After step 4 they are a bright-chip
-appearance question, not a legibility one.
+`status.css` ships a bare `--danger` / `--warning` / `--success` alongside its
+triples, which is exactly the shape bare text on a neutral surface needs — so
+each is a one-to-one swap.
 
 ## Verified
 
@@ -696,3 +703,131 @@ imperceptible rather than causing it. The bar's *value* is still readable —
 every macro row carries a text label — so this degrades the visual, it does not
 lose information. Step 4 should fix it for real, since `--data-n` is
 contrast-gated where a raw `yellow-400` is not.
+
+
+## Step 4: categorical (done) — the step that made dark mode real
+
+11 utilities, via domain tokens in `src/index.css` that point at
+`--data-1…8` and nothing else. This is the third layer doing its job:
+`categorical.css` says *"the design system must never learn what a meal type
+is."*
+
+### The split fixed a live hue collision
+
+The backlog asked for a *stated basis* for dividing two axes across one
+eight-slot scale. Measuring the old literals against each other produced a
+better reason than any tidiness argument — **the two axes already collided:**
+
+| Meal card | hue | Macro bar | hue | Apart |
+|---|---|---|---|---|
+| Breakfast `amber-100` | 96 | Fat `yellow-400` | 92 | **4°** |
+| Dinner `rose-100` | 13 | Protein `red-400` | 22 | 9° |
+| Lunch `sky-100` | 237 | Carbs `blue-400` | 255 | 18° |
+
+Three of the four meal types shared a hue family with a macro. Only lightness
+and shape kept them apart, and both axes render on the board at the same time.
+
+**So: warm run (slots 1–4) = meals, cool run (5–8) = macros.** Axis membership
+becomes legible from hue on its own — warm is *which meal*, cool is *which
+macro* — and the two cross-axis boundaries land on the scale's widest gaps
+(150→216 is 66°, 310→25 is 75°).
+
+### Within a run: the data chose, not taste
+
+**Keep the colour a thing already has where the run allows it; otherwise use
+that axis's own canonical order.**
+
+| Slot | Hue | Assigned | Was | Moves |
+|---|---|---|---|---|
+| 1 | 25 | Dinner | `rose-100` h=13 | 12° |
+| 2 | 60 | **Lunch** | `sky-100` h=237 | **177°** |
+| 3 | 105 | Breakfast | `amber-100` h=96 | 9° |
+| 4 | 150 | Snack | `green-100` h=157 | 7° |
+| 5 | 216 | Carbs | `blue-400` h=255 | bar order |
+| 6 | 274 | Protein | `red-400` h=22 | bar order |
+| 7 | 310 | Fat | `yellow-400` h=92 | bar order |
+| 8 | 345 | Fiber (chip) | `green-100` | bar order |
+
+Meals had three near-matches in the warm run, so keeping them costs **205° of
+total displacement against 437°** for a meal-order mapping. Macros had none —
+all three were warm or blue — so there was no identity to preserve and slot
+order follows the order the bars render in, which also lets fiber extend the run
+naturally.
+
+**Lunch is the one card whose colour really changes**, sky blue to orange.
+Forced rather than chosen: it was the only meal in the cool half of the wheel,
+and the cool half now belongs to the macros.
+
+> **Slot order carries no meaning, deliberately.** Tying it to `MEAL_ORDER` was
+> considered and rejected — `categorical.css` is explicit that "`--data-1` is
+> not 'the red one', it is the first slot", so using slot *index* to encode meal
+> sequence would read a meaning into the scale that the system denies.
+
+### The trap: a bar must not use `-surface`
+
+**The obvious mapping is a regression, and by a wide margin.** A slot ships
+three values, and the instinct for a filled bar is the one named "surface":
+
+| Bar fill uses | on `--surface-sunken` light | dark |
+|---|---|---|
+| `-surface` | **1.04–1.07:1** | 1.12–1.16:1 |
+| `-border` | 1.43–1.49:1 | 1.88–2.00:1 |
+| **`-fg`** | **7.67–8.01:1** | **9.58–9.90:1** |
+
+`-surface` is *worse than the raw `yellow-400` it replaces* (1.19:1), because
+the tint and the recessed track sit at nearly the same lightness. The scale is
+designed for "pale filled cards with dark text on them" — and a progress bar is
+the opposite shape: a saturated mark inside a recessed track.
+
+**The rule: the shape decides which member of the slot, not the axis.** The
+macro axis proves it by using two at once — `-fg` for its bar, `-surface` +
+`-fg` for its legend chip. Same axis, same slot, different value.
+
+### The slot's `-fg` is not the meal cards' text colour
+
+A departure from `categorical.css`'s worked example, which assumes coloured text
+on the tint. **A meal card has two text levels where a slot offers one**, so
+taking the example literally would have repeated 2b's six-into-two collapse a
+level down.
+
+Measured instead: the existing neutral tokens clear AA on every tint in **both**
+themes, so the card text did not move at all and the hierarchy survived.
+
+| | light | dark |
+|---|---|---|
+| `--fg` on the tints | 12.82–13.22:1 | 10.47–10.88:1 |
+| `--fg-muted` on the tints | 5.01–5.17:1 | 5.29–5.50:1 |
+
+### Quick Visual Rules is not the print sheet
+
+An assumption that nearly shipped a bug. Lines ~1613–1638 look like a print
+legend and are **live on-screen UI** — the print block starts at 1643. Its four
+meal swatches are the legend *for* the cards, and they carried
+`text-fg`/`text-fg-muted` on literal fills: **1.07:1 in dark**, and out of sync
+with the cards the moment those moved.
+
+Migrated with the cards. **If a later step changes a categorical colour, this
+panel changes with it** — it is the only place the palette is restated.
+
+### Verified in a browser, in both themes
+
+Offline OKLCH predictions and the rendered page agreed to two decimal places,
+which is the useful part: the `tools/color.mjs` method can be trusted for the
+remaining work. Headless Chromium against `npm run preview`:
+
+| Check | light | dark |
+|---|---|---|
+| meal-card text | 12.82–13.22:1 | **10.47–10.88:1** (was **1.07:1**) |
+| meal-card muted | 5.01–5.17:1 | 5.29–5.50:1 |
+| meal-card border on tint | 1.36–1.41:1 | 1.68–1.73:1 |
+| tint vs the day card under it | 1.33–1.37:1 | 1.28–1.33:1 |
+| macro bar on its track | **7.67:1** (was 1.19:1) | **9.90:1** |
+| macro chip text on chip | 7.39:1 | 8.55:1 |
+
+The dark tints also confirm the system's own claim that they "sit above
+`--surface-card` in lightness so a filled card reads as raised rather than as a
+hole punched in the page."
+
+CSS **31.04 → 32.48 kB** raw (6.91 → 7.07 gzipped). The first step in this
+sequence to grow the bundle, because it is the first to *consume* tokens that
+were already being shipped rather than delete utilities.

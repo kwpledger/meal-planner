@@ -6,26 +6,39 @@ paths:
 
 # Design-token traps in the stylesheet and in JSX
 
-## `color-scheme: light` is pinned on purpose, and it comes off after step 4
+## `color-scheme` governs chrome only — don't re-add the guard
 
-`base.css` (from `@kwpledger/design`) sets `color-scheme: light dark`, which
-would give a dark-preference browser dark scrollbars and form controls around a
-page still painted with light Tailwind utilities — a half-dark state that did
-not exist before the import.
+**`:root { color-scheme: light }` was removed in step 4. Re-adding it fixes
+nothing.** It governs only browser-*painted* chrome — scrollbars, form controls,
+the canvas default. `prefers-color-scheme` reflects the OS setting regardless,
+so every token still resolves to its dark value underneath. Verified in headless
+Chromium *with the guard in place*: `--fg: #e6ecf2`, `--accent: #5fbdb4`,
+`--meal-breakfast: oklch(32% .052 105)`.
 
-**Don't remove it because the neutrals are migrated.** An earlier version of
-this rule said the guard came off "the moment the neutrals migrate". They did,
-in step 2b, and the guard stayed — because the migration is what *created* the
-dependency. Tokenized text follows the theme; the surfaces under it (meal cards
-step 4, accent panels and inverted buttons step 3) do not yet. In dark mode
-`--fg` measures **1.01–1.08:1** on the meal cards and **1.06:1** on the match
-panels. Invisible, and worse than the hard-coded slate it replaced.
+Three steps treated it as the thing holding dark mode back. It wasn't, and the
+meal-card 1.07:1 failure was live in production the whole time. **A caveat you
+don't act on is not a mitigation.**
 
-`prefers-color-scheme` redefines `--surface` / `--fg` underneath regardless, and
-`color-scheme` governs only browser-painted chrome — so the guard buys
-consistent chrome, never a light-locked page. It is a stopgap, not a switch.
-**The gate is "no tokenized text sits on a literal light surface", which is the
-end of step 4.** See `docs/BACKLOG.md` item 2 step 6.
+**The gate for any colour pair, and state it both ways:** every
+foreground/background pair needs *either* both sides theme-following, *or* both
+sides literal (self-paired). The one-directional version ("no tokenized text on
+a literal surface") misses a literal foreground on a themed surface, which is
+the six bare status colours step 5 still owes.
+
+## Which member of a `--data-n` slot depends on the SHAPE, not the axis
+
+A slot ships `-surface`, `-fg` and `-border`. **Filling a progress bar with
+`-surface` measures 1.04:1 against `--surface-sunken`** — worse than the raw
+`yellow-400` it replaced, because tint and track sit at nearly the same
+lightness. `-fg` gives 7.67–8.01:1 light, 9.58–9.90:1 dark.
+
+Pale filled card (meal card, legend chip) → `-surface` + `-border`/`-fg`.
+Saturated mark in a recessed track (a bar) → `-fg`. The macro axis uses both
+at once.
+
+**And `Quick Visual Rules` (~1613–1638) is live UI, not the print sheet** — the
+print block starts at 1643. It restates the meal and macro palette, so **any
+categorical colour change has to change it too.**
 
 ## `--accent` inverts between themes, so `text-white` on it is a bug
 
