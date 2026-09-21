@@ -22,8 +22,13 @@ Step 4's six bare-status residual is fixed: the worst, `text-red-700` at
 **2.56:1**, is now **10.58:1**.
 
 **Exactly two local tokens exist in the finished state** — `--surface-sunken`
-and `--accent-fg`. Both are permitted by SPEC §10.3 with a stated reason, and
-**both are still pending an upstream report** to `kwpledger/kwpledger-site`.
+and `--accent-fg`. Both are permitted by SPEC §10.3 with a stated reason.
+
+> **The upstream report is written: `docs/UPSTREAM-REPORT.md`.** It consolidates
+> both tokens for `kwpledger/kwpledger-site`, plus the `[data-theme]` mechanism
+> ask that blocks a theme toggle. **That file is the handover copy — this file
+> stays the working reference.** If a value or a ratio changes here, update it
+> there too, or hand over the newer one.
 
 **The neutral census is now closed.** Of the 245 hard-coded neutral utilities it
 found, **232 are migrated and 13 remain**, and both remaining groups are

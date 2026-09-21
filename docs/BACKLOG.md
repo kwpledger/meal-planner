@@ -111,9 +111,9 @@ literals** — 8 in the print sheet, its `print:bg-white` variant, and 4 scrims.
 **The hold on visual polish is over.** Don't invent a colour locally that the
 system already defines. Exactly **two** local definitions exist,
 `--surface-sunken` (2b) and `--accent-fg` (step 3); both are permitted by SPEC
-§10.3 with a stated reason, both are **still pending an upstream report to
-`kwpledger/kwpledger-site`**, and the bar each had to clear is in
-`docs/DESIGN-SYSTEM.md`.
+§10.3 with a stated reason, and the bar each had to clear is in
+`docs/DESIGN-SYSTEM.md`. **The upstream report for both is written and ready to
+hand over: `docs/UPSTREAM-REPORT.md`.**
 
 **Dark mode is real and ungated.** Anything added from here must work in both
 themes — check every new colour in both, because roughly half the tokens invert.
