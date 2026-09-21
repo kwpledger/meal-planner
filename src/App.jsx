@@ -104,10 +104,10 @@ const initialDays = [
 ];
 
 const colorMap = {
-  Breakfast: 'bg-amber-100 border-amber-300',
-  Lunch: 'bg-sky-100 border-sky-300',
-  Snack: 'bg-green-100 border-green-300',
-  Dinner: 'bg-rose-100 border-rose-300',
+  Breakfast: 'bg-meal-breakfast border-meal-breakfast-border',
+  Lunch: 'bg-meal-lunch border-meal-lunch-border',
+  Snack: 'bg-meal-snack border-meal-snack-border',
+  Dinner: 'bg-meal-dinner border-meal-dinner-border',
 };
 
 
@@ -118,10 +118,10 @@ const macroTargets = {
 };
 
 const CONFIDENCE_LABELS = {
-  'exact-weight': { label: 'exact weight', className: 'bg-green-100 text-green-800' },
-  'food-portion': { label: 'matched portion', className: 'bg-green-100 text-green-800' },
-  'generic-fallback': { label: 'rough estimate', className: 'bg-yellow-100 text-yellow-800' },
-  unresolved: { label: 'unresolved', className: 'bg-red-100 text-red-800' },
+  'exact-weight': { label: 'exact weight', className: 'bg-success-surface text-success-fg' },
+  'food-portion': { label: 'matched portion', className: 'bg-success-surface text-success-fg' },
+  'generic-fallback': { label: 'rough estimate', className: 'bg-warning-surface text-warning-fg' },
+  unresolved: { label: 'unresolved', className: 'bg-danger-surface text-danger-fg' },
 };
 
 function PortionResolutionPreview({ resolution }) {
@@ -130,7 +130,7 @@ function PortionResolutionPreview({ resolution }) {
   }
 
   if (resolution.status === 'error') {
-    return <div className="mt-2 text-xs text-red-600">{resolution.message}</div>;
+    return <div className="mt-2 text-xs text-danger-fg">{resolution.message}</div>;
   }
 
   const confidence = CONFIDENCE_LABELS[resolution.confidence] || CONFIDENCE_LABELS.unresolved;
@@ -162,13 +162,13 @@ function AutoMatchPreview({ result }) {
   }
 
   if (result.status === 'error') {
-    return <div className="mb-3 text-xs text-red-600">{result.message}</div>;
+    return <div className="mb-3 text-xs text-danger-fg">{result.message}</div>;
   }
 
   const confidence = CONFIDENCE_LABELS[result.confidence] || CONFIDENCE_LABELS.unresolved;
 
   return (
-    <div className="mb-3 rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs">
+    <div className="mb-3 rounded-xl border border-border bg-surface-sunken p-3 text-xs">
       <div className="flex items-center justify-between gap-2">
         <span className="font-bold text-fg">{result.entry.matchedFoodName}</span>
         <span className="text-fg-muted">{result.fromCache ? 'from cache' : 'newly matched'}</span>
@@ -1254,7 +1254,7 @@ useEffect(() => {
               {swapMode && (
                 <button
                   onClick={() => setSwapMode(false)}
-                  className="rounded-2xl bg-indigo-600 text-white px-5 py-3 font-semibold shadow border border-indigo-600 hover:bg-indigo-500 transition"
+                  className="rounded-2xl bg-accent text-accent-fg px-5 py-3 font-semibold shadow border border-accent hover:bg-accent-hover transition"
                 >
                   Swap mode ON — tap to exit
                 </button>
@@ -1342,7 +1342,7 @@ useEffect(() => {
                         setMoreOpen(false);
                         handleNormalizeBoard();
                       }}
-                      className="text-left rounded-xl px-4 py-2 font-semibold text-indigo-700 hover:bg-indigo-50"
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-accent hover:bg-surface-sunken"
                     >
                       Normalize portions (beta)
                     </button>
@@ -1353,7 +1353,7 @@ useEffect(() => {
                         setMoreOpen(false);
                         handleReweighBoard();
                       }}
-                      className="text-left rounded-xl px-4 py-2 font-semibold text-indigo-700 hover:bg-indigo-50"
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-accent hover:bg-surface-sunken"
                     >
                       Re-weigh portions
                     </button>
@@ -1371,7 +1371,7 @@ useEffect(() => {
                         setMoreOpen(false);
                         handleReset();
                       }}
-                      className="text-left rounded-xl px-4 py-2 font-semibold text-red-700 hover:bg-red-50"
+                      className="text-left rounded-xl px-4 py-2 font-semibold text-danger-fg hover:bg-danger-surface"
                     >
                       Reset board
                     </button>
@@ -1385,10 +1385,10 @@ useEffect(() => {
             <div
               className={`mb-6 -mt-2 text-sm rounded-2xl px-4 py-2 border ${
                 syncStatus.type === 'error'
-                  ? 'bg-red-50 border-red-200 text-red-700'
+                  ? 'bg-danger-surface border-danger-border text-danger-fg'
                   : syncStatus.type === 'info'
-                  ? 'bg-amber-50 border-amber-200 text-amber-700'
-                  : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  ? 'bg-warning-surface border-warning-border text-warning-fg'
+                  : 'bg-success-surface border-success-border text-success-fg'
               }`}
             >
               {syncStatus.message}
@@ -1477,7 +1477,7 @@ useEffect(() => {
                         </div>
                         <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
                           <div
-                            className="h-full bg-blue-400 rounded-full transition-all"
+                            className="h-full bg-macro-carbs-fg rounded-full transition-all"
                             style={{ width: `${macroPercents.carbs}%` }}
                           />
                         </div>
@@ -1490,7 +1490,7 @@ useEffect(() => {
                         </div>
                         <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
                           <div
-                            className="h-full bg-red-400 rounded-full transition-all"
+                            className="h-full bg-macro-protein-fg rounded-full transition-all"
                             style={{ width: `${macroPercents.protein}%` }}
                           />
                         </div>
@@ -1503,7 +1503,7 @@ useEffect(() => {
                         </div>
                         <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
                           <div
-                            className="h-full bg-yellow-400 rounded-full transition-all"
+                            className="h-full bg-macro-fat-fg rounded-full transition-all"
                             style={{ width: `${macroPercents.fat}%` }}
                           />
                         </div>
@@ -1532,7 +1532,7 @@ useEffect(() => {
                           setDraggedMeal(null);
                           setDragOverDayId(null);
                         }}
-                        className={`rounded-2xl border-2 p-3 transition shadow-sm hover:shadow-md ${swapMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'} active:scale-[0.98] ${selectedSwapMeal?.meal.id === meal.id ? 'ring-4 ring-indigo-400 scale-[1.02]' : ''} ${colorMap[meal.type]}`}
+                        className={`rounded-2xl border-2 p-3 transition shadow-sm hover:shadow-md ${swapMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'} active:scale-[0.98] ${selectedSwapMeal?.meal.id === meal.id ? 'ring-4 ring-accent scale-[1.02]' : ''} ${colorMap[meal.type]}`}
                       >
                         <div className="flex justify-between items-start gap-2 mb-2">
                           <div>
@@ -1608,7 +1608,7 @@ useEffect(() => {
 
               <button
                 onClick={copyCronometerText}
-                className="rounded-2xl bg-slate-800 text-white px-5 py-3 font-semibold shadow hover:bg-slate-700 active:scale-95 transition mb-4"
+                className="rounded-2xl bg-accent text-accent-fg px-5 py-3 font-semibold shadow hover:bg-accent-hover active:scale-95 transition mb-4"
               >
                 Copy Cronometer text
               </button>
@@ -1624,32 +1624,32 @@ useEffect(() => {
               <h2 className="text-2xl text-fg mb-4">Quick Visual Rules</h2>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-amber-100 rounded-2xl p-4 border border-amber-300">
+              <div className="bg-meal-breakfast rounded-2xl p-4 border border-meal-breakfast-border">
                 <div className="text-sm text-fg-muted">Breakfast</div>
                 <div className="font-bold text-fg">8:30 AM</div>
               </div>
 
-              <div className="bg-sky-100 rounded-2xl p-4 border border-sky-300">
+              <div className="bg-meal-lunch rounded-2xl p-4 border border-meal-lunch-border">
                 <div className="text-sm text-fg-muted">Lunch</div>
                 <div className="font-bold text-fg">12–1 PM</div>
               </div>
 
-              <div className="bg-green-100 rounded-2xl p-4 border border-green-300">
+              <div className="bg-meal-snack rounded-2xl p-4 border border-meal-snack-border">
                 <div className="text-sm text-fg-muted">Snack</div>
                 <div className="font-bold text-fg">3:30–4 PM</div>
               </div>
 
-              <div className="bg-rose-100 rounded-2xl p-4 border border-rose-300">
+              <div className="bg-meal-dinner rounded-2xl p-4 border border-meal-dinner-border">
                 <div className="text-sm text-fg-muted">Dinner</div>
                 <div className="font-bold text-fg">Before 7 PM</div>
               </div>
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <div className="px-4 py-2 rounded-full bg-blue-100 text-blue-800 font-medium">40% Carbs</div>
-              <div className="px-4 py-2 rounded-full bg-red-100 text-red-800 font-medium">30% Protein</div>
-              <div className="px-4 py-2 rounded-full bg-yellow-100 text-yellow-800 font-medium">30% Fat</div>
-              <div className="px-4 py-2 rounded-full bg-green-100 text-green-800 font-medium">25g Fiber Goal</div>
+              <div className="px-4 py-2 rounded-full bg-macro-carbs-surface text-macro-carbs-fg font-medium">40% Carbs</div>
+              <div className="px-4 py-2 rounded-full bg-macro-protein-surface text-macro-protein-fg font-medium">30% Protein</div>
+              <div className="px-4 py-2 rounded-full bg-macro-fat-surface text-macro-fat-fg font-medium">30% Fat</div>
+              <div className="px-4 py-2 rounded-full bg-macro-fiber-surface text-macro-fiber-fg font-medium">25g Fiber Goal</div>
             </div>
             </div>
           </div>
@@ -1822,7 +1822,7 @@ useEffect(() => {
                   <button
                     type="button"
                     onClick={handleMatchAllRows}
-                    className="text-xs rounded-lg bg-indigo-600 text-white px-3 py-1 font-semibold hover:bg-indigo-500"
+                    className="text-xs rounded-lg bg-accent text-accent-fg px-3 py-1 font-semibold hover:bg-accent-hover"
                   >
                     Match all unresolved
                   </button>
@@ -1832,12 +1832,12 @@ useEffect(() => {
                   <div
                     className={`mb-2 text-xs rounded-lg px-3 py-2 border ${
                       matchStatus.type === 'error'
-                        ? 'bg-red-50 border-red-200 text-red-700'
+                        ? 'bg-danger-surface border-danger-border text-danger-fg'
                         : matchStatus.type === 'busy'
                         ? 'bg-surface border-border text-fg-muted'
                         : matchStatus.type === 'info'
-                        ? 'bg-amber-50 border-amber-200 text-amber-700'
-                        : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                        ? 'bg-warning-surface border-warning-border text-warning-fg'
+                        : 'bg-success-surface border-success-border text-success-fg'
                     }`}
                   >
                     {matchStatus.message}
@@ -1883,7 +1883,7 @@ useEffect(() => {
                           <button
                             type="button"
                             onClick={() => removeIngredientRow(index)}
-                            className="text-fg-muted hover:text-red-600 px-2"
+                            className="text-fg-muted hover:text-danger-fg px-2"
                             aria-label="Remove ingredient"
                           >
                             ✕
@@ -1961,7 +1961,7 @@ useEffect(() => {
                   <button
                     type="button"
                     onClick={applyPastedIngredients}
-                    className="mt-1 text-xs rounded-lg bg-slate-800 text-white px-3 py-1 font-semibold"
+                    className="mt-1 text-xs rounded-lg bg-accent text-accent-fg px-3 py-1 font-semibold"
                   >
                     Replace ingredients from text
                   </button>
@@ -1971,14 +1971,14 @@ useEffect(() => {
                   <button
                     type="button"
                     onClick={handleRecomputeFromIngredients}
-                    className="text-xs rounded-lg bg-indigo-600 text-white px-3 py-2 font-semibold hover:bg-indigo-500"
+                    className="text-xs rounded-lg bg-accent text-accent-fg px-3 py-2 font-semibold hover:bg-accent-hover"
                   >
                     Recompute calories/macros from ingredients
                   </button>
                 </div>
 
                 {recomputePreview && (
-                  <div className="mt-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs">
+                  <div className="mt-2 rounded-xl border border-border bg-surface-sunken p-3 text-xs">
                     <div className="text-fg-muted">
                       Stored: {editForm.calories} cal · C {editForm.carbs}g P {editForm.protein}g F {editForm.fat}g
                     </div>
@@ -1990,7 +1990,7 @@ useEffect(() => {
                       <button
                         type="button"
                         onClick={applyRecomputedTotals}
-                        className="rounded-lg bg-indigo-600 text-white px-3 py-1 font-semibold hover:bg-indigo-500"
+                        className="rounded-lg bg-accent text-accent-fg px-3 py-1 font-semibold hover:bg-accent-hover"
                       >
                         Apply to form
                       </button>
@@ -2059,7 +2059,7 @@ useEffect(() => {
                 <button
                   type="button"
                   onClick={() => handleNutritionLookup("usda")}
-                  className="rounded-xl bg-slate-800 text-white px-4 py-2 font-semibold"
+                  className="rounded-xl bg-accent text-accent-fg px-4 py-2 font-semibold"
                 >
                   USDA
                 </button>
@@ -2075,7 +2075,7 @@ useEffect(() => {
                 <button
                   type="button"
                   onClick={handleAutoMatch}
-                  className="rounded-xl bg-indigo-600 text-white px-4 py-2 font-semibold hover:bg-indigo-500"
+                  className="rounded-xl bg-accent text-accent-fg px-4 py-2 font-semibold hover:bg-accent-hover"
                 >
                   Auto-match & cache
                 </button>
@@ -2169,7 +2169,7 @@ useEffect(() => {
                   setRecomputePreview(null);
                   setPastedIngredients('');
                 }}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-white"
+                className="px-4 py-2 rounded-xl bg-accent text-accent-fg"
               >
                 Save
               </button>
@@ -2216,7 +2216,7 @@ useEffect(() => {
                 </p>
                 <div className="h-2 rounded-full bg-surface-sunken overflow-hidden mb-4">
                   <div
-                    className="h-full bg-indigo-500 rounded-full transition-all"
+                    className="h-full bg-accent rounded-full transition-all"
                     style={{ width: `${Math.round((normalizeState.current / normalizeState.total) * 100)}%` }}
                   />
                 </div>
@@ -2241,7 +2241,7 @@ useEffect(() => {
                 </p>
 
                 {normalizeState.skippedCount > 0 && (
-                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-4">
+                  <p className="text-xs text-warning-fg bg-warning-surface border border-warning-border rounded-lg p-2 mb-4">
                     {normalizeState.skippedCount} meal{normalizeState.skippedCount === 1 ? '' : 's'} skipped -
                     still {normalizeState.cancelled ? 'unmatched from the cancelled run' : 'have at least one unresolved ingredient'}.
                     Run Normalize again{normalizeState.cancelled ? '' : ', or resolve them from the meal edit modal,'} to include them here.
@@ -2254,7 +2254,7 @@ useEffect(() => {
                   <>
                     <button
                       onClick={applyAllNormalizeComparisons}
-                      className="mb-3 rounded-xl bg-indigo-600 text-white px-4 py-2 font-semibold hover:bg-indigo-500"
+                      className="mb-3 rounded-xl bg-accent text-accent-fg px-4 py-2 font-semibold hover:bg-accent-hover"
                     >
                       Apply all to meal cards
                     </button>
@@ -2267,7 +2267,15 @@ useEffect(() => {
                               <div className="font-bold text-fg">{comparison.mealName}</div>
                               <div className="text-xs text-fg-muted">{comparison.dayName} • {comparison.mealType}</div>
                             </div>
-                            <div className={`text-sm font-semibold ${comparison.delta > 0 ? 'text-amber-600' : 'text-sky-600'}`}>
+                            {/*
+                              Neutral on purpose. This is a signed delta, not a
+                              status: the board's measured week ran 16% BELOW
+                              the dietician's plan, so "calories went up" is as
+                              often the fix landing as a problem. Colouring it
+                              amber/sky asserted a judgement the app does not
+                              make. The sign carries the direction.
+                            */}
+                            <div className="text-sm font-semibold text-fg">
                               {comparison.delta > 0 ? '+' : ''}{comparison.delta} cal
                             </div>
                           </div>
@@ -2331,7 +2339,7 @@ useEffect(() => {
               </button>
               <button
                 onClick={confirmPullFromCloud}
-                className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-500"
+                className="px-4 py-2 rounded-xl bg-accent text-accent-fg font-semibold hover:bg-accent-hover"
               >
                 Replace board with cloud copy
               </button>
@@ -2398,7 +2406,7 @@ useEffect(() => {
                   setPastedIngredients('');
                   setSelectedMeal(null);
                 }}
-                className="rounded-2xl bg-slate-800 text-white px-4 py-2 font-semibold shadow hover:bg-slate-700 transition"
+                className="rounded-2xl bg-accent text-accent-fg px-4 py-2 font-semibold shadow hover:bg-accent-hover transition"
               >
                 Edit meal
               </button>

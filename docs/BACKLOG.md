@@ -101,16 +101,27 @@ self-evident to the person holding two of them** — the useful instruction is
 "compare the weekly totals on both machines first, and push from the higher-numbered one."
 
 
-## 2. Adopt the shared design system — step 2 done, accent is next
+## 2. Adopt the shared design system — ~~DONE~~, all five steps
 
-**In progress.** `@kwpledger/design` is pinned at **v0.5.1**. Typography,
-surfaces, borders and text are adopted. `docs/DESIGN-SYSTEM.md` is the wiring,
-the traps, and the verification; this item is only the order.
+**COMPLETE.** All five steps are done. `@kwpledger/design` is pinned at
+**v0.5.1** and every colour in the app now comes from it, except **13 deliberate
+literals** — 8 in the print sheet, its `print:bg-white` variant, and 4 scrims.
+`docs/DESIGN-SYSTEM.md` is the wiring, the traps, and the verification.
 
-The hold on visual polish is **over for typography, surfaces, borders and text,
-and still on for accent, categorical and status** — don't invent a colour
-locally that the system already defines. The one deliberate local definition is
-`--surface-sunken`; see 2b below for the rules that permit it.
+**The hold on visual polish is over.** Don't invent a colour locally that the
+system already defines. Exactly **two** local definitions exist,
+`--surface-sunken` (2b) and `--accent-fg` (step 3); both are permitted by SPEC
+§10.3 with a stated reason, and the bar each had to clear is in
+`docs/DESIGN-SYSTEM.md`. **The upstream report for both is written and ready to
+hand over: `docs/UPSTREAM-REPORT.md`.**
+
+**Dark mode is real and ungated.** Anything added from here must work in both
+themes — check every new colour in both, because roughly half the tokens invert.
+
+> **This item keeps its number rather than moving to Shipped**, against the
+> convention at the top of this file. `AGENTS.md`, `docs/DESIGN-SYSTEM.md` and
+> `.claude/rules/design-tokens-css.md` all point at "item 2", and renumbering
+> would break those pointers for no gain. It is finished; read it as reference.
 
 The practical test for whether a piece of UI work may proceed meanwhile is
 unchanged and still useful: does it change *what is on screen and where*, or
@@ -119,12 +130,12 @@ grid fix) go ahead regardless.
 
 1. ~~**Typography.**~~ **DONE.** Pinned dependency, fonts copied to
    `public/fonts/` with `OFL-NOTICE.txt`, `--font-display` / `--font-body` /
-   `--fw-display` consumed via `@layer base`, and `color-scheme: light` pinned
-   so the dark block cannot half-apply. `font-bold` removed from all 19 heading
-   elements — Lora is a static SemiBold and 700 was making the browser
-   synthesise a fake bold.
-2. **Neutrals — 2a done, 2b next.** The census found 245 neutral utilities, not
-   the ~200 estimated. Split because only 2a is mechanical:
+   `--fw-display` consumed via `@layer base`, and `color-scheme: light` pinned.
+   **That guard was believed to stop the dark block half-applying; it did not** —
+   see step 6. `font-bold` removed from all 19 heading elements — Lora is a
+   static SemiBold and 700 was making the browser synthesise a fake bold.
+2. ~~**Neutrals.**~~ **DONE (2a + 2b).** The census found 245 neutral utilities,
+   not the ~200 estimated. Split because only 2a was mechanical:
    - ~~**2a. Surfaces and borders.**~~ **DONE.** 78 utilities →
      `--surface`, `--surface-card`, `--border`, bridged with a plain `@theme`
      block. **Use `@theme`, never `@theme inline`** — inline drops opacity
@@ -155,69 +166,162 @@ grid fix) go ahead regardless.
      contrast gates and the inversion trap are in `docs/DESIGN-SYSTEM.md`.
    **2b did NOT make dark mode real, and the plan was wrong about that.** See
    step 6 — the guard moves to the end of step 4, for a measured reason.
-3. **← NEXT. Accent.** ~25 `indigo-*` → `--accent` / `--accent-hover`, and with
-   them the 7 `bg-slate-800`/`hover:bg-slate-700` inverted buttons plus their 12
-   `text-white` labels, which are a second accent predating the app having one
-   rather than a neutral surface. This step also fixes two of the three dark-mode
-   legibility failures in step 6.
-4. **Categorical.** Domain tokens *in this repo* — `--meal-breakfast` …
-   `--macro-fat` — onto `--data-1` … `--data-7`. Seven of eight slots; SPEC
-   §4.1 sized the scale against this app, and `categorical.css`'s worked example
-   is literally `--meal-breakfast: var(--data-1-surface)`. **Never map a domain
-   token past the semantic layer to a raw palette value** — that is the one rule
-   the whole layering exists to enforce. Bridge into Tailwind with `@theme`,
-   and remember the theme key must not equal the token name (see
-   `docs/DESIGN-SYSTEM.md`).
+3. ~~**Accent.**~~ **DONE.** 44 utilities — 25 `indigo-*` plus the 19
+   inverted-button utilities 2a/2b deferred. **This closes the neutral census:**
+   78 + 135 + 19 + 13 deliberately retained = 245, and the 13 are the print
+   sheet and the scrims.
 
-   **The question to answer before mapping anything, and it is not "which token
-   is nicest":** this app has **two** categorical axes drawing on **one**
-   eight-slot scale — 4 meal types and 3 macro bars. They appear on screen
-   together, so an arbitrary split lets a meal card and a macro bar land on
-   neighbouring hues and read as related when they are not. Decide the
-   assignment on a stated basis (contiguous runs per axis, or maximal hue
-   separation between axes) and record which, because that is exactly the
-   "throughput" the design system asks for — see `docs/DESIGN-SYSTEM.md`, *the
-   bar a local value has to clear*.
+   **It needed a second local token, and not optionally.** `--accent` inverts
+   between themes — teal-700 in light, teal-**300** in dark — so the twelve
+   `text-white` button labels would have shipped at **2.23:1**, and **1.64:1**
+   on hover. Below AA Large. `--accent-fg` is defined in `src/index.css` by the
+   same throughput rule as `--surface-sunken`: *the active theme's extreme
+   neutral on the far side of the accent's lightness* (white in light,
+   `navy-900` in dark; 7.81–11.30:1 across all four states). **Report it
+   upstream with `--surface-sunken`** — an on-accent foreground is a gap any
+   consumer with a dark theme hits.
 
-   **The eighth slot is already spoken for.** `macros.fiber` is preserved on
-   every meal and renders nowhere; a fiber row on the macro bars is the obvious
-   small feature, and it would make 4 + 4 = 8. So plan the split as if the scale
-   is full rather than treating slot 8 as spare.
-5. **Status.** The ingredient-confidence badges and warnings
-   (`amber`/`emerald`/`red`) → `--warning` / `--success` / `--danger`. SPEC §5.4
-   authors status at strictly higher chroma than categorical, which is exactly
-   the distinction those badges want — and §5.1 forbids mapping a status onto
-   `--data-n` in either direction.
-6. **Drop the guard — after step 4, not after 2b.** Remove
-   `color-scheme: light`, verify both themes.
+   **A 2a note said the opposite and was wrong**, which is the reusable part: it
+   recorded that hard-coding white "clears AA comfortably," having measured only
+   the light value. When checking a colour against a semantic token, **check it
+   in both themes** — roughly half of them invert.
 
-   **This moved, and the measurement is the reason.** Step 2 said the guard came
-   off at the end of 2b. It did not, because 2b is what *created* the
-   dependency: tokenized text now follows the theme while the surfaces under it
-   still do not. Dropping the guard today would be worse than before 2b, when
-   the same text was hard-coded slate on those same light panels and stayed
-   readable in a dark-preference browser. `--fg` in dark mode measures:
+   **Two things for a human look, neither a defect.** (a) `bg-indigo-600` and
+   `bg-slate-800` were two eras of the same button rather than a designed
+   distinction, so collapsing them means every primary button in the ingredient
+   editor now reads at the same weight. If that wants a hierarchy, the answer is
+   a secondary *style* — the app already has `bg-surface-card border-border
+   text-fg` — not a second hue; choosing which buttons demote is a design call,
+   so nothing was demoted here. (b) In light mode hover now *darkens*
+   (`--accent-hover` is teal-800), where `indigo-500` used to lighten.
+4. ~~**Categorical.**~~ **DONE.** 11 utilities onto all **eight** slots via
+   domain tokens in `src/index.css`, every one pointing at a `--data-n-*` slot
+   and nothing else. **This is the step that made dark mode real** — meal-card
+   text went from **1.07:1 to 10.47–10.88:1**, verified in headless Chromium in
+   both themes, not just computed.
 
-   | Surface | Fixed by | Contrast |
+   **The split: warm run = meals, cool run = macros — and it fixed a live
+   collision rather than just picking a basis.** Measured against each other,
+   the old literals were nearly the same hues: Breakfast `amber-100` h=96 vs Fat
+   `yellow-400` h=92 (**4° apart**), Dinner h=13 vs Protein h=22, Lunch h=237 vs
+   Carbs h=255. Three of four meal types shared a hue family with a macro; only
+   lightness and shape kept them apart. Contiguous runs make axis membership
+   legible from hue alone, and the cross-axis boundaries land on the scale's two
+   widest gaps.
+
+   Within a run: keep the colour a thing already has where the run allows,
+   otherwise use that axis's canonical order — the data decides which. Meals had
+   three near-matches (total displacement 205° against 437° for a meal-order
+   mapping); macros had none, so slot order follows bar order. **Lunch is the
+   one card whose colour really changes** — sky blue to orange, forced because it
+   was the only meal in the cool half.
+
+   **The trap, and it is the opposite of obvious: a bar must not use
+   `-surface`.** Filling the macro bars with the slot's tint measures **1.04:1**
+   against `--surface-sunken` — *worse* than the `yellow-400` it replaces. The
+   tint and the track sit at nearly the same lightness. `-fg` is the
+   high-contrast member and gives **7.67–8.01:1 light, 9.58–9.90:1 dark**. So
+   **the shape decides which slot value, not the axis**: a meal card and a
+   legend chip are pale filled cards (`-surface` + `-border`/`-fg`); a bar is a
+   saturated mark in a recessed track (`-fg`).
+
+   **The slot's `-fg` is not used as a text colour on the meal cards**, which
+   departs from `categorical.css`'s worked example. Deliberate: that example
+   assumes coloured text on the tint, and a meal card has *two* text levels
+   where a slot offers one. Measured instead, the existing neutral tokens clear
+   AA on every tint in both themes (`--fg` 10.47–13.22:1, `--fg-muted`
+   5.01–5.50:1), so the card text did not move and the hierarchy survived.
+
+   **Slot 8 was already claimed, not reserved** — correcting the note this item
+   used to carry. `macros.fiber` renders no bar, but the "25g Fiber Goal" chip
+   is on screen in Quick Visual Rules, so fiber has had a colour all along.
+
+   **Quick Visual Rules is not the print sheet**, and assuming it was nearly
+   shipped a bug. Its four meal swatches are the legend *for* the cards and
+   carried `text-fg`/`text-fg-muted` on literal fills — 1.07:1 in dark, and out
+   of sync with the cards the moment those moved. Migrated with the cards. If a
+   later step changes a categorical colour, **this panel changes with it.**
+5. ~~**Status.**~~ **DONE — and this completes item 2.** 16 sites, 36
+   utilities, onto `--danger` / `--warning` / `--success`. Consumed directly
+   rather than through domain tokens, and the asymmetry with categorical is the
+   point: `status.css` says these *"CARRY MEANING, and that meaning is the whole
+   point"*, where a `--data-n` slot is defined by carrying none. There is no
+   app-specific vocabulary to invent on top of "this failed".
+
+   | Was | Became | Role |
    |---|---|---|
-   | meal cards `bg-amber/sky/green/rose-100` | step 4 | **1.01 – 1.08:1** |
-   | match panels `bg-indigo-50` (×2) | step 3 | **1.06:1** |
-   | primary buttons `bg-slate-800` vs the card | step 3 | **1.13:1** |
+   | `bg-green-100 text-green-800` ×2 | `success-surface` + `-fg` | exact weight / matched portion |
+   | `bg-yellow-100 text-yellow-800` | `warning-surface` + `-fg` | rough estimate — "an input that will cause trouble" |
+   | `bg-red-100 text-red-800` | `danger-surface` + `-fg` | unresolved — the lookup failed |
+   | `bg-red-50 border-red-200 text-red-700` ×2 | the `danger` triple | error banners |
+   | `bg-amber-50 …-700` ×3 | the `warning` triple | warnings |
+   | `bg-emerald-50 …-700` ×2 | the `success` triple | all-clear banners |
+   | `text-red-600` ×3, `text-red-700` | `text-danger-fg` | bare error text, Reset board, row remove |
 
-   1.0:1 is invisible. The buttons are the smaller problem — the white label
-   stays at 14.6:1, so the text is readable and only the button *shape*
-   disappears — but the meal cards are the board's primary content, and they are
-   step 4. Hence the move.
+   **No local token was needed, and one nearly was.** These ship only as
+   *triples* — there is no bare `--danger`. An earlier note in this file said
+   there was; that was a zero-length regex match reading `--danger` as a prefix
+   of `--danger-surface`, and it was reported to Kevin before being caught.
+   Measured instead, **`-fg` serves both roles**: paired with its own
+   `-surface` in a chip (6.90–7.43:1 either theme) *and* bare on the theme's
+   neutral surfaces (9.69–10.37:1 light, 10.58–11.07:1 dark on a card). So
+   **the whole adoption ends with exactly two local tokens**,
+   `--surface-sunken` and `--accent-fg`.
 
-   **The gate to test against, rather than a step number:** no tokenized text
-   sits on a literal light surface. Step 5's status chips do not gate it, since
-   they pair their own text with their own background (`bg-green-100
-   text-green-800`) and stay internally legible in either theme; after step 4
-   they are a bright-chip appearance question, not a legibility one.
+   **The six bare failures step 4 recorded are fixed:** `text-red-700` 2.56:1 →
+   **10.58:1**; `text-red-600` 3.42:1 → 10.58:1; `text-amber-600` 3.19:1 in
+   *light* → 10.16:1.
 
-   Also note what the guard does *not* buy: `color-scheme` governs only
-   browser-painted chrome, and `prefers-color-scheme` redefines `--surface` and
-   `--fg` underneath regardless. It never light-locked the page.
+   **One thing was deliberately NOT mapped, and it is the interesting call.**
+   The Normalize preview coloured its calorie delta `text-amber-600` when
+   positive and `text-sky-600` when negative. **That is a signed difference, not
+   an outcome** — and this board's measured week ran **16% below** the
+   dietician's plan, so "calories went up" is as often the fix landing as a
+   problem. Mapping it to `--warning`/`--success` would assert a dietary
+   judgement the app does not make. Categorical could not take it either, since
+   step 4 filled all eight slots. So it is **`text-fg`**, and the `+`/`−` sign
+   carries the direction — colour as pure reinforcement of something already
+   printed, removed rather than migrated. The reasoning is commented at the
+   line.
+
+   **Status shares hues with categorical on purpose.** Danger sits at hue 27
+   against `--data-1` at 25; success at 150 against `--data-4` at 150. Status is
+   authored at strictly higher chroma in every role — verified live at 0.058 vs
+   0.046 light, 0.062 vs 0.052 dark — and the design repo's verifier fails if
+   that stops being true. A red meal card beside a red error badge is the same
+   hue family at different urgency, which is the correct relationship. **Don't
+   "fix" it**, and never map a status onto `--data-n` in either direction
+   (SPEC §5.1).
+6. ~~**Drop the guard.**~~ **DONE in step 4**, and the reasoning it used to
+   carry was wrong in a way worth keeping.
+
+   **`color-scheme: light` never held dark mode back.** Steps 2b and 3 both
+   treated it as the thing standing between a dark-preference browser and a
+   broken board, and moved its removal around on that basis. It governs only
+   browser-*painted* chrome — scrollbars, form controls, the canvas default —
+   while `prefers-color-scheme` reflects the OS setting regardless. Verified in
+   headless Chromium **with the guard still in place**: `prefersDark: true`,
+   `--surface: #0a1420`, `--fg: #e6ecf2`, `--accent: #5fbdb4`,
+   `--meal-breakfast: oklch(32% .052 105)`. Every token already resolved to its
+   dark value.
+
+   The consequence is not academic: **the meal-card 1.07:1 failure was live in
+   production** for any dark-preference browser from step 2b's merge until step
+   4 fixed it. The caveat was written down correctly each time ("the guard buys
+   consistent chrome, not a light-locked page") and the operational conclusion
+   drawn from it was still wrong three steps running. **A caveat you don't act
+   on is not a mitigation.**
+
+   **The gate was also stated one-directionally**, which step 4 exposed. It read
+   *"no tokenized text may sit on a literal light surface"* and missed the
+   mirror image — a literal foreground on a theme-following surface, which is
+   exactly the six bare status colours in step 5. Corrected:
+
+   > **Every foreground/background pair needs either both sides
+   > theme-following, or both sides literal (self-paired).**
+
+   Re-adding the guard would fix nothing; it would only put light scrollbars
+   around an otherwise dark page.
 
 Steps 2–5 are more than one session each in places; step 2 is the big one.
 
