@@ -79,10 +79,23 @@ function Lockup() {
  *
  * No nav. It is optional in §2 and this surface is a single page.
  */
+/*
+ * The inner column matches THIS APP'S content edge, not `--page`.
+ *
+ * 2.2 requires the rule to be full-bleed with the content column nested inside
+ * it, and shows that column as `max-width: var(--page)` because kwpledger.com's
+ * content is that wide. Here it is not: the board is a deliberately full-width
+ * auto-fit grid, so `main` is full-bleed with p-6. Imposing --page on the
+ * chrome put the lockup at x~120 while the h1 sat at x~24 - chrome and content
+ * visibly failing to share a left edge, which is the thing 2.2 is protecting.
+ *
+ * So: rule still full-bleed and still on the full-width element, inner column
+ * padded to match `main`. Same intent, this surface's measurements.
+ */
 export function SiteHeader() {
   return (
     <header className="border-b border-border print:hidden">
-      <div className="mx-auto flex max-w-[var(--page)] items-center justify-between gap-[var(--space-s)] px-6 py-[var(--space-s)]">
+      <div className="flex items-center justify-between gap-[var(--space-s)] px-6 py-[var(--space-s)]">
         <Lockup />
       </div>
     </header>
@@ -111,7 +124,7 @@ export function SiteHeader() {
 export function SiteFooter() {
   return (
     <footer className="border-t border-border text-[length:var(--step--1)] text-fg-muted print:hidden">
-      <div className="mx-auto flex max-w-[var(--page)] flex-wrap items-start justify-between gap-[var(--space-s)] px-6 py-[var(--space-s)]">
+      <div className="flex flex-wrap items-start justify-between gap-[var(--space-s)] px-6 py-[var(--space-s)]">
         <p className="max-w-[var(--measure)]">
           A personal meal planner, and one of several things built at{' '}
           <a className="underline hover:text-[var(--accent)]" href="https://kwpledger.com">
