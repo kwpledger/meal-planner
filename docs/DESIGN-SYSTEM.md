@@ -366,6 +366,42 @@ comfortably either way: `--fg` 13.7:1 / 12.2:1, `--fg-muted` 5.4:1 / 6.2:1.
 > no spec conversation — only a decision about whether other consumers want it.
 > If they do, this local block deletes and the utility name stays identical.
 
+### The bar a local value has to clear, which is higher than §10.3's text
+
+**§10.3 asks for a reason in a comment. Kevin's standard is stricter, and it is
+the one to apply here:** *"Extra colour is good. But it needs to make sense in
+context and have a throughput that suggests why those colours and not some
+others."*
+
+So the test is not "did you justify adding a token" — it is **could someone
+re-derive your value and land in the same place?** A hex chosen by eye can
+satisfy §10.3 and fail this outright.
+
+`--surface-sunken` clears it because two independent constraints pin it:
+
+1. **Family membership.** Its L and C sit inside the range of the neutral family
+   already in play, at that family's hue — so it reads as a member of the
+   palette rather than an import into it.
+2. **A gate borrowed from the system, not invented.** Discriminability is
+   measured against v0.5.1's own `--surface` vs `--surface-card` pair. Nothing
+   here depends on a threshold this repo made up.
+
+Both are recorded above as numbers, which is what makes the derivation
+re-runnable rather than a claim.
+
+**This matters most for steps 4 and 5**, the two steps where this app actually
+does want "lots of colour". Note that §10.3 is *not* the route there — the
+system defines `--data-1…8` and the three status roles, so those steps are
+mappings and the rule that governs them is §9's "never past the semantic
+layer". The throughput standard applies to whatever genuinely has nowhere to
+map, as the recessed surface did.
+
+Context worth keeping, because it shows the standard is general rather than a
+concession to this repo: **§10 exists because Kevin knew this project could not
+be limited to what `kwpledger-site` would build for everything else**, and
+`tapdodge` — a Base44 game written after the system went into effect — has the
+same appetite for colour, in dark mode. Two consumers, one standard.
+
 ### The bridge grew, and the `@theme` rule from 2a still holds
 
 `--color-fg`, `--color-fg-muted` and `--color-surface-sunken` were added to the

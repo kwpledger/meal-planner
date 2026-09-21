@@ -168,6 +168,21 @@ grid fix) go ahead regardless.
    the whole layering exists to enforce. Bridge into Tailwind with `@theme`,
    and remember the theme key must not equal the token name (see
    `docs/DESIGN-SYSTEM.md`).
+
+   **The question to answer before mapping anything, and it is not "which token
+   is nicest":** this app has **two** categorical axes drawing on **one**
+   eight-slot scale — 4 meal types and 3 macro bars. They appear on screen
+   together, so an arbitrary split lets a meal card and a macro bar land on
+   neighbouring hues and read as related when they are not. Decide the
+   assignment on a stated basis (contiguous runs per axis, or maximal hue
+   separation between axes) and record which, because that is exactly the
+   "throughput" the design system asks for — see `docs/DESIGN-SYSTEM.md`, *the
+   bar a local value has to clear*.
+
+   **The eighth slot is already spoken for.** `macros.fiber` is preserved on
+   every meal and renders nowhere; a fiber row on the macro bars is the obvious
+   small feature, and it would make 4 + 4 = 8. So plan the split as if the scale
+   is full rather than treating slot 8 as spare.
 5. **Status.** The ingredient-confidence badges and warnings
    (`amber`/`emerald`/`red`) → `--warning` / `--success` / `--danger`. SPEC §5.4
    authors status at strictly higher chroma than categorical, which is exactly
