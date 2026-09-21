@@ -12,7 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@kwpledger/design": "github:kwpledger/kwpledger-design#v0.5.1",
+    "@kwpledger/design": "github:kwpledger/kwpledger-design#v0.6.0",
     "@tailwindcss/vite": "^4.2.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
