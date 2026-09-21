@@ -1,3 +1,6 @@
+import { useRef, useState } from 'react';
+import { THEMES, readTheme, setTheme } from './theme.js';
+
 /*
  * Shared header and footer — kwpledger-design docs/header-footer-design-system.md.
  *
@@ -89,6 +92,101 @@ function Lockup() {
  *
  * No nav. It is optional in §2 and this surface is a single page.
  */
+
+/*
+ * The theme control — three states, top right of the header.
+ *
+ * A radiogroup rather than a checkbox or a two-state switch, because the
+ * states are not opposites: "system" is a third position, not the absence of
+ * a choice. Arrow keys move within a radiogroup by convention and roving
+ * tabindex keeps the group a single tab stop, which is what a segmented
+ * control should do.
+ *
+ * Initial state is read with a lazy initializer, not in an effect. This is a
+ * pure client-side SPA - no SSR, no hydration - so there is no server render
+ * to mismatch, and an effect would only cause the documented cascading render
+ * (the eslint rule that caught it links React's "You Might Not Need an
+ * Effect"). The inline script in index.html has already set the attribute
+ * before React mounts; this just reads the same key to label the control.
+ *
+ * Labels are text, never colour alone - the system's rule, and here it is also
+ * just necessary: three swatches would be unreadable.
+ */
+const THEME_LABELS = { system: 'System', light: 'Light', dark: 'Dark' };
+
+function ThemeToggle() {
+  const [theme, setThemeState] = useState(readTheme);
+
+  /*
+   * No matchMedia listener here, deliberately. In `system` the CSS media query
+   * already tracks the OS with no JavaScript, and the control's label reads
+   * "System" in either register - so there is nothing for a listener to
+   * update. One was written and removed as dead weight.
+   */
+
+  const choose = (next) => setThemeState(setTheme(next));
+
+  /*
+   * Arrow keys move focus AND selection, which is the radiogroup contract.
+   * Selection alone is not enough and is not a nicety: with roving tabindex
+   * the previously selected button drops to tabIndex -1, so leaving focus on
+   * it strands the user on an element outside the tab order while assistive
+   * technology still announces it as the current item. Caught by screenshot -
+   * the ring stayed on Dark after selection had moved to System.
+   */
+  const refs = useRef({});
+
+  const move = (next) => {
+    choose(next);
+    refs.current[next]?.focus();
+  };
+
+  const onKeyDown = (event) => {
+    const i = THEMES.indexOf(theme);
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      move(THEMES[(i + 1) % THEMES.length]);
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      move(THEMES[(i - 1 + THEMES.length) % THEMES.length]);
+    }
+  };
+
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Colour theme"
+      onKeyDown={onKeyDown}
+      className="inline-flex rounded-2xl border border-border bg-surface-card p-0.5 text-[length:var(--step--1)]"
+    >
+      {THEMES.map((value) => {
+        const selected = value === theme;
+        return (
+          <button
+            key={value}
+            ref={(el) => {
+              refs.current[value] = el;
+            }}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            tabIndex={selected ? 0 : -1}
+            onClick={() => choose(value)}
+            className={
+              'rounded-[0.9rem] px-3 py-1 font-semibold transition ' +
+              (selected
+                ? 'bg-accent text-accent-fg'
+                : 'text-fg-muted hover:text-fg')
+            }
+          >
+            {THEME_LABELS[value]}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /*
  * The inner column matches THIS APP'S content edge, not `--page`.
  *
@@ -107,6 +205,7 @@ export function SiteHeader() {
     <header className="border-b border-border print:hidden">
       <div className="flex items-center justify-between gap-[var(--space-s)] px-6 py-[var(--space-s)]">
         <Lockup />
+        <ThemeToggle />
       </div>
     </header>
   );
