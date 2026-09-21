@@ -27,6 +27,24 @@ consistent chrome, never a light-locked page. It is a stopgap, not a switch.
 **The gate is "no tokenized text sits on a literal light surface", which is the
 end of step 4.** See `docs/BACKLOG.md` item 2 step 6.
 
+## `--accent` inverts between themes, so `text-white` on it is a bug
+
+**Never pair a fixed light foreground with `--accent`.** The accent is
+teal-700 (L 43.0%) in light and teal-**300** (L 73.8%) in dark — a dark fill
+becomes a light fill. White on it goes from 7.81:1 to **2.23:1**, and on the
+hover state (teal-200) to **1.64:1**: below AA Large, on twelve primary
+buttons.
+
+A 2a note in `docs/DESIGN-SYSTEM.md` said hard-coding white was "defensible"
+because it "clears AA comfortably." That measured the light value only, and
+step 3 had to correct it. **When you check a colour against a token, check it
+in both themes** — half the tokens in this system invert.
+
+Use `text-accent-fg` (local, defined in `src/index.css`). Its rule: the active
+theme's extreme neutral on the far side of the accent's lightness — white in
+light, `navy-900` in dark. It is pinned to the *current* accent pair, so
+**re-run its four contrast ratios on any pin bump.**
+
 ## A `font-bold` on a heading is a bug here, not a style choice
 
 Lora ships as a **static SemiBold** — 600 is the only real weight. Asking for
@@ -54,19 +72,35 @@ mechanism.
 differ. This matters for the colour work, where `@theme` bridging genuinely is
 needed.
 
-## The `@source not` list is load-bearing — add to it, never trim it
+## `@source not` takes a glob, not a filename — a file path fails silently
 
 Tailwind v4 scans **every tracked file** for utility-shaped strings, so
-documentation mutates production CSS. Five exclusions are in place:
-`.addedbykevin/`, `docs/`, `.claude/`, `AGENTS.md`, `README.md`.
+documentation mutates production CSS. Four exclusions are in place:
 
-Two real incidents, not hypotheticals. The prose "Lora is a *static* SemiBold"
-in a doc emitted a `.static` rule. And writing up step 2b — which required
-naming the utilities it *removed*, in a was/became table — re-emitted rules for
-every one of them, growing the bundle 460 bytes for classes `App.jsx` no longer
-contains. **Documenting a removal partly un-did it.**
+```css
+@source not "../.addedbykevin";
+@source not "../docs";
+@source not "../.claude";
+@source not "../*.md";        /* AGENTS.md, README.md, the CLAUDE.md symlink */
+```
+
+**The last line must stay a glob.** Step 2b shipped
+`@source not "../AGENTS.md"` and a bare file path is accepted and does
+*nothing* — no warning, no error. Step 3 measured it: one added word, "invert",
+emitted a `.invert` rule into production with that line sitting directly above
+it. Directories work; filenames don't. `"*.md"` also fails, because it resolves
+against `src/`.
+
+Three real incidents, not hypotheticals. The prose "Lora is a *static*
+SemiBold" emitted a `.static` rule. Writing up 2b's was/became table re-emitted
+every utility that step had just removed, +460 bytes. And the broken
+`AGENTS.md` line above.
+
+**Test an exclusion with a deliberate canary, never by "the docs changed and
+the hash didn't."** 2b used the latter and passed for the wrong reason —
+AGENTS.md happened to hold no utility-shaped word that wasn't already emitted.
+Append a utility the app doesn't use (`rotate-45`) to the excluded file, build,
+confirm it is absent, remove it.
 
 **If you add a directory or a top-level file that only humans read, exclude it.
-Only `src/` and `index.html` are source.** With the list in place the emitted
-stylesheet is byte-identical regardless of what the docs say, which is the
-property to preserve.
+Only `src/` and `index.html` are source.**
