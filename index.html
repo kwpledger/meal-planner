@@ -8,6 +8,27 @@
     <title>Kevin’s Visual Meal Planner</title>
   </head>
   <body>
+    <!--
+      THEME, BEFORE FIRST PAINT. This must be an inline, render-blocking script
+      in <body> and must run before React mounts, or the page paints in the
+      wrong register and visibly snaps - the "flash of wrong theme". A module
+      script is deferred by definition, so main.jsx is far too late.
+
+      Kept in sync with src/theme.js by hand, deliberately: importing a module
+      here would defer it and reintroduce the flash this exists to prevent. The
+      duplicated logic is four lines and the key is the shared constant.
+    -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('kwp-theme');
+          if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {
+          /* Private mode throws on access. Fall through to system preference. */
+        }
+      })();
+    </script>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

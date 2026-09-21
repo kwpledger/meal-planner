@@ -11,6 +11,33 @@
 @import "@kwpledger/design";
 
 /*
+ * `dark:` FOLLOWS THE TOGGLE, NOT ONLY THE OS.
+ *
+ * Tailwind's stock `dark:` is `@media (prefers-color-scheme: dark)` alone,
+ * which a button cannot override. The design system's v0.6.0 tokens are
+ * authored under two selectors - the guarded media query and an explicit
+ * `:root[data-theme="dark"]` - so a stock `dark:` utility would disagree with
+ * the very tokens it sits beside: the lockup would keep its light mark on a
+ * page the toggle had just made dark.
+ *
+ * Redefining the variant once here keeps every `dark:` in the app in step with
+ * the tokens, instead of each component remembering. Mirror of SPEC 9.1, and
+ * the reason header-footer-design-system.md 4.1 calls the swap a one-line
+ * change: this is that line.
+ */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) & {
+      @slot;
+    }
+  }
+
+  :root[data-theme="dark"] & {
+    @slot;
+  }
+}
+
+/*
  * PROSE IS NOT SOURCE, AND TAILWIND v4 CANNOT TELL. It auto-scans every tracked
  * file for anything shaped like a utility name, so documentation mutates the
  * production stylesheet unless it is excluded.
@@ -212,10 +239,24 @@
   --surface-sunken: #e5e3dd;
 }
 
+/*
+ * Authored under BOTH selectors, exactly as the design system authors its
+ * own dark register (SPEC 9.1). A local token left on the media query alone
+ * would stay light while every system token went dark - a half-dark page,
+ * and for --surface-sunken that is the 1.64:1 white-on-dark-accent failure
+ * docs/UPSTREAM-REPORT.md 1 exists to fix, reintroduced by the toggle.
+ *
+ * The two copies must hold the same value. Two tokens, so by hand; the
+ * design repo gates its own forty with `npm run verify`.
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --surface-sunken: #182b3c;
   }
+}
+
+:root[data-theme="dark"] {
+  --surface-sunken: #182b3c;
 }
 
 /*
@@ -254,10 +295,24 @@
   --accent-fg: #ffffff;
 }
 
+/*
+ * Authored under BOTH selectors, exactly as the design system authors its
+ * own dark register (SPEC 9.1). A local token left on the media query alone
+ * would stay light while every system token went dark - a half-dark page,
+ * and for --accent-fg that is the 1.64:1 white-on-dark-accent failure
+ * docs/UPSTREAM-REPORT.md 1 exists to fix, reintroduced by the toggle.
+ *
+ * The two copies must hold the same value. Two tokens, so by hand; the
+ * design repo gates its own forty with `npm run verify`.
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --accent-fg: #0a1420;
   }
+}
+
+:root[data-theme="dark"] {
+  --accent-fg: #0a1420;
 }
 
 /*
