@@ -225,6 +225,54 @@ Steps 2–5 are more than one session each in places; step 2 is the big one.
 here: meal types, macro bars and match confidence all carry text labels. Any
 colour work must keep them.
 
+### A light/dark toggle — Kevin's request, and it is blocked upstream
+
+Asked for on PR #24, "maybe as a removable dev feature, maybe to keep in the
+final version." **It cannot be built cleanly against v0.5.1, and the reason is
+worth having before anyone tries.**
+
+`base.css` themes *only* through `@media (prefers-color-scheme: dark)`. A media
+query cannot be overridden by a button, so a toggle needs a selector — and the
+pinned system ships none. To build one here today this repo would have to
+redefine **40 tokens** under `:root[data-theme="dark"]`, duplicating the design
+system's own dark block: 7 semantic in `base.css`, 24 categorical, 9 status.
+That is a copy that silently goes stale on every pin bump, which is the exact
+liability pinning a tag exists to avoid. **Don't do it locally.**
+
+**The design system already assumes the capability it doesn't ship**, which is
+what makes this a clean upstream ask rather than a feature request.
+`header-footer-design-system.md` §4.1 says a surface with its own toggle
+"swaps the media query for whatever selector drives the rest of its theme
+(`:root[data-theme="dark"]`, a `.dark` class)" — presuming the consumer has
+one. No consumer does.
+
+**The ask for `kwpledger-site` → `design`:** give each dark block a companion
+selector, so `:root[data-theme="dark"]` sets the same values as the media query
+and `:root[data-theme="light"]` can opt out of it. The usual shape is three
+selectors — the media query guarded by `:root:not([data-theme="light"])`, plus
+an explicit `[data-theme="dark"]` — which leaves system-preference consumers
+completely unaffected. **This travels with the layout note Kevin is already
+considering** (a slider top-right of the header, near the About link): the
+layout note calls for the control, and this makes the control possible.
+
+**Until then the toggle is not a prerequisite for steps 3–5, only a
+convenience** — a large one. It is why 2b's dark-mode failures were found by
+computing contrast ratios rather than by looking, and it would make step 4's
+categorical work checkable by eye.
+
+### Header and footer conformance — Kevin raised it, and §10.1 makes it binding
+
+*"We still have to do the header and footer at some point."* Noted here because
+it has a status the rest of the colour work does not: **SPEC §10 point 1 calls
+`header-footer-design-system.md` "the hard edge of this rule, and it is not
+negotiable."** So unlike the palette, where added colour is explicitly welcome,
+the header/footer is a conform-or-justify surface.
+
+It also interacts with item 5 (making the header sticky) and with the toggle
+above, since the slider's home is the header. Read that doc before designing
+any of the three, rather than doing them in sequence and re-cutting the header
+each time.
+
 
 ## 3. Harden portion normalization
 
