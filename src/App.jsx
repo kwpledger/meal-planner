@@ -135,7 +135,7 @@ function PortionResolutionPreview({ resolution }) {
   const confidence = CONFIDENCE_LABELS[resolution.confidence] || CONFIDENCE_LABELS.unresolved;
 
   return (
-    <div className="mt-2 rounded-lg bg-white border border-slate-200 p-2 text-xs">
+    <div className="mt-2 rounded-lg bg-surface-card border border-border p-2 text-xs">
       <div className="flex items-center gap-2">
         <span className={`px-2 py-0.5 rounded-full font-semibold ${confidence.className}`}>
           {confidence.label}
@@ -1228,7 +1228,7 @@ useEffect(() => {
             </div>
 
             <div className="flex gap-3 items-center flex-wrap justify-end">
-              <div className="bg-white rounded-2xl shadow px-5 py-3 border border-slate-200 text-right">
+              <div className="bg-surface-card rounded-2xl shadow px-5 py-3 border border-border text-right">
                 <div className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Weekly total</div>
                 <div className="text-2xl font-bold text-slate-800">{weeklyCalories.toLocaleString()} cal</div>
               </div>
@@ -1236,7 +1236,7 @@ useEffect(() => {
               <select
                 value={proteinFilter}
                 onChange={(event) => setProteinFilter(event.target.value)}
-                className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-700 font-medium shadow-sm"
+                className="rounded-2xl border border-border bg-surface-card px-4 py-3 text-slate-700 font-medium shadow-sm"
               >
                 <option value="All">All Proteins</option>
                 <option value="Chicken">Chicken</option>
@@ -1247,7 +1247,7 @@ useEffect(() => {
 
               <button
                 onClick={() => window.print()}
-                className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition"
+                className="rounded-2xl bg-surface-card text-slate-800 px-5 py-3 font-semibold shadow border border-border hover:bg-surface active:scale-95 transition"
               >
                 Print prep sheet
               </button>
@@ -1274,7 +1274,7 @@ useEffect(() => {
                   onClick={() => setMoreOpen((current) => !current)}
                   aria-haspopup="menu"
                   aria-expanded={moreOpen}
-                  className="rounded-2xl bg-white text-slate-800 px-5 py-3 font-semibold shadow border border-slate-300 hover:bg-slate-50 active:scale-95 transition"
+                  className="rounded-2xl bg-surface-card text-slate-800 px-5 py-3 font-semibold shadow border border-border hover:bg-surface active:scale-95 transition"
                 >
                   More {moreOpen ? '▲' : '▼'}
                 </button>
@@ -1282,7 +1282,7 @@ useEffect(() => {
                 {moreOpen && (
                   <div
                     role="menu"
-                    className="absolute right-0 z-20 mt-2 w-60 rounded-2xl bg-white shadow-xl border border-slate-200 p-2 flex flex-col gap-1"
+                    className="absolute right-0 z-20 mt-2 w-60 rounded-2xl bg-surface-card shadow-xl border border-border p-2 flex flex-col gap-1"
                   >
                     <button
                       role="menuitem"
@@ -1295,7 +1295,7 @@ useEffect(() => {
                       Swap mode: {swapMode ? 'ON' : 'OFF'}
                     </button>
 
-                    <div className="my-1 border-t border-slate-200" />
+                    <div className="my-1 border-t border-border" />
 
                     <button
                       role="menuitem"
@@ -1372,7 +1372,7 @@ useEffect(() => {
                       after a divider, rather than adjacent to the sync actions
                       it would be most costly to mis-tap next to.
                     */}
-                    <div className="my-1 border-t border-slate-200" />
+                    <div className="my-1 border-t border-border" />
 
                     <button
                       role="menuitem"
@@ -1445,11 +1445,11 @@ useEffect(() => {
                   }}
                   onDragLeave={() => setDragOverDayId(null)}
                   onDrop={() => handleDrop(day.id)}
-                  className={`bg-white rounded-3xl shadow-lg p-4 border-2 min-h-[720px] transition ${
-                    isDragOver ? 'border-slate-500 bg-slate-50 scale-[1.01]' : 'border-slate-200'
+                  className={`bg-surface-card rounded-3xl shadow-lg p-4 border-2 min-h-[720px] transition ${
+                    isDragOver ? 'border-border bg-surface scale-[1.01]' : 'border-border'
                   }`}
                 >
-                  <div className="mb-4 sticky top-0 bg-white/95 backdrop-blur rounded-2xl pb-3 z-10">
+                  <div className="mb-4 sticky top-0 bg-surface-card/95 backdrop-blur rounded-2xl pb-3 z-10">
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h2 className="text-2xl text-slate-800">{day.day}</h2>
@@ -1473,7 +1473,7 @@ useEffect(() => {
 
                   {!isCollapsed && (
                   <>
-                  <div className="mb-4 bg-slate-50 rounded-2xl p-3 border border-slate-200">
+                  <div className="mb-4 bg-surface rounded-2xl p-3 border border-border">
                     <div className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">
                       Daily Macro Balance
                     </div>
@@ -1526,7 +1526,7 @@ useEffect(() => {
                   
                   <div className="space-y-3">
                     {day.meals.length === 0 && (
-                      <div className="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center text-slate-400">
+                      <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center text-slate-400">
                         Drop meals here
                       </div>
                     )}
@@ -1561,7 +1561,7 @@ useEffect(() => {
                           {meal.items.map((item) => (
                             <span
                               key={`${meal.id}-${item}`}
-                              className="bg-white/70 text-slate-700 text-[11px] px-2 py-1 rounded-full"
+                              className="bg-surface-card/70 text-slate-700 text-[11px] px-2 py-1 rounded-full"
                             >
                               {item}
                             </span>
@@ -1578,7 +1578,7 @@ useEffect(() => {
           </div>
 
           <div className="mt-8 grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="bg-white rounded-3xl shadow-lg p-6 border border-slate-200">
+            <div className="bg-surface-card rounded-3xl shadow-lg p-6 border border-border">
               <h2 className="text-2xl text-slate-800 mb-2">Auto Grocery Aggregation</h2>
               <p className="text-sm text-slate-500 mb-4">
                 Built from the current board. Rearrange meals and this list follows the new weekly layout.
@@ -1586,7 +1586,7 @@ useEffect(() => {
 
               <div className="max-h-[520px] overflow-y-auto pr-2 space-y-3">
                 {groceryList.map(({ ingredient, uses }) => (
-                  <details key={ingredient} className="bg-slate-50 rounded-2xl border border-slate-200 p-3">
+                  <details key={ingredient} className="bg-surface rounded-2xl border border-border p-3">
                     <summary className="cursor-pointer font-bold text-slate-800 capitalize flex justify-between gap-3">
                       <span>{ingredient}</span>
                       <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">
@@ -1596,7 +1596,7 @@ useEffect(() => {
 
                     <ul className="mt-3 space-y-2 text-sm text-slate-600">
                       {uses.map((use) => (
-                        <li key={`${use.day}-${use.mealType}-${use.original}`} className="border-t border-slate-200 pt-2 first:border-t-0 first:pt-0">
+                        <li key={`${use.day}-${use.mealType}-${use.original}`} className="border-t border-border pt-2 first:border-t-0 first:pt-0">
                           <div className="font-semibold text-slate-700">{use.amount}</div>
                           <div className="text-xs text-slate-500">
                             {use.day} • {use.mealType} • {use.mealName}
@@ -1609,7 +1609,7 @@ useEffect(() => {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-lg p-6 border border-slate-200">
+            <div className="bg-surface-card rounded-3xl shadow-lg p-6 border border-border">
               <h2 className="text-2xl text-slate-800 mb-4">Cronometer Helper</h2>
               <p className="text-sm text-slate-500 mb-4">
                 Use this as a copy/paste checklist for entering foods manually. The calories and macros are planner estimates, not verified Cronometer values.
@@ -1625,11 +1625,11 @@ useEffect(() => {
               <textarea
                 readOnly
                 value={cronometerText}
-                className="w-full h-[360px] rounded-2xl border border-slate-300 bg-slate-50 p-4 text-xs font-mono text-slate-700"
+                className="w-full h-[360px] rounded-2xl border border-border bg-surface p-4 text-xs font-mono text-slate-700"
               />
             </div>
 
-            <div className="bg-white rounded-3xl shadow-lg p-6 border border-slate-200">
+            <div className="bg-surface-card rounded-3xl shadow-lg p-6 border border-border">
               <h2 className="text-2xl text-slate-800 mb-4">Quick Visual Rules</h2>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -1731,7 +1731,7 @@ useEffect(() => {
 
       {editingMeal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+          <div className="bg-surface-card rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
       
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl text-slate-800">
@@ -1757,7 +1757,7 @@ useEffect(() => {
                   type="text"
                   value={editForm.name}
                   onChange={(e) => handleEditField("name", e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 p-3"
+                  className="w-full rounded-xl border border-border p-3"
                 />
               </div>
       
@@ -1774,7 +1774,7 @@ useEffect(() => {
                     onChange={(e) =>
                       handleEditField("calories", Number(e.target.value))
                     }
-                    className="w-full rounded-xl border border-slate-300 p-3"
+                    className="w-full rounded-xl border border-border p-3"
                   />
                 </div>
       
@@ -1789,7 +1789,7 @@ useEffect(() => {
                     onChange={(e) =>
                       handleEditField("carbs", Number(e.target.value))
                     }
-                    className="w-full rounded-xl border border-slate-300 p-3"
+                    className="w-full rounded-xl border border-border p-3"
                   />
                 </div>
       
@@ -1804,7 +1804,7 @@ useEffect(() => {
                     onChange={(e) =>
                       handleEditField("protein", Number(e.target.value))
                     }
-                    className="w-full rounded-xl border border-slate-300 p-3"
+                    className="w-full rounded-xl border border-border p-3"
                   />
                 </div>
       
@@ -1819,7 +1819,7 @@ useEffect(() => {
                     onChange={(e) =>
                       handleEditField("fat", Number(e.target.value))
                     }
-                    className="w-full rounded-xl border border-slate-300 p-3"
+                    className="w-full rounded-xl border border-border p-3"
                   />
                 </div>
       
@@ -1843,7 +1843,7 @@ useEffect(() => {
                       matchStatus.type === 'error'
                         ? 'bg-red-50 border-red-200 text-red-700'
                         : matchStatus.type === 'busy'
-                        ? 'bg-slate-50 border-slate-200 text-slate-600'
+                        ? 'bg-surface border-border text-slate-600'
                         : matchStatus.type === 'info'
                         ? 'bg-amber-50 border-amber-200 text-amber-700'
                         : 'bg-emerald-50 border-emerald-200 text-emerald-700'
@@ -1858,7 +1858,7 @@ useEffect(() => {
                     const confidence = CONFIDENCE_LABELS[ingredient.gramsConfidence] || CONFIDENCE_LABELS.unresolved;
 
                     return (
-                      <div key={ingredient.id} className="rounded-xl border border-slate-300 p-2">
+                      <div key={ingredient.id} className="rounded-xl border border-border p-2">
                         {/*
                           Wraps because the fixed controls (amt + unit + remove
                           + gaps) come to ~196px, which left the name field and
@@ -1873,21 +1873,21 @@ useEffect(() => {
                             value={ingredient.amount ?? ''}
                             onChange={(e) => updateIngredientRow(index, { amount: e.target.value === '' ? null : Number(e.target.value) })}
                             placeholder="amt"
-                            className="w-16 rounded-lg border border-slate-300 p-2 text-sm"
+                            className="w-16 rounded-lg border border-border p-2 text-sm"
                           />
                           <input
                             type="text"
                             value={ingredient.unit ?? ''}
                             onChange={(e) => updateIngredientRow(index, { unit: e.target.value || null })}
                             placeholder="unit"
-                            className="w-20 rounded-lg border border-slate-300 p-2 text-sm"
+                            className="w-20 rounded-lg border border-border p-2 text-sm"
                           />
                           <input
                             type="text"
                             value={ingredient.name}
                             onChange={(e) => updateIngredientRow(index, { name: e.target.value })}
                             placeholder="ingredient name"
-                            className="flex-1 min-w-40 rounded-lg border border-slate-300 p-2 text-sm"
+                            className="flex-1 min-w-40 rounded-lg border border-border p-2 text-sm"
                           />
                           <button
                             type="button"
@@ -1912,7 +1912,7 @@ useEffect(() => {
                           <button
                             type="button"
                             onClick={() => handleMatchRow(index)}
-                            className="text-xs rounded-lg bg-white border border-slate-300 px-2 py-1 font-semibold text-slate-700 hover:bg-slate-100"
+                            className="text-xs rounded-lg bg-surface-card border border-border px-2 py-1 font-semibold text-slate-700 hover:bg-slate-100"
                           >
                             Match
                           </button>
@@ -1937,7 +1937,7 @@ useEffect(() => {
                           value={ingredient.searchName ?? ''}
                           onChange={(e) => updateIngredientRow(index, { searchName: e.target.value || null })}
                           placeholder={`search USDA as… (default: ${ingredient.name || 'ingredient name'})`}
-                          className="mt-2 w-full rounded-lg border border-dashed border-slate-300 p-2 text-xs text-slate-600"
+                          className="mt-2 w-full rounded-lg border border-dashed border-border p-2 text-xs text-slate-600"
                         />
 
                         {ingredient.prepNote && (
@@ -1951,12 +1951,12 @@ useEffect(() => {
                 <button
                   type="button"
                   onClick={addIngredientRow}
-                  className="mt-2 text-xs rounded-lg border border-dashed border-slate-300 px-3 py-2 text-slate-500 hover:bg-slate-50 w-full"
+                  className="mt-2 text-xs rounded-lg border border-dashed border-border px-3 py-2 text-slate-500 hover:bg-surface w-full"
                 >
                   + Add ingredient
                 </button>
 
-                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-2">
+                <div className="mt-3 rounded-xl border border-border bg-surface p-2">
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Or paste ingredients as text (one per line, replaces the list above)
                   </label>
@@ -1965,7 +1965,7 @@ useEffect(() => {
                     value={pastedIngredients}
                     onChange={(e) => setPastedIngredients(e.target.value)}
                     placeholder={"0.75 cup oats\n1 banana"}
-                    className="w-full rounded-lg border border-slate-300 p-2 text-xs"
+                    className="w-full rounded-lg border border-border p-2 text-xs"
                   />
                   <button
                     type="button"
@@ -2006,7 +2006,7 @@ useEffect(() => {
                       <button
                         type="button"
                         onClick={() => setRecomputePreview(null)}
-                        className="rounded-lg border border-slate-300 px-3 py-1 font-semibold text-slate-700"
+                        className="rounded-lg border border-border px-3 py-1 font-semibold text-slate-700"
                       >
                         Dismiss
                       </button>
@@ -2034,7 +2034,7 @@ useEffect(() => {
                       .filter((line) => line !== "")
                   )
                 }
-                className="w-full rounded-xl border border-slate-300 p-3"
+                className="w-full rounded-xl border border-border p-3"
               />
 
               <p className="text-xs text-slate-500 mt-1">
@@ -2042,7 +2042,7 @@ useEffect(() => {
               </p>
             </div>
       
-            <div className="border-t border-slate-200 pt-4">
+            <div className="border-t border-border pt-4">
               <h3 className="text-slate-800 mb-2">Nutrition Lookup</h3>
 
               <p className="text-sm text-slate-500 mb-3">
@@ -2062,7 +2062,7 @@ useEffect(() => {
                   value={nutritionQuery}
                   onChange={(e) => setNutritionQuery(e.target.value)}
                   placeholder="Search food, e.g. chicken breast or Dave's Killer Thin"
-                  className="flex-1 min-w-48 rounded-xl border border-slate-300 p-3"
+                  className="flex-1 min-w-48 rounded-xl border border-border p-3"
                 />
 
                 <button
@@ -2076,7 +2076,7 @@ useEffect(() => {
                 <button
                   type="button"
                   onClick={() => handleNutritionLookup("off")}
-                  className="rounded-xl bg-white border border-slate-300 text-slate-800 px-4 py-2 font-semibold"
+                  className="rounded-xl bg-surface-card border border-border text-slate-800 px-4 py-2 font-semibold"
                 >
                   Open Food Facts
                 </button>
@@ -2101,7 +2101,7 @@ useEffect(() => {
                   {nutritionResults.map((result) => (
                     <div
                       key={`${result.source}-${result.id}`}
-                      className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                      className="rounded-xl border border-border bg-surface p-3"
                     >
                       <div className="font-bold text-slate-800">{result.name}</div>
                       {result.brand && (
@@ -2123,7 +2123,7 @@ useEffect(() => {
                       <button
                         type="button"
                         onClick={() => handleResolvePortion(result)}
-                        className="mt-2 text-xs rounded-lg bg-white border border-slate-300 px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-100"
+                        className="mt-2 text-xs rounded-lg bg-surface-card border border-border px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-100"
                       >
                         Resolve portion for "{nutritionQuery || result.name}"
                       </button>
@@ -2143,7 +2143,7 @@ useEffect(() => {
       
               <button
                 onClick={() => setEditingMeal(null)}
-                className="px-4 py-2 rounded-xl border border-slate-300"
+                className="px-4 py-2 rounded-xl border border-border"
               >
                 Cancel
               </button>
@@ -2191,7 +2191,7 @@ useEffect(() => {
 
       {normalizeState && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+          <div className="bg-surface-card rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl text-slate-800">Normalize portions</h2>
               <button
@@ -2231,7 +2231,7 @@ useEffect(() => {
                 </div>
                 <button
                   onClick={cancelNormalizeBoard}
-                  className="rounded-xl border border-slate-300 px-4 py-2 font-semibold text-slate-700"
+                  className="rounded-xl border border-border px-4 py-2 font-semibold text-slate-700"
                 >
                   Cancel
                 </button>
@@ -2270,7 +2270,7 @@ useEffect(() => {
 
                     <div className="space-y-2">
                       {normalizeState.comparisons.map((comparison) => (
-                        <div key={comparison.mealId} className="rounded-xl border border-slate-200 p-3">
+                        <div key={comparison.mealId} className="rounded-xl border border-border p-3">
                           <div className="flex items-center justify-between gap-2">
                             <div>
                               <div className="font-bold text-slate-800">{comparison.mealName}</div>
@@ -2292,7 +2292,7 @@ useEffect(() => {
 
                           <button
                             onClick={() => applyNormalizeComparison(comparison)}
-                            className="mt-2 text-xs rounded-lg bg-white border border-slate-300 px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-100"
+                            className="mt-2 text-xs rounded-lg bg-surface-card border border-border px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-100"
                           >
                             Apply this meal
                           </button>
@@ -2309,7 +2309,7 @@ useEffect(() => {
 
       {pullPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6">
+          <div className="bg-surface-card rounded-3xl shadow-2xl w-full max-w-md p-6">
             <h2 className="text-2xl text-slate-800 mb-4">Pull from cloud?</h2>
 
             <p className="text-sm text-slate-600 mb-4">
@@ -2317,13 +2317,13 @@ useEffect(() => {
             </p>
 
             <div className="space-y-2 text-sm mb-6">
-              <div className="rounded-xl border border-slate-200 p-3">
+              <div className="rounded-xl border border-border p-3">
                 <div className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Cloud copy</div>
                 <div className="text-slate-800">
                   {pullPreview.cloudUpdatedAt ? new Date(pullPreview.cloudUpdatedAt).toLocaleString() : 'Unknown'}
                 </div>
               </div>
-              <div className="rounded-xl border border-slate-200 p-3">
+              <div className="rounded-xl border border-border p-3">
                 <div className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Your local copy</div>
                 <div className="text-slate-800">
                   {pullPreview.localUpdatedAt ? new Date(pullPreview.localUpdatedAt).toLocaleString() : 'Unknown'}
@@ -2334,7 +2334,7 @@ useEffect(() => {
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setPullPreview(null)}
-                className="px-4 py-2 rounded-xl border border-slate-300"
+                className="px-4 py-2 rounded-xl border border-border"
               >
                 Cancel
               </button>
@@ -2355,7 +2355,7 @@ useEffect(() => {
           onClick={() => setSelectedMeal(null)}
         >
           <div
-            className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md p-6"
+            className="bg-surface-card rounded-3xl shadow-2xl border border-border w-full max-w-md p-6"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4 mb-4">

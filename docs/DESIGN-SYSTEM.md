@@ -7,16 +7,18 @@ The system's own contract is `docs/SPEC.md` in `kwpledger/kwpledger-design` —
 that is the authority on what the tokens mean. This file only covers this
 consumer.
 
-## Current state: typography only
+## Current state: typography, plus surfaces and borders
 
 **Adopted:** `--font-display` (Lora), `--font-body` (Hanken Grotesk),
-`--fw-display`.
+`--fw-display`, and as of step 2a `--surface`, `--surface-card`, `--border`.
 
-**Not adopted:** every colour token. The board still paints itself with **245**
-hard-coded neutral utilities across 20 distinct classes (`slate-*`, `bg-white`,
-`text-white`, `bg-black`) plus `indigo` as a de-facto accent,
-`amber`/`sky`/`green`/`rose` for meal types and `blue`/`red`/`yellow` for
-macros. `docs/BACKLOG.md` item 2 carries the order the rest goes in.
+**Not adopted yet:** the rest of the colour set. Of the 245 hard-coded neutral
+utilities the census found, **78 are migrated and ~167 remain** — the six slate
+*text* levels (2b), `bg-slate-100`/`200` as a third surface level, `indigo` as a
+de-facto accent (step 3), `amber`/`sky`/`green`/`rose` for meal types (step 4)
+and `blue`/`red`/`yellow` for macros. Plus 5 print-only utilities that stay
+literal on purpose, and 4 scrims with no token to move to.
+`docs/BACKLOG.md` item 2 carries the order.
 
 ## What v0.5.1 added, and what it still does not define
 
@@ -167,3 +169,66 @@ cannot be driven from a session, but a local preview can:
 CSS bundle 27.35 kB → 31.99 kB raw (5.88 → 7.09 kB gzipped) for the full token
 set, most of which is colour tokens nothing consumes yet — that cost is already
 paid for the steps that follow.
+
+## Step 2a: borders and surfaces (done)
+
+78 utilities migrated. `border-slate-300/200/500` → `border-border`,
+`bg-white` → `bg-surface-card`, `bg-slate-50` → `bg-surface`, bridged through a
+plain `@theme` block in `src/index.css`.
+
+### `@theme inline` silently drops opacity modifiers
+
+The biggest trap in this step, and it would have shipped looking fine.
+
+`@theme inline` compiles a utility straight to `var(--surface-card)`. That reads
+as the ideal bridge — one less indirection — but it leaves Tailwind with no
+registered colour to work from, so **an opacity modifier is discarded with no
+error at all**. `bg-surface-card/95` emitted a flat
+`background-color: var(--surface-card)`.
+
+That matters here: the sticky day-card header is `bg-white/95 backdrop-blur`.
+Opaque, the blur has nothing to blur, and the effect disappears while the page
+still looks broadly right.
+
+Plain `@theme` registers the colour and compiles the modifier correctly:
+
+```css
+color-mix(in oklab, var(--color-surface-card) 95%, transparent)
+```
+
+Both forms still follow `prefers-color-scheme`, because the indirection resolves
+at use time either way — so there is no theming reason to prefer `inline`, and a
+real reason not to. **Check the emitted CSS for any later step that needs a
+translucent token.** Steps 3, 4 and 5 all plausibly do.
+
+### The print sheet is deliberately not tokenized
+
+Lines ~1666–1730 of `App.jsx` (`hidden print:block`) and the `print:bg-white` on
+the page wrapper keep literal colours. Paper is white in every theme, and
+`prefers-color-scheme` behaviour while printing is inconsistent across browsers
+— so a tokenized print sheet risks handing a dark-mode user a black page.
+4 utilities in the block plus 1 variant were skipped on purpose; they are not
+stragglers.
+
+### Two border levels collapsed into one, and it is visible
+
+`--border` is the only border token, so `slate-300` and `slate-200` both land on
+`sand-200`. They met in the middle rather than one winning:
+
+| | hex | relative luminance |
+|---|---|---|
+| `slate-300` (was: inputs, buttons) | `#cbd5e1` | 0.830 |
+| `sand-200` (now: both) | `#e3e0da` | 0.879 |
+| `slate-200` (was: card dividers) | `#e2e8f0` | 0.907 |
+
+So **input borders got lighter and card dividers got darker.** The app used to
+draw inputs more prominently than card edges; now they read at the same weight.
+That is forced by the token set rather than chosen, and it is the one part of
+2a worth looking at with human eyes before step 2b piles text changes on top.
+
+### Still light-only
+
+`color-scheme: light` stays pinned. Surfaces and borders now follow the theme,
+but ~120 text utilities and the accent do not, so a dark-mode render would be
+warm-dark panels with near-black text on them. The guard comes off at the end of
+step 2b, not before.

@@ -101,14 +101,15 @@ self-evident to the person holding two of them** — the useful instruction is
 "compare the weekly totals on both machines first, and push from the higher-numbered one."
 
 
-## 2. Adopt the shared design system — step 1 done, 5 to go
+## 2. Adopt the shared design system — step 1 and 2a done
 
-**In progress.** `@kwpledger/design` is pinned at **v0.5.1** and the typography
-is adopted. `docs/DESIGN-SYSTEM.md` is the wiring, the traps, and the
-verification; this item is only the order.
+**In progress.** `@kwpledger/design` is pinned at **v0.5.1**. Typography is
+adopted, and as of 2a so are surfaces and borders. `docs/DESIGN-SYSTEM.md` is
+the wiring, the traps, and the verification; this item is only the order.
 
-The hold on visual polish is **over for typography and still on for colour** —
-don't invent a colour locally that the system already defines.
+The hold on visual polish is **over for typography, surfaces and borders, and
+still on for text, accent, categorical and status** — don't invent a colour
+locally that the system already defines.
 
 The practical test for whether a piece of UI work may proceed meanwhile is
 unchanged and still useful: does it change *what is on screen and where*, or
@@ -121,10 +122,22 @@ grid fix) go ahead regardless.
    so the dark block cannot half-apply. `font-bold` removed from all 19 heading
    elements — Lora is a static SemiBold and 700 was making the browser
    synthesise a fake bold.
-2. **← NEXT. Neutrals.** ~200 `slate-*` and `bg-white` utilities →
-   `--surface`, `--surface-card`, `--fg`, `--fg-muted`, `--border`. The largest
-   single chunk, and the one that makes dark mode real: **this is the change
-   that removes the `color-scheme: light` guard**, so it is not done until the
+2. **Neutrals — 2a done, 2b next.** The census found 245 neutral utilities, not
+   the ~200 estimated. Split because only 2a is mechanical:
+   - ~~**2a. Surfaces and borders.**~~ **DONE.** 78 utilities →
+     `--surface`, `--surface-card`, `--border`, bridged with a plain `@theme`
+     block. **Use `@theme`, never `@theme inline`** — inline drops opacity
+     modifiers with no error, which would have silently killed the sticky
+     header's `backdrop-blur`. The print sheet and `print:bg-white` stay
+     literal on purpose. See `docs/DESIGN-SYSTEM.md` for both, and for the
+     border-weight collapse that is worth a human look.
+   - **← NEXT. 2b. Text.** ~120 utilities across **six** slate levels
+     (`900/800/700/600/500/400`) onto **two** tokens, `--fg` and `--fg-muted`.
+     Not mechanical: it is a deliberate hierarchy collapse, and v0.5.1 defines
+     no third level. Also decide `bg-slate-100`/`200` here — a third surface
+     level against two surface tokens.
+   **This is the step that makes dark mode real**: the `color-scheme: light`
+   guard comes off at the end of 2b, not before, and 2b is not done until the
    board is legible in both themes.
 3. **Accent.** ~25 `indigo-*` → `--accent` / `--accent-hover`.
 4. **Categorical.** Domain tokens *in this repo* — `--meal-breakfast` …

@@ -62,6 +62,38 @@
   color-scheme: light;
 }
 
+/*
+ * COLOUR BRIDGE - step 2a of docs/BACKLOG.md item 2 (neutrals: borders and
+ * surfaces). Text levels are 2b, accent is step 3.
+ *
+ * The self-reference trap above does not apply, because the theme key and the
+ * token it reads are different property names (`--color-surface` reads
+ * `--surface`). No cycle, so a bridge is safe here where it was not for fonts.
+ *
+ * NOT `inline`, AND THE REASON IS A SILENT FAILURE. `@theme inline` compiles a
+ * utility straight to `var(--surface)`, which looks ideal - but it also means
+ * Tailwind has no registered colour to work from, so **an opacity modifier is
+ * dropped with no error**: `bg-surface-card/95` emitted a flat
+ * `background-color: var(--surface-card)`. That would have made the sticky
+ * day-card header opaque and quietly killed its backdrop-blur.
+ *
+ * Plain `@theme` registers the colour, so `/95` compiles correctly to
+ * `color-mix(in oklab, var(--color-surface-card) 95%, transparent)`. Both forms
+ * still follow `prefers-color-scheme`, because the indirection resolves at use
+ * time either way. Measured, not assumed - see the probe in this commit's PR.
+ *
+ * This applies to every later step that needs a translucent token, so check
+ * the emitted CSS rather than trusting that a modifier compiled.
+ *
+ * `--color-border` producing `border-border` is deliberately literal rather
+ * than prettier: it greps 1:1 against the design-system token name.
+ */
+@theme {
+  --color-surface: var(--surface);
+  --color-surface-card: var(--surface-card);
+  --color-border: var(--border);
+}
+
 @layer base {
   /*
    * Applied to elements rather than through utilities in JSX. Typography is a
