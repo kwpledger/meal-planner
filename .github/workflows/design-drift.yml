@@ -1,0 +1,158 @@
+# Notice when kwpledger-design cuts a release this repo has not taken.
+#
+# WHY THIS LIVES IN THE CONSUMER AND NOT IN kwpledger-design. The obvious
+# design is one check in the design repo, walking a list of consumers. It does
+# not work: kwpledger-design is public and two of its consumers are private, so
+# a check running there would need a cross-repo credential stored in a PUBLIC
+# repo's secrets just to read a pin. Running in the consumer needs no secret at
+# all — it reads its own package.json and makes an unauthenticated read against
+# a public repo. Measured before it was written; see kwpledger-site's
+# docs/ROADMAP.md.
+#
+# THIS NEVER BUMPS ANYTHING, AND MUST NOT LEARN TO. Consumers take a pinned
+# dependency precisely so one bad deploy cannot restyle every property at once.
+# Automatic propagation is the thing pinning exists to prevent. This opens an
+# issue; a human merges.
+#
+# `push` IS HERE AS WELL AS `schedule` ON PURPOSE. GitHub disables scheduled
+# workflows in a repo with no activity for 60 days, and a disabled poll reports
+# exactly what a poll finding nothing reports — silence. A repo you are pushing
+# to re-checks on every push and so cannot go quietly stale.
+
+name: Design system drift
+
+on:
+  schedule:
+    # Mondays, 13:17 UTC. Off the hour because every cron set to :00 fires into
+    # the same stampede and gets queued.
+    - cron: '17 13 * * 1'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: design-drift
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Compare the pin against the latest release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the pinned version
+        id: pin
+        run: |
+          set -euo pipefail
+          SPEC=$(node -p "require('./package.json').dependencies?.['@kwpledger/design'] ?? ''")
+          if [ -z "$SPEC" ]; then
+            echo "No @kwpledger/design dependency in package.json — nothing to check."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # "github:kwpledger/kwpledger-design#v0.6.0" -> "v0.6.0"
+          PINNED=${SPEC##*#}
+          if ! echo "$PINNED" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::warning::Pinned to '$PINNED', which is not a release tag. Nothing to compare against."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Pinned at $PINNED"
+          echo "version=$PINNED" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Find the latest release
+        id: latest
+        if: steps.pin.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          # ls-remote asks the remote, which is what the question was about. A
+          # local `git tag` prints an empty list in a fresh clone whether or not
+          # releases exist — a mistake already made once, in another repo.
+          # `|| true` because `set -o pipefail` plus a grep that matches nothing
+          # would abort here with exit 1, losing the diagnosis below.
+          LATEST=$(git ls-remote --tags https://github.com/kwpledger/kwpledger-design \
+            | sed 's#.*refs/tags/##; s#\^{}$##' \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sort -u -V \
+            | tail -1 || true)
+
+          if [ -z "$LATEST" ]; then
+            echo "::error::No version tags found on kwpledger-design. Either the"
+            echo "::error::remote is unreachable or the tag naming changed."
+            exit 1
+          fi
+
+          echo "Latest release is $LATEST"
+          echo "version=$LATEST" >> "$GITHUB_OUTPUT"
+
+      - name: Open, update, or close the drift issue
+        if: steps.pin.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PINNED: ${{ steps.pin.outputs.version }}
+          LATEST: ${{ steps.latest.outputs.version }}
+        run: |
+          set -euo pipefail
+          TITLE='Design system: newer version available'
+
+          # One issue, reused. The title is fixed so it can be found again; the
+          # versions live in the body, which gets rewritten each run.
+          NUM=$(gh issue list --state open --limit 100 --json number,title \
+                  --jq 'map(select(.title == "'"$TITLE"'")) | .[0].number // empty')
+
+          # Ordering, not string equality: a pin ahead of the newest tag (a
+          # release cut and then deleted) must not read as "behind".
+          NEWEST=$(printf '%s\n%s\n' "$PINNED" "$LATEST" | sort -u -V | tail -1)
+          if [ "$NEWEST" = "$PINNED" ]; then
+            echo "Pinned at $PINNED; latest is $LATEST. Nothing to do."
+            if [ -n "$NUM" ]; then
+              gh issue close "$NUM" \
+                --comment "Now pinned at \`$PINNED\`. Closing — this repo is current."
+            fi
+            exit 0
+          fi
+
+          # Built with echo rather than a heredoc: YAML block scalars re-indent
+          # heredoc bodies. Same reason kwpledger-design's release.yml does.
+          {
+            echo "This repo is pinned at \`$PINNED\`. The latest release of"
+            echo "[kwpledger-design](https://github.com/kwpledger/kwpledger-design/releases) is \`$LATEST\`."
+            echo
+            echo 'Nothing is broken by this on its own — pinning means the older'
+            echo 'tokens keep working. It is here so the gap is visible rather than'
+            echo 'discovered later.'
+            echo
+            echo 'To take it:'
+            echo
+            echo '```bash'
+            echo "npm install github:kwpledger/kwpledger-design#$LATEST --save"
+            echo '```'
+            echo
+            echo '**Check the lockfile, not the spec.** Editing the version in'
+            echo '`package.json` can leave `package-lock.json` resolved to the old'
+            echo 'commit while the build stays green and every token stays stale.'
+            echo 'Confirm the resolved SHA moved, and that the installed files'
+            echo 'contain what the new version claims to add.'
+            echo
+            echo 'Read the release notes before merging: a major bump can rename or'
+            echo 'remove a token, which is exactly what pinning exists to catch.'
+            echo
+            echo '<sub>Opened automatically by `.github/workflows/design-drift.yml`.'
+            echo 'It closes itself once the pin catches up.</sub>'
+          } > "$RUNNER_TEMP/body.md"
+
+          if [ -n "$NUM" ]; then
+            echo "Updating issue #$NUM."
+            gh issue edit "$NUM" --body-file "$RUNNER_TEMP/body.md"
+          else
+            echo "Opening a new issue."
+            gh issue create --title "$TITLE" --body-file "$RUNNER_TEMP/body.md"
+          fi
