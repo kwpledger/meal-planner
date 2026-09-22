@@ -70,3 +70,28 @@ The general guardrail against volunteering health details **does not apply
 here** — applying it mechanically would mean refusing to help with something he
 actively wants discussed, or hedging in a way he'd find patronizing. Other
 medical detail stays private. The distinction is his.
+
+## The word budget on `AGENTS.md`
+
+Kevin set this on 2026-09-20, the same in every repo of his that carries a
+handoff file. It lived in `AGENTS.md` itself until 2026-09-22, which was a
+small joke at its own expense: the rule against letting that file sprawl was
+~120 words of it, in four repos at once.
+
+1. **Soft limit 1,350 words.** Past it, weigh each addition, and look for what
+   can be cut safely or preserved by moving it to a `docs/` reference.
+2. **Hard limit 1,850 words.** Past it, decide what gets cut or moved *now*,
+   not later.
+3. **The four-minute rule is _a_ primary decider, not the only one.** If a
+   session will not need it in the first four minutes after handoff, it is a
+   high-tier candidate for preservation by move.
+4. **No `docs/` file carries a word limit** — reference, not handoff, so moving
+   costs nothing.
+
+A PostToolUse hook measures `AGENTS.md` on every write
+(`.claude/hooks/agents-md-length.mjs`); it reports but cannot block.
+
+**The test that matters is rule 3, not the count.** A file can be under 1,350
+and still be wrong if it holds reference nobody needs on arrival, and the count
+climbing at all is the signal that the test is being skipped rather than
+applied.
