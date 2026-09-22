@@ -422,6 +422,44 @@ Three points worth keeping:
 item 5 is about the app's own heading prose above the board, not site chrome.
 The two are separate cuts.
 
+### Staying current with the design system — SHIPPED 2026-09-22
+
+Adopting the system once was never the hard part. Noticing that it *moved* is.
+`v0.6.1` shipped and this repo sat on `v0.6.0` for days; nothing was broken,
+because pinning means the older tokens keep working, but nothing said so either.
+
+`.github/workflows/design-drift.yml` now answers it. It reads this repo's pin,
+asks the design remote for its newest tag, and opens one reusable issue when
+they disagree — closing it again once the pin catches up. Identical file in all
+three npm consumers, no configuration. It runs weekly, on every push to `main`,
+and on demand.
+
+**It never bumps anything, and must not learn to.** Pinning exists so one bad
+deploy cannot restyle every property at once; automatic propagation is the
+thing it prevents. The workflow only makes sure the merge is offered.
+
+Two details worth not re-deriving:
+
+- **The check lives here rather than once in `kwpledger-design`.** One check
+  there walking a consumer list is tidier and does not work: `design` is public
+  and several consumers are private, so it would need a cross-repo credential
+  in a public repo's Actions secrets. A consumer reading a public remote needs
+  none.
+- **`push` is a trigger alongside `schedule`** because GitHub disables
+  scheduled workflows in a repo idle for 60 days, and a disabled poll reports
+  exactly what a poll finding nothing reports.
+
+It proved itself immediately: it opened **issue #32** within seconds of its own
+merge, naming the `v0.6.0` → `v0.6.1` gap. Taking that release is what closed
+the loop, and the bump was verified as a true no-op — `tokens/` and `fonts/`
+are byte-identical between the two tags, and the built CSS kept the same md5
+and the same content hash in its filename.
+
+**Still to confirm once:** that issue #32 actually closed itself. The
+close-on-catch-up path is the one branch of the workflow that had not run on a
+real runner. Also open, shared with `kwpledger-site` KWP-21: bump
+`actions/checkout@v4` to `v5` here, which every run currently warns about.
+
 
 ## 3. Harden portion normalization
 
