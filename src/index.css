@@ -94,7 +94,7 @@
 
 /*
  * TYPOGRAPHY ONLY, FOR NOW. This adoption is deliberately staged: the type
- * tokens are consumed here, the colour tokens are not. See docs/BACKLOG.md.
+ * tokens are consumed here, the colour tokens are not. See docs/HISTORY.md item 2.
  *
  * NO `@theme` BRIDGE FOR THE FONTS, AND THE REASON GENERALISES. The obvious
  * move is `@theme inline { --font-display: var(--font-display) }` to get a
@@ -173,7 +173,7 @@
  */
 
 /*
- * COLOUR BRIDGE - step 2a of docs/BACKLOG.md item 2 (neutrals: borders and
+ * COLOUR BRIDGE - step 2a of docs/HISTORY.md item 2 (neutrals: borders and
  * surfaces). Text levels are 2b, accent is step 3.
  *
  * The self-reference trap above does not apply, because the theme key and the
@@ -406,7 +406,7 @@
   --macro-fat-fg: var(--data-7-fg);
 
   /*
-   * Slot 8 is CLAIMED, not reserved - correcting a note in docs/BACKLOG.md.
+   * Slot 8 is CLAIMED, not reserved - correcting a note in docs/HISTORY.md.
    * `macros.fiber` renders nowhere as a bar, but the "25g Fiber Goal" chip is
    * already on screen in Quick Visual Rules, so fiber has had a colour all
    * along. Its cost: slot 8 (h=345) sits 40 degrees from Dinner (h=25), which

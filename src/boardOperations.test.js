@@ -4,7 +4,7 @@ import { getMealSortValue, moveMealToDay, MEAL_ORDER } from './boardOperations';
 /*
  * The first three cases here are a regression test for a real data-loss bug:
  * dropping a meal back on the day it already belonged to deleted it. See
- * docs/BACKLOG.md (Shipped) for why the guard has to sit before the map.
+ * docs/HISTORY.md (Shipped) for why the guard has to sit before the map.
  *
  * Deliberately no component rendering. These are pure board transforms, so
  * testing them needs no DOM, no jsdom, and no drag simulation - which is the
