@@ -43,7 +43,7 @@ jobs:
     name: Compare the pin against the latest release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Read the pinned version
         id: pin
