@@ -26,6 +26,20 @@ work, which a session cannot do.
 (none)
 
 
+## To Do (docs) ##
+
+- [ ] **1.** Replace `README.md`, still the React + Vite template from the first commit in May, with a real one. The repo is public, so the README is the first thing a visitor reads, and right now it describes a template rather than this app. It should cover:
+    - [ ] **a.** What it is, in a sentence or two, and the live link (meal-planner.kwpledger.com). Match how the portal describes it, not the dietician's document.
+    - [ ] **b.** What it does: the board, drag and swap, macro breakdowns, the grocery list, USDA/Open Food Facts matching, and manual cloud sync.
+    - [ ] **c.** How to run it: the `npm` commands, the one `.env` key, and why `npm run dev` can't sync. `AGENTS.md` has all three.
+    - [ ] **d.** The stack in one line, the GPL-3.0 license, and a link back to kwpledger.com.
+    - [ ] **e.** Keep personal detail to what the portal already publishes. It says the plan came from a dietician; it doesn't say more, and the README shouldn't either.
+
+**Completed Items**
+
+(none)
+
+
 ## To Do (matching) ##
 
 Architecture note: portion resolution (how many grams) and food matching (which
@@ -55,7 +69,7 @@ the evidence.
 
 **Completed Items**
 
-(none)
+- [x] Took `kwpledger-design` v0.7.0. Docs-only for consumers, and the built CSS is byte-identical (`index-DVsy9TYU.css`); the toggle already matched the release's new §4.4. 2026-09-23.
 
 
 ## To Do (polish — lower priority, non-blocking) ##
