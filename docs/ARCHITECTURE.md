@@ -73,7 +73,7 @@ Carried forward from the old implementation's worst habit, which cost real debug
 
 ## Deployment
 
-**Not part of this repo.** There is no deploy workflow and no deploy config file anywhere in the tree - an earlier GitHub Pages Actions workflow (`.github/workflows/main.yml`) existed and was deliberately deleted (see git history, "Remove obsolete GitHub Pages deploy workflow") once hosting moved to Cloudflare Pages. **This repo now has no `.github/` directory at all**: its only remaining workflow was the Supabase keep-alive, deleted with the migration.
+**Not part of this repo.** There is no deploy workflow and no deploy config file anywhere in the tree - an earlier GitHub Pages Actions workflow (`.github/workflows/main.yml`) existed and was deliberately deleted (see git history, "Remove obsolete GitHub Pages deploy workflow") once hosting moved to Cloudflare Pages. The Supabase keep-alive, the last workflow of that era, went with the migration. `.github/workflows/` now holds only `design-drift.yml` and `release.yml` (tags `v<version>` on merge when `package.json`'s version changes); neither deploys.
 
 - **Host**: Cloudflare Pages, project name `meal-planner`.
 - **How it deploys**: Cloudflare's own GitHub App integration watches `kwpledger/meal-planner` on GitHub directly and rebuilds automatically on every push to `main` - there's nothing in this repo that triggers it. Build command is Cloudflare's default for a Vite project (`npm install` + `npm run build`, serving `dist/`).

@@ -6,6 +6,11 @@ import { resolvePortionToGrams, computeNutrientsForIngredient, recomputeMealFrom
 import { loadLibrary, matchIngredient } from './ingredientLibrary';
 import { pushToCloud, pullFromCloud } from './cloudSync';
 import { getMealSortValue, moveMealToDay } from './boardOperations';
+import { version } from '../package.json';
+
+// "0.9.0" -> "0.9". The patch digit is a release detail, not something the
+// page should announce; runbox-mcp's landing page shows the same two digits.
+const APP_VERSION = version.split('.').slice(0, 2).join('.');
 
 // Kevin's working plan, not the dietician's document verbatim.
 //
@@ -1212,7 +1217,18 @@ useEffect(() => {
       <div className="print:hidden">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-6">
             <div>
-              <h1 className="text-4xl text-fg">Kevin’s Visual Meal Planner</h1>
+              <h1 className="text-4xl text-fg">
+                Kevin’s Visual Meal Planner
+                {/*
+                  Same marker as the runbox-mcp landing page's h1 (src/landing.ts
+                  .version) and the portal's project cards: plain muted body text
+                  trailing the name, not a badge. Major.minor only, read from
+                  package.json so the tag and the page cannot disagree.
+                */}
+                <span className="ml-[var(--space-2xs)] align-baseline font-[family-name:var(--font-body)] text-[length:var(--step--1)] font-normal text-fg-muted">
+                  v{APP_VERSION}
+                </span>
+              </h1>
               <p className="text-fg-muted mt-2 max-w-3xl">
                 Drag meals between days, or enable swap mode to exchange meals by clicking two cards. Click a meal normally to view ingredient amounts.
               </p>

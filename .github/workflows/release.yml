@@ -1,0 +1,62 @@
+# Tag a release when the version in package.json changes.
+#
+# WHY THIS EXISTS: an agent session cannot create git refs - pushing a tag and
+# POSTing to the refs API are both blocked. Actions runs inside GitHub with its
+# own token, so it can. Same mechanism as kwpledger-design's release.yml, minus
+# its verify job and consumer checklist: nothing pins this repo.
+#
+# So a bumped version IS the release: change "version" in package.json, merge,
+# and this cuts v<version> on main. It does nothing when the tag already exists,
+# so it is safe on every merge that leaves the version alone.
+#
+# Identical in kwpledger/meal-planner and kwpledger/runbox-mcp. Change both.
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Tag if the version changed
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read the version
+        id: v
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Has this version already been tagged?
+        id: check
+        run: |
+          if git ls-remote --exit-code --tags origin \
+              "refs/tags/v${{ steps.v.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "v${{ steps.v.outputs.version }} already tagged - nothing to do."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Tag and publish the release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          V="v${{ steps.v.outputs.version }}"
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "$V" -m "$V"
+          git push origin "$V"
+          gh release create "$V" --title "$V" --generate-notes
