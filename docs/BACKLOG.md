@@ -32,7 +32,7 @@ work, which a session cannot do.
     - [ ] **a.** What it is, in a sentence or two, and the live link (meal-planner.kwpledger.com). Match how the portal describes it, not the dietician's document.
     - [ ] **b.** What it does: the board, drag and swap, macro breakdowns, the grocery list, USDA/Open Food Facts matching, and manual cloud sync.
     - [ ] **c.** How to run it: the `npm` commands, the one `.env` key, and why `npm run dev` can't sync. `AGENTS.md` has all three.
-    - [ ] **d.** The stack in one line, the GPL-3.0 licence, and a link back to kwpledger.com.
+    - [ ] **d.** The stack in one line, the GPL-3.0 license, and a link back to kwpledger.com.
     - [ ] **e.** Keep personal detail to what the portal already publishes. It says the plan came from a dietician; it doesn't say more, and the README shouldn't either.
 
 **Completed Items**
