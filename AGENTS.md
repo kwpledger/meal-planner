@@ -33,7 +33,7 @@ State lives in `App.jsx`'s `days` array (7 days -> meals -> structured `ingredie
 
 Two directories outside `src/` matter:
 
-- **`functions/`** - Cloudflare Pages Functions, routed by file path. Runs on Workers: no React, no `import.meta.env`, configured only by the `MEAL_PLAN_KV` binding. `.claude/rules/pages-function.md` loads the constraints when you open it. **There is no longer a `.github/` directory**; the repo's only workflow was the Supabase keep-alive, deleted with that migration.
+- **`functions/`** - Cloudflare Pages Functions, routed by file path. Runs on Workers: no React, no `import.meta.env`, configured only by the `MEAL_PLAN_KV` binding. `.claude/rules/pages-function.md` loads the constraints when you open it. **`.github/workflows/` holds two workflows, neither of which deploys**: `design-drift.yml`, and `release.yml`, which tags `v<version>` when a merge changes `package.json`'s version - so bumping it *is* the release.
 - **`.addedbykevin/`** - a drop-box for binaries and reference material Kevin passes in. Tracked deliberately; gitignoring it would defeat the purpose. **It is not source.** Tailwind v4 scans every tracked file for utility-shaped strings, so `src/index.css` carries `@source not` for it, `docs/`, `.claude/` and `../*.md`: documenting step 2b re-emitted the very utilities that step removed. **Anything only a human reads needs an exclusion, and the `.md` one must stay a glob - a bare filename fails silently.**
 
 ## Design decisions — the ones that bite
