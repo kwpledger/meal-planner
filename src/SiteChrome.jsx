@@ -234,13 +234,22 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-border text-[length:var(--step--1)] text-fg-muted print:hidden">
       <div className="flex flex-wrap items-start justify-between gap-[var(--space-s)] px-6 py-[var(--space-s)]">
-        <p className="max-w-[var(--measure)]">
-          A personal meal planner, and one of several things built at{' '}
-          <a className="underline hover:text-accent" href="https://kwpledger.com">
-            kwpledger.com
-          </a>
-          .
-        </p>
+        {/*
+          Same shape as runbox-mcp's landing footer (src/landing.ts): what this
+          is, then the way back as its own line. Tracks it, not copies it.
+        */}
+        <div className="max-w-[var(--measure)] space-y-[var(--space-2xs)]">
+          <p>
+            Kevin's Meal Planner is a personal project, coded to my
+            dietician's original meal plan for me, changeable as it
+            changes, and interactive as my mood for what to have when changes.
+          </p>
+          <p>
+            <a className="underline hover:text-accent" href="https://kwpledger.com">
+              &larr; More of what I'm building, at kwpledger.com
+            </a>
+          </p>
+        </div>
 
         <p className="text-right">
           <a className="underline hover:text-accent" href="mailto:hello@kwpledger.com">
