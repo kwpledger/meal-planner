@@ -26,7 +26,7 @@ work, which a session cannot do.
 (none)
 
 
-## To Do (portions and matching) ##
+## To Do (matching) ##
 
 Architecture note: portion resolution (how many grams) and food matching (which
 food) fail independently. Diagnose them separately. HISTORY items 3 and 4 hold
@@ -49,7 +49,7 @@ the evidence.
 (none)
 
 
-## To Do (design system) ##
+## To Do (design) ##
 
 - [ ] **1.** Hand `docs/UPSTREAM-REPORT.md` to `kwpledger-design`. It proposes the app's two local tokens, `--surface-sunken` and `--accent-fg`, for the shared system; the report is written and ready, but no design-repo doc mentions either token yet.
 
