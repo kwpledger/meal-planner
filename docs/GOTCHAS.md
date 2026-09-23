@@ -31,7 +31,7 @@ Pressing **Sync from Cloud** on any `*.pages.dev` preview URL returned a
 
 Nothing had reset. Preview deployments bind `MEAL_PLAN_KV` to
 `meal-planner-sync-preview`, a deliberately separate namespace (see
-`docs/BACKLOG.md` item 1 step 3). Checked directly from a session:
+`docs/HISTORY.md` item 1 step 3). Checked directly from a session:
 
 | | board | `updatedAt` |
 |---|---|---|

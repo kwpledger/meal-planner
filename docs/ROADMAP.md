@@ -136,7 +136,7 @@ dependency was for the job.
 work rather than code: the Supabase project itself, both tables
 (`meal_plan_sync` and `keepalive`), the open-by-design RLS policies, the two
 repository secrets, and the two `VITE_SUPABASE_*` variables in both Cloudflare
-scopes. `docs/BACKLOG.md` item 1 step 6 is where that lives. They are inert —
+scopes. `docs/HISTORY.md` item 1 step 6 is where that lives. They are inert —
 nothing in the app reads them any more.
 
 ### The one regression it introduced
@@ -189,7 +189,7 @@ they apply — don't reorder casually.
   Zucchini went from *"Zucchini, pickled"* to *"Squash, zucchini, baby, raw"* at
   21. Weekly total **13,187** against the dietician's 14,000, which is estimation
   noise rather than a defect. Fixed by editing the ingredient name, which is the
-  right mechanism here and not a workaround — see `docs/BACKLOG.md` (Shipped).
+  right mechanism here and not a workaround — see `docs/HISTORY.md` (Shipped).
 - **This board has two name fields, and confusing them produces false readings.**
   `meal.items` is the display list the meal cards render (`"Quinoa"`, `"Cod"`);
   `meal.ingredients[].name` / `.raw` is the matcher's input, and the seed already

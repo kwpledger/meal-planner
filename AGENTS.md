@@ -51,7 +51,7 @@ where not knowing it in the first four minutes gets something broken:
 - **The app consumes `@kwpledger/design`, pinned at v0.6.1.** Dark mode is live,
   so check every colour in both themes. **A domain token must never reach past
   the semantic layer to a raw palette value** — the one rule the layering
-  exists to enforce. **Read `docs/DESIGN-SYSTEM.md` and `docs/BACKLOG.md` item 2
+  exists to enforce. **Read `docs/DESIGN-SYSTEM.md` and `docs/HISTORY.md` item 2
   before any colour work**; the traps there have each already cost a session.
 - **The sync endpoint is unauthenticated on purpose.** A shared-secret header
   *cannot* work in a browser-only SPA — it would ship in the bundle. The 1 MB
@@ -89,7 +89,7 @@ Also: narrate your reasoning back to him, including routine results like a green
 
 Working end-to-end: the board, drag/drop + swap, print sheet, grocery aggregation, Cronometer export, Export/Import JSON, per-ingredient editing with USDA/OFF matching (single, bulk, re-weigh), search-name overrides, the phone toolbar disclosure, and **cloud sync on Cloudflare KV, verified across two devices**.
 
-**Work order lives in `docs/BACKLOG.md`** - live work above a divider, finished below, so the top heading is always the next thing to pick up. Don't ask which item to do; read the file.
+**Work order lives in `docs/BACKLOG.md`** - the first open item in the first section is the next thing to pick up. Don't ask which item to do; read the file. Released work is in `docs/CHANGELOG.md`; the old backlog is archived verbatim as `docs/HISTORY.md`, which other docs cite by item number.
 
 The board is seeded from **Kevin's working plan, not the dietician's document verbatim** - her 2026-07-31 revision plus his naming pass. Her macros remain the displayed baseline; measured values replace them only through an explicit apply.
 

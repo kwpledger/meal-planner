@@ -43,7 +43,7 @@ deliberate rather than stragglers:
 
 **Nothing is unadopted.** The only hard-coded colours left are **13 deliberate
 literals**: 8 in the print sheet, its `print:bg-white` variant, and 4 scrims.
-`docs/BACKLOG.md` item 2 carries the order and the measurements.
+`docs/HISTORY.md` item 2 carries the order and the measurements.
 
 ## What v0.5.1 added, and what it still does not define
 

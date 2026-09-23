@@ -5,7 +5,7 @@
 **To:** `kwpledger/kwpledger-site`, to decide what (if anything) should be
 globalised into `kwpledger-design`.
 **Date:** 2026-09-21, at the end of the five-step adoption recorded in
-`docs/BACKLOG.md` item 2.
+`docs/HISTORY.md` item 2.
 
 ## How to read this
 
