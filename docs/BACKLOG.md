@@ -55,7 +55,7 @@ the evidence.
 
 **Completed Items**
 
-(none)
+- [x] Took `kwpledger-design` v0.7.0. Docs-only for consumers, and the built CSS is byte-identical (`index-DVsy9TYU.css`); the toggle already matched the release's new §4.4. 2026-09-23.
 
 
 ## To Do (polish — lower priority, non-blocking) ##
