@@ -1,5 +1,5 @@
 > **Archive, frozen 2026-09-23.** This was `docs/BACKLOG.md` until the switch to
-> the shared [backlog format](https://github.com/kwpledger/kwpledger-site/blob/main/docs/BACKLOG-FORMAT.md).
+> the shared [backlog format](https://github.com/kwpledger/kwpledger-design/blob/main/docs/BACKLOG-FORMAT.md).
 > It is kept verbatim for the reasoning and the measurements, which other docs
 > still cite by item number ("item 2", "Shipped"). **Nothing here is current
 > work, and its "the top item is next" language no longer applies** — open work

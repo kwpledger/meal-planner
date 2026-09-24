@@ -1,7 +1,7 @@
 # Changelog — Meal Planner
 
 Newest first. Each version lists what it added, one line per item; the PR has
-the detail. Format: [BACKLOG-FORMAT](https://github.com/kwpledger/kwpledger-site/blob/main/docs/BACKLOG-FORMAT.md).
+the detail. Format: [BACKLOG-FORMAT](https://github.com/kwpledger/kwpledger-design/blob/main/docs/BACKLOG-FORMAT.md).
 
 
 ## v0.9.0 — 2026-09-23 — first tagged release
