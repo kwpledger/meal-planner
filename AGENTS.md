@@ -48,7 +48,7 @@ where not knowing it in the first four minutes gets something broken:
 - **Colour is reinforcement, never the sole carrier.** All three colour-coded
   axes carry text labels (verified, not assumed). **Any colour work must keep
   them.**
-- **The app consumes `@kwpledger/design`, pinned at v0.7.0.** Dark mode is live,
+- **The app consumes `@kwpledger/design`, pinned at v0.8.0.** Dark mode is live,
   so check every colour in both themes. **A domain token must never reach past
   the semantic layer to a raw palette value** — the one rule the layering
   exists to enforce. **Read `docs/DESIGN-SYSTEM.md` and `docs/HISTORY.md` item 2

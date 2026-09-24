@@ -1,6 +1,6 @@
 # These things need to be done in Meal Planner v1.0 #
 
-Current release: **v0.9.0** (2026-09-23). Format: [BACKLOG-FORMAT](https://github.com/kwpledger/kwpledger-site/blob/main/docs/BACKLOG-FORMAT.md).
+Current release: **v0.9.0** (2026-09-23). Format: [BACKLOG-FORMAT](https://github.com/kwpledger/kwpledger-design/blob/main/docs/BACKLOG-FORMAT.md).
 
 Sections are in the order to work them, and so are the items inside each: the
 first open item in the first section is the next thing to do. Don't ask Kevin
@@ -70,6 +70,7 @@ the evidence.
 **Completed Items**
 
 - [x] Took `kwpledger-design` v0.7.0. Docs-only for consumers, and the built CSS is byte-identical (`index-DVsy9TYU.css`); the toggle already matched the release's new §4.4. 2026-09-23.
+- [x] Took `kwpledger-design` v0.8.0, which ships the backlog standard in the package (`node_modules/@kwpledger/design/docs/BACKLOG-FORMAT.md`); this repo's format links now point at the design repo. No token change; built CSS byte-identical. 2026-09-24.
 
 
 ## To Do (polish — lower priority, non-blocking) ##
