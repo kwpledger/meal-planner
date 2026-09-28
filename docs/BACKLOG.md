@@ -44,11 +44,11 @@ Nothing open.
 
 ## To Do (layout) ##
 
-- [ ] **1.** Give the Auto Grocery Aggregation panel the day cards' sticky heading. Today its list scrolls inside a fixed 520px box under the page's own scroll, which fights the thumb on a phone; drop the box and let the heading stick while the page scrolls, as each day card's header already does. **Measure at 390px first.** Out of scope, both checked: the page header not scrolling is fine (the main site and runbox-mcp behave the same), and the Cronometer Helper's heading and Copy button already sit above a textarea that scrolls itself.
+Nothing open.
 
 **Completed Items**
 
-(none)
+- [x] The Auto Grocery Aggregation heading now sticks like a day card's, below `xl`. Measured first: at 390px the 31 collapsed rows were 1,934px inside a 520px box of their own, about four phone screens in one nested scroll window. Below `xl` the box is gone and the list scrolls with the page; at `xl`, where the panels sit side by side and a mouse wheel doesn't get trapped, the box stays. Checked in both themes, and the heading lets go when its panel ends. Not changed, both on purpose: the page header (fixed, as on the main site and runbox-mcp) and the Cronometer Helper (its textarea already scrolls under a visible heading). 2026-09-28.
 
 
 ## To Do (design) ##
