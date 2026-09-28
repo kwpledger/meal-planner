@@ -22,16 +22,11 @@ Nothing open. The Supabase era is fully torn down.
 
 ## To Do (docs) ##
 
-- [ ] **1.** Replace `README.md`, still the React + Vite template from the first commit in May, with a real one. The repo is public, so the README is the first thing a visitor reads, and right now it describes a template rather than this app. It should cover:
-    - [ ] **a.** What it is, in a sentence or two, and the live link (meal-planner.kwpledger.com). Match how the portal describes it, not the dietician's document.
-    - [ ] **b.** What it does: the board, drag and swap, macro breakdowns, the grocery list, USDA/Open Food Facts matching, and manual cloud sync.
-    - [ ] **c.** How to run it: the `npm` commands, the one `.env` key, and why `npm run dev` can't sync. `AGENTS.md` has all three.
-    - [ ] **d.** The stack in one line, the GPL-3.0 license, and a link back to kwpledger.com.
-    - [ ] **e.** Keep personal detail to what the portal already publishes. It says the plan came from a dietician; it doesn't say more, and the README shouldn't either.
+Nothing open.
 
 **Completed Items**
 
-(none)
+- [x] Replaced the React + Vite template `README.md` with a real one: what it is and the live link, what it does, how to run it, the stack, the license. Its opening line is the portal's own blurb. The portal says "a written diet plan" and never mentions a dietician, so neither does the README; the item's note that it did was wrong. 2026-09-28.
 
 
 ## To Do (matching) ##
@@ -41,7 +36,6 @@ food) fail independently. Diagnose them separately. HISTORY items 3 and 4 hold
 the evidence.
 
 - [ ] **1.** Refuse an Open Food Facts match for a generic whole-food name when only USDA failed. OFF is a branded-product database: with USDA unavailable it matched `1 medium banana` to *Banana chips*, about a 6× calorie error landing as a "rough estimate". A wrong number that looks resolved is worse than an honest `unresolved`. (HISTORY item 4.)
-- [ ] **2.** Compound ingredient lines. "Oats cooked in 1 cup 2% milk" matches only the oats. Design detail is in `docs/ROADMAP.md`.
 
 **Completed Items**
 
@@ -76,6 +70,18 @@ blocked, say so rather than reaching down into this section.
 - [ ] **1.** Display tags and ingredients drift apart. `meal.items` (the card chips) and `meal.ingredients` are maintained independently, so an ingredient added in the editor gets no chip and a renamed one leaves its old chip standing. **Not obviously "link them"**: the hand-written tags are better copy than matcher text. If picked up, *warn on drift* rather than *derive*. (HISTORY, Polish.)
 - [ ] **2.** Decide whether `searchName` stays. It works, but no ingredient in production uses it; the seed's naming convention solved the cases it was built for. Keep it until a case arrives where USDA's wording would be unacceptable in the grocery list, the meal modal or the Cronometer export; retire it if that case never comes. (HISTORY, Polish.)
 - [ ] **3.** Button hierarchy in the ingredient editor. Collapsing `bg-indigo-600` and `bg-slate-800` onto `--accent` put every primary button at the same weight. If that wants a hierarchy, the answer is a secondary *style*, not a second hue, and which buttons demote is a design call. (HISTORY item 2, step 3.)
+
+**Completed Items**
+
+(none)
+
+
+## Later (v1.1 and beyond) ##
+
+Deliberately **not** v1.0. Nothing here counts toward the release, and none of
+it is the next thing to do until v1.0 ships.
+
+- [ ] **1.** Compound ingredient lines. "Oats cooked in 1 cup 2% milk" matches only the oats; the milk becomes an unmatched `prepNote`. Moved out of v1.0 on 2026-09-28: Kevin's own board no longer has such rows, since he split them long ago. It comes back into scope with v2.0, where the app is meant to take other people's plans, which will arrive unsplit. **No design exists yet:** `docs/ROADMAP.md` records only that the problem exists.
 
 **Completed Items**
 
