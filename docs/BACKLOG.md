@@ -1,6 +1,6 @@
 # These things need to be done in Meal Planner v1.0 #
 
-Current release: **v0.9.0** (2026-09-23). Format: [BACKLOG-FORMAT](https://github.com/kwpledger/kwpledger-design/blob/main/docs/BACKLOG-FORMAT.md).
+Current release: **v1.0.0** (2026-09-28). Format: [BACKLOG-FORMAT](https://github.com/kwpledger/kwpledger-design/blob/main/docs/BACKLOG-FORMAT.md).
 
 Sections are in the order to work them, and so are the items inside each: the
 first open item in the first section is the next thing to do. Don't ask Kevin
@@ -16,8 +16,7 @@ Nothing open. The Supabase era is fully torn down.
 
 **Completed Items**
 
-- [x] Finished the Supabase teardown (HISTORY item 1, step 7). The two repository secrets and both Cloudflare scopes' `VITE_SUPABASE_*` variables were already gone when checked; the Supabase GitHub App was still installed with access to **all** repositories, and is now uninstalled account-wide. 2026-09-28.
-- [x] Unpublished the old GitHub Pages site at `kwpledger.github.io/meal-planner/`. Deleting its deploy workflow never took the site down: it was still serving a July build, blank since the base path changed to `/`. 2026-09-28.
+(none)
 
 
 ## To Do (docs) ##
@@ -26,7 +25,7 @@ Nothing open.
 
 **Completed Items**
 
-- [x] Replaced the React + Vite template `README.md` with a real one: what it is and the live link, what it does, how to run it, the stack, the license. Its opening line is the portal's own blurb. The portal says "a written diet plan" and never mentions a dietician, so neither does the README; the item's note that it did was wrong. 2026-09-28.
+(none)
 
 
 ## To Do (matching) ##
@@ -39,7 +38,7 @@ Nothing open.
 
 **Completed Items**
 
-- [x] The automatic matcher only falls back to Open Food Facts when USDA answered and had no results, which is what a branded name looks like. If USDA errored, or found candidates it couldn't fetch, the line stays unresolved and says why, instead of landing *Banana chips* for a banana. USDA's own answer is the "is it generic?" test, so there's no wording heuristic. The manual "Open Food Facts" search is unchanged. Tests in `src/ingredientLibrary.test.js`, seen to fail without the fix. 2026-09-28.
+(none)
 
 
 ## To Do (layout) ##
@@ -48,7 +47,7 @@ Nothing open.
 
 **Completed Items**
 
-- [x] The Auto Grocery Aggregation heading now sticks like a day card's, below `xl`. Measured first: at 390px the 31 collapsed rows were 1,934px inside a 520px box of their own, about four phone screens in one nested scroll window. Below `xl` the box is gone and the list scrolls with the page; at `xl`, where the panels sit side by side and a mouse wheel doesn't get trapped, the box stays. Checked in both themes, and the heading lets go when its panel ends. Not changed, both on purpose: the page header (fixed, as on the main site and runbox-mcp) and the Cronometer Helper (its textarea already scrolls under a visible heading). 2026-09-28.
+(none)
 
 
 ## To Do (design) ##
@@ -57,9 +56,7 @@ Nothing open.
 
 **Completed Items**
 
-- [x] Took `kwpledger-design` v0.7.0. Docs-only for consumers, and the built CSS is byte-identical (`index-DVsy9TYU.css`); the toggle already matched the release's new §4.4. 2026-09-23.
-- [x] Took `kwpledger-design` v0.8.0, which ships the backlog standard in the package (`node_modules/@kwpledger/design/docs/BACKLOG-FORMAT.md`); this repo's format links now point at the design repo. No token change; built CSS byte-identical. 2026-09-24.
-- [x] Handed `docs/UPSTREAM-REPORT.md` to `kwpledger-design`. This had already happened: its backlog took the two tokens as tokens item 1 on 2026-09-23, linking the report, the same day this item was written. The decision is now Kevin's, in that repo. The report gained a status note, since the design backlog links to it and its item 3 (`[data-theme]`) had shipped in v0.6.0. 2026-09-28.
+(none)
 
 
 ## To Do (polish — lower priority, non-blocking) ##

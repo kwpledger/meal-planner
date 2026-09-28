@@ -4,6 +4,41 @@ Newest first. Each version lists what it added, one line per item; the PR has
 the detail. Format: [BACKLOG-FORMAT](https://github.com/kwpledger/kwpledger-design/blob/main/docs/BACKLOG-FORMAT.md).
 
 
+## v1.0.0 — 2026-09-28
+
+Every item in the v1.0 backlog, closed in one session. Compound ingredient
+lines, the one item with no design, moved to *Later (v1.1 and beyond)* rather
+than holding the release. Every PR is listed in the
+[v1.0.0 release notes](https://github.com/kwpledger/meal-planner/releases/tag/v1.0.0).
+
+**Matching**
+
+- [x] Open Food Facts is asked only when USDA answered with no results, so a USDA outage leaves `1 medium banana` honestly unresolved instead of matched to *Banana chips*. Regression tests seen to fail without the fix. PR #46.
+
+**Layout**
+
+- [x] The grocery panel's heading sticks like a day card's below `xl`, replacing a 520px box that held 1,934px of list at 390px. At `xl` the box stays. PR #47.
+
+**Docs**
+
+- [x] A real `README.md`, replacing the React + Vite template; it opens with the portal's own blurb. PR #45.
+- [x] The upstream report marked as handed over: `kwpledger-design` took both tokens into its backlog, and the report's `[data-theme]` item had shipped in v0.6.0. PR #48.
+
+**Hosting and teardown**
+
+- [x] The Supabase teardown finished: the GitHub App, still installed with access to every repository, uninstalled; the secrets and Cloudflare variables were already gone. PR #44.
+- [x] The old GitHub Pages copy at `kwpledger.github.io/meal-planner/` unpublished. It had outlived its deleted workflow, serving a blank July build. PR #44.
+
+**Design system**
+
+- [x] Pinned `kwpledger-design` v0.7.0, then v0.8.0. Built CSS byte-identical both times. PRs #42, #43.
+
+**Repo and release**
+
+- [x] Backlog wording: one-word section names, American spelling, the README item. PRs #41, #42.
+- [x] Version 1.0.0. This PR.
+
+
 ## v0.9.0 — 2026-09-23 — first tagged release
 
 Everything before the first tag. No earlier version was tagged, so this section
