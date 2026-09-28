@@ -53,12 +53,13 @@ Nothing open.
 
 ## To Do (design) ##
 
-- [ ] **1.** Hand `docs/UPSTREAM-REPORT.md` to `kwpledger-design`. It proposes the app's two local tokens, `--surface-sunken` and `--accent-fg`, for the shared system; the report is written and ready, but no design-repo doc mentions either token yet.
+Nothing open.
 
 **Completed Items**
 
 - [x] Took `kwpledger-design` v0.7.0. Docs-only for consumers, and the built CSS is byte-identical (`index-DVsy9TYU.css`); the toggle already matched the release's new §4.4. 2026-09-23.
 - [x] Took `kwpledger-design` v0.8.0, which ships the backlog standard in the package (`node_modules/@kwpledger/design/docs/BACKLOG-FORMAT.md`); this repo's format links now point at the design repo. No token change; built CSS byte-identical. 2026-09-24.
+- [x] Handed `docs/UPSTREAM-REPORT.md` to `kwpledger-design`. This had already happened: its backlog took the two tokens as tokens item 1 on 2026-09-23, linking the report, the same day this item was written. The decision is now Kevin's, in that repo. The report gained a status note, since the design backlog links to it and its item 3 (`[data-theme]`) had shipped in v0.6.0. 2026-09-28.
 
 
 ## To Do (polish — lower priority, non-blocking) ##
