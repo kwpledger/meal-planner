@@ -228,9 +228,22 @@ export async function matchIngredient(rawLine, library) {
    */
   let lookupFailure = null;
 
+  /*
+   * Open Food Facts is a branded-product database. Asked for a generic whole
+   * food it confidently returns the nearest packaged thing: with USDA down,
+   * "1 medium banana" matched *Banana chips*, a ~6x calorie error presented as
+   * a rough estimate (HISTORY item 4). So OFF only gets asked when USDA
+   * answered and had nothing, which is what a branded name like "Dave's Killer
+   * Thin" looks like. If USDA errored we can't tell generic from branded, and
+   * if it returned candidates the food is plainly generic; either way an
+   * honest unresolved beats a wrong number that looks resolved.
+   */
+  let offAllowed = false;
+
   try {
     const usdaData = await searchUsdaFoods(buildUsdaSearchQuery(parsed.name));
     const rankedFoods = rankUsdaFoods(usdaData.foods, parsed.name);
+    offAllowed = rankedFoods.length === 0;
 
     // Try candidates in ranked order - USDA's detail endpoint can 404 on a
     // food its own search just returned, so one failure shouldn't mean
@@ -254,6 +267,7 @@ export async function matchIngredient(rawLine, library) {
         return { entry, library: setCachedMatch(library, cacheKey, entry), fromCache: false };
       } catch (detailError) {
         console.error(`USDA detail fetch failed for "${candidate.description}" (fdcId ${candidate.fdcId}):`, detailError);
+        lookupFailure = `USDA found "${parsed.name}" but its details could not be fetched: ${detailError.message}`;
       }
     }
   } catch (error) {
@@ -261,8 +275,12 @@ export async function matchIngredient(rawLine, library) {
     lookupFailure = `USDA lookup failed: ${error.message}`;
   }
 
-  // USDA came up empty (or errored) - fall back to Open Food Facts, mainly
-  // useful for actually-branded ingredients.
+  if (!offAllowed) {
+    return { entry: null, library, fromCache: false, failure: lookupFailure };
+  }
+
+  // USDA answered with no results - fall back to Open Food Facts, which is
+  // where actually-branded ingredients live.
   try {
     const offData = await searchOpenFoodFacts(parsed.name);
     const bestProduct = pickBestOffProduct(offData.products, parsed.name);
@@ -291,9 +309,7 @@ export async function matchIngredient(rawLine, library) {
     }
   } catch (error) {
     console.error(`Open Food Facts match failed for "${parsed.name}":`, error);
-    // Prefer the USDA reason when both failed - USDA is the primary source and
-    // the likelier thing to have been misconfigured.
-    lookupFailure = lookupFailure || `Open Food Facts lookup failed: ${error.message}`;
+    lookupFailure = `Open Food Facts lookup failed: ${error.message}`;
   }
 
   return { entry: null, library, fromCache: false, failure: lookupFailure };

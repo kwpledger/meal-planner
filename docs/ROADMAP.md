@@ -222,13 +222,16 @@ they apply — don't reorder casually.
   arrives where the search wording is unacceptable in the grocery list, the
   honest conclusion is that the field solved a problem that the seed's naming
   convention had already solved.
-- **Open Food Facts will confidently return branded near-homonyms for generic
-  whole foods.** With USDA unavailable it matched "1 medium banana" to *"Banana
-  chips"* — roughly a 6x calorie error landing as a resolved "rough estimate".
-  OFF is a branded-product database; for generic names it returns the nearest
-  branded thing rather than nothing. Worth making the fallback refuse generic
-  names when only USDA failed: an honest `unresolved` beats a confident wrong
-  number.
+- ~~**Open Food Facts will confidently return branded near-homonyms for generic
+  whole foods.**~~ **FIXED 2026-09-28.** With USDA unavailable it matched
+  "1 medium banana" to *"Banana chips"*, roughly a 6x calorie error landing as a
+  resolved "rough estimate". `matchIngredient` now asks OFF only when USDA
+  answered with zero results. A USDA error, or candidates whose details all
+  failed to fetch, ends as an honest `unresolved` with the reason. **The
+  accepted cost:** during a USDA outage, a branded name like "Dave's Killer
+  Thin" also stays unresolved, since nothing distinguishes it from a generic
+  one without USDA's answer. Retrying once USDA is back fixes it, and anything
+  already matched is served from the cache.
 - **Compound ingredient lines aren't split.** "oats cooked in 1 cup 2% milk"
   matches only the oats; the milk becomes an unmatched `prepNote`.
 - **OFF matches never auto-verify**, even when grams resolve cleanly.
