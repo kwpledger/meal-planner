@@ -1,4 +1,4 @@
-# These things need to be done in Meal Planner v1.0 #
+# These things need to be done in Meal Planner v1.1 #
 
 Current release: **v1.0.0** (2026-09-28). Format: [BACKLOG-FORMAT](https://github.com/kwpledger/kwpledger-design/blob/main/docs/BACKLOG-FORMAT.md).
 
@@ -10,46 +10,6 @@ before v0.9 are in [HISTORY.md](HISTORY.md), which other docs cite by its old
 item numbers.
 
 
-## To Do (sync) ##
-
-Nothing open. The Supabase era is fully torn down.
-
-**Completed Items**
-
-(none)
-
-
-## To Do (docs) ##
-
-Nothing open.
-
-**Completed Items**
-
-(none)
-
-
-## To Do (matching) ##
-
-Architecture note: portion resolution (how many grams) and food matching (which
-food) fail independently. Diagnose them separately. HISTORY items 3 and 4 hold
-the evidence.
-
-Nothing open.
-
-**Completed Items**
-
-(none)
-
-
-## To Do (layout) ##
-
-Nothing open.
-
-**Completed Items**
-
-(none)
-
-
 ## To Do (design) ##
 
 Nothing open.
@@ -59,11 +19,23 @@ Nothing open.
 (none)
 
 
-## To Do (polish — lower priority, non-blocking) ##
+## To Do (sharing) ##
 
-Real, and deliberately outside the running order. Nothing here is load-bearing.
-**Never offer one of these as the next thing to do**: if everything above is
-blocked, say so rather than reaching down into this section.
+- [ ] **1.** Social cards for link previews, the way kwpledger.com does them (KWP-14 there). `index.html` has no `description` or Open Graph tags at all, so a LinkedIn share of the v1.0 launch showed only the page title and the domain: no image, no blurb. Needs:
+    - [ ] **a.** A 1200×630 PNG card built to `kwpledger-design`'s `docs/social-card-design-system.md`: dark register, pinned; one sentence, one name, one mark. Its reference implementation is `examples/social-card/` in that repo. Serve it from `public/og/`.
+    - [ ] **b.** Tags in `index.html`: `description`, `og:type`, `og:title`, `og:description`, `og:url`, `og:site_name`, `og:image` with its type, size and alt, and `twitter:card` as `summary_large_image`. `og:image` must be an absolute URL, since crawlers don't resolve relative ones. kwpledger-site's `BaseLayout.astro` is the working example.
+    - [ ] **c.** Copy: the portal's blurb is the obvious `og:description`. The card's one sentence is Kevin's call.
+    - [ ] **d.** After deploy, refresh LinkedIn's cached preview with its Post Inspector. LinkedIn keeps the old card for days otherwise.
+
+**Completed Items**
+
+(none)
+
+
+## To Do (polish) ##
+
+Moved up from the v1.0 polish section, which was deliberately outside the
+running order. For v1.1 they are ordinary work.
 
 - [ ] **1.** Display tags and ingredients drift apart. `meal.items` (the card chips) and `meal.ingredients` are maintained independently, so an ingredient added in the editor gets no chip and a renamed one leaves its old chip standing. **Not obviously "link them"**: the hand-written tags are better copy than matcher text. If picked up, *warn on drift* rather than *derive*. (HISTORY, Polish.)
 - [ ] **2.** Decide whether `searchName` stays. It works, but no ingredient in production uses it; the seed's naming convention solved the cases it was built for. Keep it until a case arrives where USDA's wording would be unacceptable in the grocery list, the meal modal or the Cronometer export; retire it if that case never comes. (HISTORY, Polish.)
@@ -74,10 +46,10 @@ blocked, say so rather than reaching down into this section.
 (none)
 
 
-## Later (v1.1 and beyond) ##
+## Later (not v1.1) ##
 
-Deliberately **not** v1.0. Nothing here counts toward the release, and none of
-it is the next thing to do until v1.0 ships.
+Deliberately **not** v1.1. Nothing here counts toward the release, and none of
+it is the next thing to do until v1.1 ships.
 
 - [ ] **1.** Compound ingredient lines. "Oats cooked in 1 cup 2% milk" matches only the oats; the milk becomes an unmatched `prepNote`. Moved out of v1.0 on 2026-09-28: Kevin's own board no longer has such rows, since he split them long ago. It comes back into scope with v2.0, where the app is meant to take other people's plans, which will arrive unsplit. **No design exists yet:** `docs/ROADMAP.md` records only that the problem exists.
 
