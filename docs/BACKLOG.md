@@ -12,18 +12,12 @@ item numbers.
 
 ## To Do (sync) ##
 
-Architecture note: the Supabase project is already deleted and nothing reads
-any of what is left, so none of this can break anything. It is all dashboard
-work, which a session cannot do.
-
-- [ ] **1.** Finish the Supabase teardown (HISTORY item 1, step 7):
-    - [ ] **a.** Delete the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` repository secrets (GitHub → Settings → Secrets and variables → Actions).
-    - [ ] **b.** Delete the two `VITE_SUPABASE_*` variables from **both** Cloudflare scopes, Production and Preview. Each scope holds its own copy, and both are still inlined into every build as dead strings.
-    - [ ] **c.** Remove the Supabase GitHub integration from the repo. It posts a skipped "Supabase Preview" check on every PR until it goes.
+Nothing open. The Supabase era is fully torn down.
 
 **Completed Items**
 
-(none)
+- [x] Finished the Supabase teardown (HISTORY item 1, step 7). The two repository secrets and both Cloudflare scopes' `VITE_SUPABASE_*` variables were already gone when checked; the Supabase GitHub App was still installed with access to **all** repositories, and is now uninstalled account-wide. 2026-09-28.
+- [x] Unpublished the old GitHub Pages site at `kwpledger.github.io/meal-planner/`. Deleting its deploy workflow never took the site down: it was still serving a July build, blank since the base path changed to `/`. 2026-09-28.
 
 
 ## To Do (docs) ##
@@ -56,7 +50,7 @@ the evidence.
 
 ## To Do (layout) ##
 
-- [ ] **1.** The header doesn't scroll with the content. Unexamined since the grid fix, and the toolbar disclosure has since changed that region. At 390px the header prose is now the biggest consumer of space above the board, so **re-measure before designing anything.** This is the app's own heading prose, not the shared site chrome (HISTORY item 2, "Note on item 5").
+- [ ] **1.** Give the Auto Grocery Aggregation panel the day cards' sticky heading. Today its list scrolls inside a fixed 520px box under the page's own scroll, which fights the thumb on a phone; drop the box and let the heading stick while the page scrolls, as each day card's header already does. **Measure at 390px first.** Out of scope, both checked: the page header not scrolling is fine (the main site and runbox-mcp behave the same), and the Cronometer Helper's heading and Copy button already sit above a textarea that scrolls itself.
 
 **Completed Items**
 
