@@ -21,15 +21,11 @@ Nothing open.
 
 ## To Do (sharing) ##
 
-- [ ] **1.** Social cards for link previews, the way kwpledger.com does them (KWP-14 there). `index.html` has no `description` or Open Graph tags at all, so a LinkedIn share of the v1.0 launch showed only the page title and the domain: no image, no blurb. Needs:
-    - [x] **a.** A 1200×630 PNG card built to `kwpledger-design`'s `docs/social-card-design-system.md`: dark register, pinned; one sentence, one name, one mark. Its reference implementation is `examples/social-card/` in that repo. Serve it from `public/og/`.
-    - [x] **b.** Tags in `index.html`: `description`, `og:type`, `og:title`, `og:description`, `og:url`, `og:site_name`, `og:image` with its type, size and alt, and `twitter:card` as `summary_large_image`. `og:image` must be an absolute URL, since crawlers don't resolve relative ones. kwpledger-site's `BaseLayout.astro` is the working example.
-    - [x] **c.** Copy: the portal's blurb is the obvious `og:description`. The card's one sentence is Kevin's call: *A written diet plan was not something I could actually read at 6am.* (2026-09-28). Card source and re-render steps: `docs/social-card/`.
-    - [ ] **d.** After deploy, refresh LinkedIn's cached preview with its Post Inspector. LinkedIn keeps the old card for days otherwise.
+Nothing open.
 
 **Completed Items**
 
-(none)
+- [x] Social cards for link previews, the way kwpledger.com does them. `public/og/meal-planner.png` is a 1200×630 card built to `kwpledger-design`'s social-card spec, headline *A written diet plan was not something I could actually read at 6am.* (Kevin's choice). `index.html` carries `description`, `og:*` and `twitter:*` tags with an absolute `og:image`. Its source and re-render steps are in `docs/social-card/`. Confirmed in LinkedIn's Post Inspector after deploy. PR #51. 2026-09-28.
 
 
 ## To Do (polish) ##
