@@ -7,6 +7,13 @@ globalised into `kwpledger-design`.
 **Date:** 2026-09-21, at the end of the five-step adoption recorded in
 `docs/HISTORY.md` item 2.
 
+> **Status, 2026-09-28.** Items 1 and 2 are waiting on a decision in
+> `kwpledger-design`, which took them as its own backlog item (tokens,
+> item 1) on 2026-09-23. **Item 3 is done:** the `[data-theme]` selector
+> shipped in design v0.6.0, and this app's light/dark toggle is built on it.
+> This consumer now pins **v0.8.0**. The report below is kept as written,
+> since it records what was measured against v0.5.1 at the time.
+
 ## How to read this
 
 The meal planner has finished adopting the system. Every colour in the app now
