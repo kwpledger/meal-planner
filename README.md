@@ -1,16 +1,55 @@
-# React + Vite
+# Meal Planner
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A visual meal-plan board, because a written diet plan was not something I could
+actually read at 6am. It turns a seven-day plan into cards you can see, drag and
+rearrange, with the macros and the grocery list following along.
 
-Currently, two official plugins are available:
+**Live:** [meal-planner.kwpledger.com](https://meal-planner.kwpledger.com)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+It's a personal, single-user app, built for one plan and one person. Nothing
+stops you running your own copy, but the seed board is mine.
 
-## React Compiler
+## What it does
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **The board.** Seven days, four meals each, colour-coded by meal and labelled
+  in text, so the colour is never the only cue.
+- **Drag and swap.** Move a meal to another day, or swap two meals in place.
+- **Macro breakdowns.** Carbs, protein and fat per meal and per day, and a
+  running calorie total for the week.
+- **Grocery list.** Built from whatever the board currently holds, grouped by
+  ingredient, with every place each one is used. A printable prep sheet and a
+  copy-paste list for Cronometer come from the same data.
+- **Nutrition matching.** Each ingredient can be matched against USDA
+  FoodData Central, falling back to Open Food Facts, with its amount converted
+  to grams. Matches are advisory: the plan's own figures stay on screen until
+  you choose to recompute, see the before and after, and apply it.
+- **Manual cloud sync.** Push the board up from one device and pull it down on
+  another. Nothing syncs on its own, so nothing is overwritten behind your back.
+  The board is also saved in the browser, and can be exported and imported as
+  JSON.
 
-## Expanding the ESLint configuration
+## Running it
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. `npm install`
+2. Copy `.env.example` to `.env` and fill in `VITE_USDA_API_KEY`, a free key
+   from [api.data.gov](https://api.data.gov/signup/). Without it the board
+   still works; only nutrition lookups fail.
+3. `npm run dev` for the local dev server.
+4. `npm run build` for a production build, and `npm test` for the tests.
+
+**`npm run dev` can't sync**, and that's expected. Sync is a Cloudflare Pages
+Function, and Vite's dev server doesn't serve those. To exercise sync locally,
+build first and run `npx wrangler pages dev dist`.
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) has the detail.
+
+## Stack
+
+React 19, Vite and Tailwind CSS v4, styled with the
+[`@kwpledger/design`](https://github.com/kwpledger/kwpledger-design) system,
+hosted on Cloudflare Pages with one Pages Function and Workers KV for sync.
+
+## License and links
+
+Licensed under the [GPL-3.0](LICENSE).
+
+Part of [kwpledger.com](https://kwpledger.com).
