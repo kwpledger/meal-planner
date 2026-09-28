@@ -35,11 +35,11 @@ Architecture note: portion resolution (how many grams) and food matching (which
 food) fail independently. Diagnose them separately. HISTORY items 3 and 4 hold
 the evidence.
 
-- [ ] **1.** Refuse an Open Food Facts match for a generic whole-food name when only USDA failed. OFF is a branded-product database: with USDA unavailable it matched `1 medium banana` to *Banana chips*, about a 6× calorie error landing as a "rough estimate". A wrong number that looks resolved is worse than an honest `unresolved`. (HISTORY item 4.)
+Nothing open.
 
 **Completed Items**
 
-(none)
+- [x] The automatic matcher only falls back to Open Food Facts when USDA answered and had no results, which is what a branded name looks like. If USDA errored, or found candidates it couldn't fetch, the line stays unresolved and says why, instead of landing *Banana chips* for a banana. USDA's own answer is the "is it generic?" test, so there's no wording heuristic. The manual "Open Food Facts" search is unchanged. Tests in `src/ingredientLibrary.test.js`, seen to fail without the fix. 2026-09-28.
 
 
 ## To Do (layout) ##
