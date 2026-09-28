@@ -1586,12 +1586,23 @@ useEffect(() => {
 
           <div className="mt-8 grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="bg-surface-card rounded-3xl shadow-lg p-6 border border-border">
-              <h2 className="text-2xl text-fg mb-2">Auto Grocery Aggregation</h2>
+              {/*
+                Single column (below xl), the list scrolls with the page and the
+                heading sticks, like a day card's. It used to sit in a 520px box
+                of its own: 31 collapsed rows measured 1,934px, about four phone
+                screens inside one scroll window, so a thumb scrolled the box
+                when it meant the page. At xl the panels sit side by side and a
+                mouse wheel doesn't get trapped, so the box stays and keeps the
+                two panels level.
+              */}
+              <h2 className="text-2xl text-fg mb-2 sticky top-0 z-10 bg-surface-card/95 backdrop-blur py-2 xl:static xl:py-0 xl:bg-transparent xl:backdrop-blur-none">
+                Auto Grocery Aggregation
+              </h2>
               <p className="text-sm text-fg-muted mb-4">
                 Built from the current board. Rearrange meals and this list follows the new weekly layout.
               </p>
 
-              <div className="max-h-[520px] overflow-y-auto pr-2 space-y-3">
+              <div className="space-y-3 xl:max-h-[520px] xl:overflow-y-auto xl:pr-2">
                 {groceryList.map(({ ingredient, uses }) => (
                   <details key={ingredient} className="bg-surface rounded-2xl border border-border p-3">
                     <summary className="cursor-pointer font-bold text-fg capitalize flex justify-between gap-3">
