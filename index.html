@@ -6,6 +6,26 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kevin’s Visual Meal Planner</title>
+    <meta name="description" content="A visual meal-plan board, because a written diet plan was not something I could actually read at 6am." />
+    <!--
+      Link previews (LinkedIn, iMessage, Slack). Modelled on kwpledger-site's
+      BaseLayout.astro. og:image must be absolute: crawlers don't resolve a
+      relative URL against the page. The card's source and how to re-render it
+      are in docs/social-card/.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Kevin’s Visual Meal Planner" />
+    <meta property="og:description" content="A visual meal-plan board, because a written diet plan was not something I could actually read at 6am." />
+    <meta property="og:url" content="https://meal-planner.kwpledger.com/" />
+    <meta property="og:site_name" content="Kevin Pledger" />
+    <meta property="og:image" content="https://meal-planner.kwpledger.com/og/meal-planner.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="A written diet plan was not something I could actually read at 6am. Kevin Pledger, meal-planner.kwpledger.com." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://meal-planner.kwpledger.com/og/meal-planner.png" />
+    <meta name="twitter:image:alt" content="A written diet plan was not something I could actually read at 6am. Kevin Pledger, meal-planner.kwpledger.com." />
   </head>
   <body>
     <!--
