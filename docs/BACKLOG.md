@@ -10,6 +10,15 @@ before v0.9 are in [HISTORY.md](HISTORY.md), which other docs cite by its old
 item numbers.
 
 
+## To Do (nutrition) ##
+
+- [ ] **1.** Recompute zeroes fiber. The seed carries the dietician's per-meal fiber in `macros.fiber` (`src/App.jsx`), but `recomputeMealFromIngredients` in `src/portionResolver.js` writes `macros` with only carbs, protein and fat, so applying a recompute silently deletes a real number. Nothing renders fiber, so the loss can't be seen, which breaks the rule against silently overwriting a number Kevin is looking at (`AGENTS.md`). Two fixes on record: carry `fiber` through recompute (or compute it), or render a fiber row on the macro bars (HISTORY, Fiber preserved; ROADMAP, Remaining known limitations). Verified against `main` 2026-10-04. It was never in this backlog; it came over from a TickTick subtask.
+
+**Completed Items**
+
+(none)
+
+
 ## To Do (design) ##
 
 Nothing open.
