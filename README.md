@@ -1,7 +1,7 @@
 # Meal Planner
 
-A visual meal-plan board, because a written diet plan was not something I could
-actually read at 6am. It turns a seven-day plan into cards you can see, drag and
+A visual meal-plan board, because my dietician's plan, pages of typed text, was
+not something I could process at 6am. It turns a seven-day plan into cards you can see, drag and
 rearrange, with the macros and the grocery list following along.
 
 **Live:** [meal-planner.kwpledger.com](https://meal-planner.kwpledger.com)
