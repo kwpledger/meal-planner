@@ -12,7 +12,15 @@ item numbers.
 
 ## To Do (nutrition) ##
 
-- [ ] **1.** Recompute zeroes fiber. The seed carries the dietician's per-meal fiber in `macros.fiber` (`src/App.jsx`), but `recomputeMealFromIngredients` in `src/portionResolver.js` writes `macros` with only carbs, protein and fat, so applying a recompute silently deletes a real number. Nothing renders fiber, so the loss can't be seen, which breaks the rule against silently overwriting a number Kevin is looking at (`AGENTS.md`). Two fixes on record: carry `fiber` through recompute (or compute it), or render a fiber row on the macro bars (HISTORY, Fiber preserved; ROADMAP, Remaining known limitations). Verified against `main` 2026-10-04. It was never in this backlog; it came over from a TickTick subtask.
+- [ ] **1.** Recompute zeroes fiber. The seed carries the dietician's per-meal fiber in `macros.fiber` (`src/App.jsx`), but `recomputeMealFromIngredients` in `src/portionResolver.js` writes `macros` with only carbs, protein and fat, so applying a recompute silently deletes a real number. Nothing renders fiber, so the loss can't be seen, which breaks the rule against silently overwriting a number Kevin is looking at (`AGENTS.md`). Verified against `main` 2026-10-04. It was never in this backlog; it came over from a TickTick subtask.
+  **Decided 2026-10-13: compute fiber from the matched data.** Kevin chose this over carrying the dietician's figure through unchanged, which would leave fiber as her estimate beside measured calories and macros, a fix he'd have to redo later. Scope:
+  1. Extract fiber in the USDA and OFF paths (`src/nutritionApi.js`, `src/ingredientLibrary.js`). Check for the multi-entry quirks energy had (ROADMAP, Remaining known limitations).
+  2. Carry it through scaling in `src/portionResolver.js` and into `recomputeMealFromIngredients`.
+  3. Cached matches saved before this have no fiber. Re-fetch or mark them unknown; never write them as 0.
+  4. Show fiber in the Recompute preview diff, so Apply changes it visibly.
+  5. A regression test, checked to fail with the fix removed.
+
+  Rendering a fiber row on the macro bars is a separate question, not part of this item.
 
 **Completed Items**
 
