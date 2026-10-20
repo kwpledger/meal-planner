@@ -14,6 +14,13 @@
 # Automatic propagation is the thing pinning exists to prevent. This opens an
 # issue; a human merges.
 #
+# IT ALSO OFFERS A BACKLOG LINE, AS A PR. Sessions read docs/BACKLOG.md, not
+# Issues, so an issue alone was a report filed where nobody looks: runbox-mcp
+# and meal-planner both sat a release behind with the issue open and the
+# backlog silent. The PR adds one open item to the end of `## To Do (design) ##`
+# — never Current sprint, and never ahead of planned work — and a human merges
+# that too. It touches the backlog only, never package.json.
+#
 # `push` IS HERE AS WELL AS `schedule` ON PURPOSE. GitHub disables scheduled
 # workflows in a repo with no activity for 60 days, and a disabled poll reports
 # exactly what a poll finding nothing reports — silence. A repo you are pushing
@@ -31,8 +38,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   issues: write
+  pull-requests: write
 
 concurrency:
   group: design-drift
@@ -94,6 +102,7 @@ jobs:
           echo "version=$LATEST" >> "$GITHUB_OUTPUT"
 
       - name: Open, update, or close the drift issue
+        id: issue
         if: steps.pin.outputs.skip == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -113,6 +122,7 @@ jobs:
           NEWEST=$(printf '%s\n%s\n' "$PINNED" "$LATEST" | sort -u -V | tail -1)
           if [ "$NEWEST" = "$PINNED" ]; then
             echo "Pinned at $PINNED; latest is $LATEST. Nothing to do."
+            echo "behind=false" >> "$GITHUB_OUTPUT"
             if [ -n "$NUM" ]; then
               gh issue close "$NUM" \
                 --comment "Now pinned at \`$PINNED\`. Closing — this repo is current."
@@ -154,5 +164,113 @@ jobs:
             gh issue edit "$NUM" --body-file "$RUNNER_TEMP/body.md"
           else
             echo "Opening a new issue."
-            gh issue create --title "$TITLE" --body-file "$RUNNER_TEMP/body.md"
+            URL=$(gh issue create --title "$TITLE" --body-file "$RUNNER_TEMP/body.md")
+            NUM=${URL##*/}
+          fi
+          echo "behind=true" >> "$GITHUB_OUTPUT"
+          echo "number=$NUM" >> "$GITHUB_OUTPUT"
+
+      # Needs Settings → Actions → General → "Allow GitHub Actions to create and
+      # approve pull requests". Without it `gh pr create` fails here, after the
+      # issue step has already done its job, so the run goes red rather than
+      # the gap going quiet.
+      - name: Offer the backlog line as a PR
+        if: steps.pin.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PINNED: ${{ steps.pin.outputs.version }}
+          LATEST: ${{ steps.latest.outputs.version }}
+          BEHIND: ${{ steps.issue.outputs.behind }}
+          ISSUE: ${{ steps.issue.outputs.number }}
+        run: |
+          set -euo pipefail
+          # The branch belongs to this workflow and is rebuilt from main every
+          # run, so it is force-pushed. Edit the PR's content on main instead.
+          BRANCH='design-drift/backlog'
+          PR=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+
+          if [ "$BEHIND" != 'true' ]; then
+            if [ -n "$PR" ]; then
+              gh pr close "$PR" --delete-branch \
+                --comment "Now pinned at \`$PINNED\`. Closing — nothing to add to the backlog."
+            fi
+            exit 0
+          fi
+
+          # One open item, rewritten in place when a newer release arrives, so
+          # three releases behind is still one line. Appended last in its
+          # section: order is priority, and this must not jump planned work.
+          # The section is created at the end of the file if the repo has none.
+          node -e '
+            const fs = require("fs");
+            const { LATEST, PINNED, ISSUE } = process.env;
+            const HEADING = "## To Do (design) ##";
+            const item = "Take `kwpledger-design` " + LATEST + "; this repo pins " + PINNED +
+              ". Issue #" + ISSUE + " has the steps, and closes itself once the pin catches up.";
+            const lines = fs.readFileSync("docs/BACKLOG.md", "utf8").replace(/\n+$/, "").split("\n");
+
+            let start = lines.findIndex(l => l.trim() === HEADING);
+            if (start < 0) {
+              lines.push("", "", HEADING, "", "Nothing open.", "", "**Completed Items**", "", "(none)");
+              start = lines.length - 7;
+            }
+            let end = lines.findIndex((l, i) => i > start && l.startsWith("## "));
+            if (end < 0) end = lines.length;
+            let openEnd = lines.findIndex((l, i) => i > start && i < end && l.trim() === "**Completed Items**");
+            if (openEnd < 0) openEnd = end;
+
+            const ITEM = /^- \[ \] \*\*(\d+)\.\*\* /;
+            const existing = lines.findIndex((l, i) => i > start && i < openEnd &&
+              ITEM.test(l) && l.includes("Take `kwpledger-design` v"));
+            if (existing >= 0) {
+              lines[existing] = lines[existing].match(ITEM)[0] + item;
+            } else {
+              let count = 0, last = -1;
+              for (let i = start + 1; i < openEnd; i++) {
+                if (ITEM.test(lines[i])) count++;
+                if (/^(- |\s+- )/.test(lines[i])) last = i;
+              }
+              const line = "- [ ] **" + (count + 1) + ".** " + item;
+              const empty = lines.findIndex((l, i) => i > start && i < openEnd &&
+                /^(Nothing open\.|\(none\))$/.test(l.trim()));
+              if (last >= 0) lines.splice(last + 1, 0, line);
+              else if (empty >= 0) lines[empty] = line;
+              else lines.splice(start + 1, 0, "", line);
+            }
+            fs.writeFileSync("docs/BACKLOG.md", lines.join("\n") + "\n");
+          '
+
+          if git diff --quiet -- docs/BACKLOG.md; then
+            echo "The backlog on main already offers $LATEST."
+            if [ -n "$PR" ]; then
+              gh pr close "$PR" --delete-branch --comment "Main already lists \`$LATEST\`."
+            fi
+            exit 0
+          fi
+
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -B "$BRANCH"
+          git commit -q -am "Backlog: take kwpledger-design $LATEST"
+          git push -q --force origin "$BRANCH"
+
+          # echo rather than a heredoc, for the reason given in the step above.
+          {
+            echo "Adds one open item to \`docs/BACKLOG.md\` under *To Do (design)*:"
+            echo "take \`kwpledger-design\` \`$LATEST\` (pinned at \`$PINNED\`). See #$ISSUE."
+            echo
+            echo 'Merging this changes the backlog only. Taking the release is'
+            echo 'still its own PR, which ticks this item when it lands.'
+            echo
+            echo '<sub>Opened automatically by `.github/workflows/design-drift.yml`.'
+            echo 'Rewritten by each run while behind; closes itself once current.</sub>'
+          } > "$RUNNER_TEMP/pr.md"
+
+          TITLE="Backlog: take kwpledger-design $LATEST"
+          if [ -n "$PR" ]; then
+            echo "Updating PR #$PR."
+            gh pr edit "$PR" --title "$TITLE" --body-file "$RUNNER_TEMP/pr.md"
+          else
+            echo "Opening a PR."
+            gh pr create --base main --head "$BRANCH" --title "$TITLE" --body-file "$RUNNER_TEMP/pr.md"
           fi
