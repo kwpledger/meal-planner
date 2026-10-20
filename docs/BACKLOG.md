@@ -29,7 +29,7 @@ item numbers.
 
 ## To Do (design) ##
 
-Nothing open.
+- [ ] **1.** Take `kwpledger-design` v0.11.0; this repo pins v0.8.0. Issue #53 has the steps, and closes itself once the pin catches up.
 
 **Completed Items**
 
