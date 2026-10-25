@@ -1,29 +1,38 @@
 Fonts in this directory
 =======================
 
-Both typefaces are licensed under the SIL Open Font License, Version 1.1,
+All three typefaces are licensed under the SIL Open Font License, Version 1.1,
 which permits redistribution and web embedding, including self-hosting.
 
-lora-latin.woff2
-  Lora, SemiBold (600) — STATIC, this single weight only.
+lora-latin.woff2, lora-latin-italic.woff2
+  Lora, upright and italic — VARIABLE, weight axis 400-700.
   Copyright (c) Cyreal (https://github.com/cyrealtype/Lora-Cyrillic)
   https://fonts.google.com/specimen/Lora
   License: SIL OFL 1.1 — https://openfontlicense.org/
 
-hanken-grotesk-latin.woff2
-  Hanken Grotesk — VARIABLE, weight axis 100-900.
+hanken-grotesk-latin.woff2, hanken-grotesk-latin-italic.woff2
+  Hanken Grotesk, upright and italic — VARIABLE, weight axis 100-900.
   Copyright (c) Alfredo Marco Pradil
   https://fonts.google.com/specimen/Hanken+Grotesk
   License: SIL OFL 1.1 — https://openfontlicense.org/
 
-Both files are the latin subset only (~56 KB combined). Characters outside
+ibm-plex-mono-latin.woff2
+  IBM Plex Mono, Regular (400) only, upright only — STATIC, not variable.
+  Copyright 2017 IBM Corp.
+  https://github.com/IBM/plex
+  License: SIL OFL 1.1 — https://openfontlicense.org/
+  Taken from @fontsource/ibm-plex-mono 5.3.0 (its latin-400-normal file).
+
+All five files are the latin subset only (~164 KB combined; the two italics
+load only when a page uses them, and Plex Mono only when text is set in
+it). Characters outside
 that range fall back to the next family in the stack, which is the intended
-behavior — see the unicode-range declarations in src/styles/global.css.
+behavior — see the unicode-range declarations in tokens/fonts.css.
 
 Why self-hosted rather than loaded from Google Fonts: no third-party request
 on page load, and no dependency on an external host remaining available.
 
 To replace either typeface, drop in a new .woff2, update the matching
-@font-face block and the --font-display / --font-body tokens in
-src/styles/global.css, and check --fw-display still matches an available
-weight. Nothing else references the font files.
+@font-face block in tokens/fonts.css and the --font-display / --font-body /
+--font-mono tokens in tokens/base.css, and check --fw-display still falls inside the new
+face's weight range.

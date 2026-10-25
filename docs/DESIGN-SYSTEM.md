@@ -79,7 +79,7 @@ mode.
 ## The pin
 
 ```json
-"@kwpledger/design": "github:kwpledger/kwpledger-design#v0.5.1"
+"@kwpledger/design": "github:kwpledger/kwpledger-design#v0.12.0"
 ```
 
 **Pinned to a tag, never a branch.** A design system that moves under a consumer
@@ -109,8 +109,12 @@ Two things about the install that look wrong and are not:
 
 ## The fonts are copied, not imported
 
-`public/fonts/` holds `lora-latin.woff2`, `hanken-grotesk-latin.woff2` and
-`OFL-NOTICE.txt`, copied from the package. ~56 KB total.
+`public/fonts/` holds `lora-latin.woff2` (variable, 400-700), `lora-latin-italic.woff2`,
+`hanken-grotesk-latin.woff2`, `hanken-grotesk-latin-italic.woff2`,
+`ibm-plex-mono-latin.woff2` and `OFL-NOTICE.txt`, copied from the package as of
+v0.12.0. The italics and the mono face are fetched only on a page that sets text
+in them; this app currently uses none of the three, so they cost nothing at
+runtime.
 
 This is the design system's own instruction: its `fonts.css` declares
 `src: url('/fonts/…')` with **absolute paths**, described there as "a
@@ -153,17 +157,18 @@ needed: the theme key must never equal the design-system token name.**
 `--color-meal-breakfast: var(--data-1-surface)` is fine. `--font-display:
 var(--font-display)` is not.
 
-### Utilities outrank `@layer base`, and Lora has exactly one weight
+### Utilities outrank `@layer base`, so `font-bold` still overrides the heading weight
 
 Every heading carried `font-bold`. Tailwind utilities beat a `@layer base` rule,
 so headings computed to **700** while the base rule asked for `--fw-display`
 (600) — measured in a real browser, not assumed.
 
-Lora ships here as a **static SemiBold**: 600 is the only weight in the file.
-Asking for 700 makes the browser synthesise a fake bold, which is precisely what
-`--fw-display` exists to prevent (see the design repo's `fonts.css`). The fix
-was removing `font-bold` from all 19 heading elements so the base rule's 600
-applies.
+When this was found (v0.5.1), Lora shipped as a static SemiBold, so asking for
+700 made the browser synthesise a fake bold. **Since v0.11.0 Lora is a variable
+font, 400-700, so 700 would now render a real bold rather than a fake one** -
+but `--fw-display` (600) is still the system's default heading weight, and a
+`font-bold` on a heading still overrides it. The fix was removing `font-bold`
+from all 19 heading elements so the base rule's 600 applies, and that stays.
 
 **Anything that sets a display-font weight must use `--fw-display`.** A
 `font-bold` on a Lora element is a bug, not a style choice.
