@@ -177,11 +177,23 @@ export function computeNutrientsForIngredient(ingredient) {
     carbs: Math.round((per100g.carbs || 0) * factor),
     protein: Math.round((per100g.protein || 0) * factor),
     fat: Math.round((per100g.fat || 0) * factor),
+    // Not rounded per ingredient like the others: fiber amounts are small
+    // (1 cup broccoli is ~2.2 g), so rounding each line to a whole gram before
+    // summing loses up to half a gram per ingredient. The meal total is
+    // rounded instead. null when the match has no fiber figure - see
+    // fiberPer100g in ingredientLibrary.js; absent is never treated as 0.
+    fiber: per100g.fiber == null ? null : per100g.fiber * factor,
   };
 }
 
+/*
+ * macros.fiber is null when any matched ingredient's fiber is unknown, with
+ * those ingredients' names in fiberUnknown. A partial sum would look like a
+ * real, applicable number and quietly understate the meal.
+ */
 export function recomputeMealFromIngredients(meal) {
-  const totals = { calories: 0, carbs: 0, protein: 0, fat: 0 };
+  const totals = { calories: 0, carbs: 0, protein: 0, fat: 0, fiber: 0 };
+  const fiberUnknown = [];
 
   meal.ingredients.forEach((ingredient) => {
     const nutrients = computeNutrientsForIngredient(ingredient);
@@ -193,10 +205,39 @@ export function recomputeMealFromIngredients(meal) {
     totals.carbs += nutrients.carbs;
     totals.protein += nutrients.protein;
     totals.fat += nutrients.fat;
+
+    if (nutrients.fiber == null) {
+      fiberUnknown.push(ingredient.name);
+    } else {
+      totals.fiber += nutrients.fiber;
+    }
   });
 
   return {
     calories: totals.calories,
-    macros: { carbs: totals.carbs, protein: totals.protein, fat: totals.fat },
+    macros: {
+      carbs: totals.carbs,
+      protein: totals.protein,
+      fat: totals.fat,
+      fiber: fiberUnknown.length > 0 ? null : Math.round(totals.fiber),
+    },
+    fiberUnknown,
   };
+}
+
+/*
+ * Every path that writes computed macros onto a meal goes through this. It
+ * used to be a plain replace, and since computed macros had no fiber, each
+ * apply deleted the meal's fiber - which is how every meal on the real board
+ * lost the dietician's figure. An unknown computed fiber keeps whatever is
+ * stored rather than overwriting it.
+ */
+export function mergeComputedMacros(storedMacros, computedMacros) {
+  const merged = { ...storedMacros, carbs: computedMacros.carbs, protein: computedMacros.protein, fat: computedMacros.fat };
+
+  if (computedMacros.fiber != null) {
+    merged.fiber = computedMacros.fiber;
+  }
+
+  return merged;
 }

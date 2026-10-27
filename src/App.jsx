@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { SiteHeader, SiteFooter, SkipLink } from './SiteChrome.jsx';
 import { searchUsdaFoods, searchOpenFoodFacts, getUsdaFoodDetail } from './nutritionApi';
 import { migrateDaysToIngredients, mergeIngredientsFromLines, formatIngredientAmount, parseIngredientLine, searchTermFor, SCHEMA_VERSION } from './ingredientParser';
-import { resolvePortionToGrams, computeNutrientsForIngredient, recomputeMealFromIngredients } from './portionResolver';
-import { loadLibrary, matchIngredient } from './ingredientLibrary';
+import { resolvePortionToGrams, computeNutrientsForIngredient, recomputeMealFromIngredients, mergeComputedMacros } from './portionResolver';
+import { loadLibrary, matchIngredient, fetchUsdaFiber } from './ingredientLibrary';
 import { pushToCloud, pullFromCloud } from './cloudSync';
 import { getMealSortValue, moveMealToDay } from './boardOperations';
 import { syncDisplayTags } from './displayTags';
@@ -12,6 +12,9 @@ import { version } from '../package.json';
 // "0.9.0" -> "0.9". The patch digit is a release detail, not something the
 // page should announce; runbox-mcp's landing page shows the same two digits.
 const APP_VERSION = version.split('.').slice(0, 2).join('.');
+
+// Unknown and never-recorded fiber both show as a dash, never as "0g".
+const formatFiber = (fiber) => (fiber == null ? '—' : `${fiber}g`);
 
 // Kevin's working plan, not the dietician's document verbatim.
 //
@@ -230,6 +233,7 @@ export default function MealPlanBoard() {
     carbs: 0,
     protein: 0,
     fat: 0,
+    fiber: null,
     ingredients: [],
   });
   const [nutritionQuery, setNutritionQuery] = useState("");
@@ -496,6 +500,8 @@ export default function MealPlanBoard() {
       carbs: recomputePreview.macros.carbs,
       protein: recomputePreview.macros.protein,
       fat: recomputePreview.macros.fat,
+      // Unknown computed fiber leaves the stored figure alone (mergeComputedMacros).
+      fiber: recomputePreview.macros.fiber ?? current.fiber,
     }));
 
     setRecomputePreview(null);
@@ -508,6 +514,11 @@ export default function MealPlanBoard() {
   // doesn't change any calorie/macro number currently on screen. It does
   // NOT touch meal.calories/macros itself; those go through the review step
   // below so nothing changes without an explicit apply.
+  //
+  // It also backfills fiber. Ingredients matched before fiber was extracted
+  // carry nutrientsPer100g with no `fiber` key; those are fetched again by
+  // their matched USDA id (fetchUsdaFiber), which adds the one missing number
+  // and changes nothing else about the match.
   async function handleNormalizeBoard() {
     const targets = [];
 
@@ -515,7 +526,14 @@ export default function MealPlanBoard() {
       day.meals.forEach((meal) => {
         meal.ingredients.forEach((ingredient) => {
           if (ingredient.name && ingredient.gramsConfidence === 'unresolved') {
-            targets.push({ dayId: day.id, mealId: meal.id, ingredientId: ingredient.id });
+            targets.push({ dayId: day.id, mealId: meal.id, ingredientId: ingredient.id, kind: 'match' });
+          } else if (
+            ingredient.source === 'usda'
+            && ingredient.matchedFoodId
+            && ingredient.nutrientsPer100g
+            && ingredient.nutrientsPer100g.fiber === undefined
+          ) {
+            targets.push({ dayId: day.id, mealId: meal.id, ingredientId: ingredient.id, kind: 'fiber' });
           }
         });
       });
@@ -531,6 +549,9 @@ export default function MealPlanBoard() {
 
     let library = ingredientLibrary;
     const workingDays = structuredClone(days);
+    // One fetch per food, not per row: chicken breast is on the board 7 times.
+    const fiberById = new Map();
+    let fiberFailures = 0;
 
     for (let i = 0; i < targets.length; i += 1) {
       if (normalizeCancelRef.current) {
@@ -541,6 +562,34 @@ export default function MealPlanBoard() {
       const day = workingDays.find((d) => d.id === target.dayId);
       const meal = day.meals.find((m) => m.id === target.mealId);
       const ingredient = meal.ingredients.find((ing) => ing.id === target.ingredientId);
+
+      if (target.kind === 'fiber') {
+        const fetched = fiberById.has(ingredient.matchedFoodId);
+
+        if (!fetched) {
+          try {
+            fiberById.set(ingredient.matchedFoodId, await fetchUsdaFiber(ingredient.matchedFoodId));
+          } catch (error) {
+            console.error(`Fiber fetch failed for "${ingredient.name}" (fdcId ${ingredient.matchedFoodId}):`, error);
+            // Leave the key absent, not null: a failed fetch should be retried
+            // by the next Normalize, not recorded as "USDA has no fiber".
+            fiberById.set(ingredient.matchedFoodId, undefined);
+            fiberFailures += 1;
+          }
+        }
+
+        const fiber = fiberById.get(ingredient.matchedFoodId);
+        if (fiber !== undefined) {
+          ingredient.nutrientsPer100g = { ...ingredient.nutrientsPer100g, fiber };
+        }
+
+        setNormalizeState({ status: 'running', current: i + 1, total: targets.length });
+
+        if (!fetched) {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+        continue;
+      }
 
       // eslint-disable-next-line no-await-in-loop
       const { entry, library: nextLibrary } = await matchIngredient(searchTermFor(ingredient), library);
@@ -578,9 +627,9 @@ export default function MealPlanBoard() {
     setIngredientLibrary(library);
     setDays(workingDays);
 
-    const { comparisons, skippedCount } = buildMealComparisons(workingDays);
+    const { comparisons, skippedCount, fiberUnknownMeals, fiberUnknownNames } = buildMealComparisons(workingDays);
 
-    setNormalizeState({ status: 'review', comparisons, cancelled: normalizeCancelRef.current, skippedCount });
+    setNormalizeState({ status: 'review', comparisons, cancelled: normalizeCancelRef.current, skippedCount, fiberFailures, fiberUnknownMeals, fiberUnknownNames });
   }
 
   /*
@@ -636,9 +685,9 @@ export default function MealPlanBoard() {
 
     setDays(workingDays);
 
-    const { comparisons, skippedCount } = buildMealComparisons(workingDays);
+    const { comparisons, skippedCount, fiberUnknownMeals, fiberUnknownNames } = buildMealComparisons(workingDays);
 
-    setNormalizeState({ status: 'review', comparisons, skippedCount, reweighed });
+    setNormalizeState({ status: 'review', comparisons, skippedCount, reweighed, fiberUnknownMeals, fiberUnknownNames });
   }
 
   /*
@@ -655,6 +704,11 @@ export default function MealPlanBoard() {
   function buildMealComparisons(workingDays) {
     const comparisons = [];
     let skippedCount = 0;
+    // Meals whose fiber can't be computed and whose calories didn't move never
+    // become a comparison, so without this they would vanish from the review
+    // with no hint that one ingredient needs a better match.
+    let fiberUnknownMeals = 0;
+    const fiberUnknownNames = new Set();
 
     workingDays.forEach((day) => {
       day.meals.forEach((meal) => {
@@ -668,8 +722,16 @@ export default function MealPlanBoard() {
 
         const computed = recomputeMealFromIngredients(meal);
         const delta = computed.calories - meal.calories;
+        // Fiber can change with calories untouched - backfilling it is exactly
+        // that case - so a calories-only test would never offer it for apply.
+        const fiberChanged = computed.macros.fiber != null && computed.macros.fiber !== meal.macros?.fiber;
 
-        if (Math.abs(delta) >= 1) {
+        if (computed.fiberUnknown.length > 0) {
+          fiberUnknownMeals += 1;
+          computed.fiberUnknown.forEach((name) => fiberUnknownNames.add(name));
+        }
+
+        if (Math.abs(delta) >= 1 || fiberChanged) {
           comparisons.push({
             dayId: day.id,
             dayName: day.day,
@@ -686,7 +748,7 @@ export default function MealPlanBoard() {
 
     comparisons.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
 
-    return { comparisons, skippedCount };
+    return { comparisons, skippedCount, fiberUnknownMeals, fiberUnknownNames: [...fiberUnknownNames] };
   }
 
   function cancelNormalizeBoard() {
@@ -703,7 +765,7 @@ export default function MealPlanBoard() {
         ...day,
         meals: day.meals.map((meal) => (
           meal.id === comparison.mealId
-            ? { ...meal, calories: comparison.computed.calories, macros: comparison.computed.macros }
+            ? { ...meal, calories: comparison.computed.calories, macros: mergeComputedMacros(meal.macros, comparison.computed.macros) }
             : meal
         )),
       };
@@ -727,7 +789,7 @@ export default function MealPlanBoard() {
       meals: day.meals.map((meal) => {
         const comparison = byMealId.get(meal.id);
         return comparison
-          ? { ...meal, calories: comparison.computed.calories, macros: comparison.computed.macros }
+          ? { ...meal, calories: comparison.computed.calories, macros: mergeComputedMacros(meal.macros, comparison.computed.macros) }
           : meal;
       }),
     })));
@@ -2007,12 +2069,18 @@ useEffect(() => {
                 {recomputePreview && (
                   <div className="mt-2 rounded-xl border border-border bg-surface-sunken p-3 text-xs">
                     <div className="text-fg-muted">
-                      Stored: {editForm.calories} cal · C {editForm.carbs}g P {editForm.protein}g F {editForm.fat}g
+                      Stored: {editForm.calories} cal · C {editForm.carbs}g P {editForm.protein}g F {editForm.fat}g · Fiber {formatFiber(editForm.fiber)}
                     </div>
                     <div className="text-fg font-semibold mt-1">
                       Computed: {recomputePreview.calories} cal · C {recomputePreview.macros.carbs}g P{' '}
-                      {recomputePreview.macros.protein}g F {recomputePreview.macros.fat}g
+                      {recomputePreview.macros.protein}g F {recomputePreview.macros.fat}g · Fiber {formatFiber(recomputePreview.macros.fiber)}
                     </div>
+                    {recomputePreview.fiberUnknown.length > 0 && (
+                      <div className="text-fg-muted mt-1">
+                        Fiber unknown: no fiber figure for {recomputePreview.fiberUnknown.join(', ')}. Applying keeps the stored fiber.
+                        Try Match with a different "search USDA as..." term.
+                      </div>
+                    )}
                     <div className="flex gap-2 mt-2">
                       <button
                         type="button"
@@ -2180,11 +2248,14 @@ useEffect(() => {
                           ...meal,
                           name: editForm.name,
                           calories: Number(editForm.calories),
-                          macros: {
+                          // Through mergeComputedMacros so a save can't drop fiber:
+                          // writing only these three keys is how it used to vanish.
+                          macros: mergeComputedMacros(meal.macros, {
                             carbs: Number(editForm.carbs),
                             protein: Number(editForm.protein),
                             fat: Number(editForm.fat),
-                          },
+                            fiber: editForm.fiber == null ? null : Number(editForm.fiber),
+                          }),
                           ingredients: savedIngredients,
                           items: syncDisplayTags(editingMeal, savedIngredients),
                         };
@@ -2222,7 +2293,7 @@ useEffect(() => {
 
             {normalizeState.status === 'no-targets' && (
               <p className="text-sm text-fg-muted">
-                Every ingredient on the board already has a resolved match. Use "Re-weigh portions" to
+                Every ingredient on the board already has a resolved match, with fiber. Use "Re-weigh portions" to
                 recalculate their gram weights against the current portion table without re-querying USDA,
                 or edit a meal and use "Match" to re-resolve one ingredient.
               </p>
@@ -2263,9 +2334,24 @@ useEffect(() => {
                   {normalizeState.reweighed
                     ? `${normalizeState.reweighed} estimated portion${normalizeState.reweighed === 1 ? '' : 's'} re-weighed against the current portion table - no lookups were made. `
                     : 'Ingredient grams/matches for the board have been saved. '}
-                  These are the fully-resolved meals where computed calories differ from the stored value -
+                  These are the fully-resolved meals where computed calories or fiber differ from the stored value -
                   nothing here has been applied to the visible cards yet.
                 </p>
+
+                {normalizeState.fiberFailures > 0 && (
+                  <p className="text-xs text-warning-fg bg-warning-surface border border-warning-border rounded-lg p-2 mb-4">
+                    Fiber could not be fetched for {normalizeState.fiberFailures} food{normalizeState.fiberFailures === 1 ? '' : 's'}.
+                    Run Normalize again to retry them.
+                  </p>
+                )}
+
+                {normalizeState.fiberUnknownMeals > 0 && (
+                  <p className="text-xs text-warning-fg bg-warning-surface border border-warning-border rounded-lg p-2 mb-4">
+                    Fiber unknown for {normalizeState.fiberUnknownMeals} meal{normalizeState.fiberUnknownMeals === 1 ? '' : 's'}:
+                    USDA's match for {normalizeState.fiberUnknownNames.join(', ')} has no fiber figure. Their stored fiber is
+                    left alone. Re-match with a different "search USDA as..." term to fix it.
+                  </p>
+                )}
 
                 {normalizeState.skippedCount > 0 && (
                   <p className="text-xs text-warning-fg bg-warning-surface border border-warning-border rounded-lg p-2 mb-4">
@@ -2303,18 +2389,23 @@ useEffect(() => {
                               make. The sign carries the direction.
                             */}
                             <div className="text-sm font-semibold text-fg">
-                              {comparison.delta > 0 ? '+' : ''}{comparison.delta} cal
+                              {comparison.delta === 0 ? 'fiber only' : `${comparison.delta > 0 ? '+' : ''}${comparison.delta} cal`}
                             </div>
                           </div>
 
                           <div className="text-xs text-fg-muted mt-2">
                             Stored: {comparison.stored.calories} cal · C {comparison.stored.macros.carbs}g P{' '}
-                            {comparison.stored.macros.protein}g F {comparison.stored.macros.fat}g
+                            {comparison.stored.macros.protein}g F {comparison.stored.macros.fat}g · Fiber {formatFiber(comparison.stored.macros.fiber)}
                           </div>
                           <div className="text-xs text-fg font-semibold mt-1">
                             Computed: {comparison.computed.calories} cal · C {comparison.computed.macros.carbs}g P{' '}
-                            {comparison.computed.macros.protein}g F {comparison.computed.macros.fat}g
+                            {comparison.computed.macros.protein}g F {comparison.computed.macros.fat}g · Fiber {formatFiber(comparison.computed.macros.fiber)}
                           </div>
+                          {comparison.computed.fiberUnknown.length > 0 && (
+                            <div className="text-xs text-fg-muted mt-1">
+                              Fiber unknown ({comparison.computed.fiberUnknown.join(', ')}) - applying keeps the stored fiber.
+                            </div>
+                          )}
 
                           <button
                             onClick={() => applyNormalizeComparison(comparison)}
@@ -2425,6 +2516,7 @@ useEffect(() => {
                     carbs: selectedMeal.macros.carbs,
                     protein: selectedMeal.macros.protein,
                     fat: selectedMeal.macros.fat,
+                    fiber: selectedMeal.macros.fiber ?? null,
                     ingredients: selectedMeal.ingredients.map((ingredient) => ({ ...ingredient })),
                   });
 

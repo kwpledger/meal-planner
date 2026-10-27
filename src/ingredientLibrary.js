@@ -117,15 +117,67 @@ function energyOf(food) {
   return undefined;
 }
 
+/*
+ * Fiber, checked live against every food on the real board (2026-10-27):
+ *
+ * - Nutrient 1079 "Fiber, total dietary" is the figure every data type
+ *   carries. Some Foundation records add a second total, 2033 "Total dietary
+ *   fiber (AOAC 2011.25)", from a newer method, and the two disagree: brown
+ *   rice 3.0 vs 4.3 g, ripe banana 1.7 vs 4.6 g. Always prefer 1079 so one
+ *   food isn't measured one way and the next another; 2033 only stands in
+ *   when 1079 is absent.
+ * - Some records have no fiber entry at all - Foundation chicken breast, but
+ *   also Foundation "Lentils, dry" - so absent is NOT zero. It comes back as
+ *   null (unknown), never 0, and callers must keep that distinction.
+ * - The one safe inference: fiber is part of carbohydrate, so a record that
+ *   reports 0 g carbohydrate has 0 g fiber. That covers the chicken, eggs and
+ *   ground turkey records the board actually matched.
+ *
+ * Accepts both nutrient shapes USDA uses: /foods/search returns
+ * { nutrientId, value }, /food/{id} returns { nutrient: { id }, amount }.
+ */
+const FIBER_NUTRIENT_IDS = [1079, 2033];
+
+export function fiberPer100g(foodNutrients, carbsPer100g) {
+  const valueOf = (id) => {
+    const match = (foodNutrients || []).find((item) => (item.nutrientId ?? item.nutrient?.id) === id);
+    const value = match ? (match.value ?? match.amount) : undefined;
+    return typeof value === 'number' ? value : undefined;
+  };
+
+  for (const id of FIBER_NUTRIENT_IDS) {
+    const value = valueOf(id);
+    if (value !== undefined) {
+      return value;
+    }
+  }
+
+  return carbsPer100g === 0 ? 0 : null;
+}
+
 function extractUsdaNutrients(food) {
   const nutrient = (name) => food.foodNutrients?.find((item) => item.nutrientName === name)?.value ?? 0;
+  const carbs = nutrient('Carbohydrate, by difference');
 
   return {
     calories: energyOf(food) ?? 0,
     protein: nutrient('Protein'),
-    carbs: nutrient('Carbohydrate, by difference'),
+    carbs,
     fat: nutrient('Total lipid (fat)'),
+    fiber: fiberPer100g(food.foodNutrients, carbs),
   };
+}
+
+/*
+ * Fiber for a food that is already matched, fetched by its id rather than by
+ * searching again. Re-searching could land on a different food than the one
+ * on the board (USDA's results move); this only adds the missing number to
+ * the match Kevin already has.
+ */
+export async function fetchUsdaFiber(fdcId) {
+  const detail = await getUsdaFoodDetail(fdcId);
+  const carbs = (detail.foodNutrients || []).find((item) => (item.nutrient?.id ?? item.nutrientId) === 1005);
+  return fiberPer100g(detail.foodNutrients, carbs ? (carbs.amount ?? carbs.value) : undefined);
 }
 
 // A meal-prep recipe line like "1.25 cups brown rice" alongside a protein
@@ -214,7 +266,11 @@ export async function matchIngredient(rawLine, library) {
   const cacheKey = normalizeIngredientName(parsed.name);
   const cached = getCachedMatch(library, cacheKey);
 
-  if (cached) {
+  // A cache entry saved before fiber was extracted has no `fiber` key at all
+  // (as opposed to null, which means USDA had none). Treat it as a miss so the
+  // match is fetched again with fiber, rather than serving it and leaving
+  // fiber looking unknown forever.
+  if (cached && cached.nutrientsPer100g?.fiber !== undefined) {
     return { entry: cached, library, fromCache: true };
   }
 
@@ -296,6 +352,9 @@ export async function matchIngredient(rawLine, library) {
           protein: bestProduct.nutriments?.proteins_100g ?? 0,
           carbs: bestProduct.nutriments?.carbohydrates_100g ?? 0,
           fat: bestProduct.nutriments?.fat_100g ?? 0,
+          // Same rule as USDA: absent is unknown, not zero.
+          fiber: bestProduct.nutriments?.fiber_100g
+            ?? (bestProduct.nutriments?.carbohydrates_100g === 0 ? 0 : null),
         },
         servingSize: bestProduct.serving_size || null,
         servingQuantity: bestProduct.serving_quantity ?? null,

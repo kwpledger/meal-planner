@@ -12,20 +12,11 @@ item numbers.
 
 ## To Do (nutrition) ##
 
-- [ ] **1.** Recompute zeroes fiber. The seed carries the dietician's per-meal fiber in `macros.fiber` (`src/App.jsx`), but `recomputeMealFromIngredients` in `src/portionResolver.js` writes `macros` with only carbs, protein and fat, so applying a recompute silently deletes a real number. Nothing renders fiber, so the loss can't be seen, which breaks the rule against silently overwriting a number Kevin is looking at (`AGENTS.md`). Verified against `main` 2026-10-04. It was never in this backlog; it came over from a TickTick subtask.
-  **Decided 2026-10-13: compute fiber from the matched data.** Kevin chose this over carrying the dietician's figure through unchanged, which would leave fiber as her estimate beside measured calories and macros, a fix he'd have to redo later. Scope:
-  1. Extract fiber in the USDA and OFF paths (`src/nutritionApi.js`, `src/ingredientLibrary.js`). Check for the multi-entry quirks energy had (ROADMAP, Remaining known limitations).
-  2. Carry it through scaling in `src/portionResolver.js` and into `recomputeMealFromIngredients`.
-  3. Cached matches saved before this have no fiber. Re-fetch or mark them unknown; never write them as 0.
-  4. Show fiber in the Recompute preview diff, so Apply changes it visibly.
-  5. A regression test, checked to fail with the fix removed.
-
-  Rendering a fiber row on the macro bars is a separate question, not part of this item.
-- [ ] **2.** The matcher drops an exact Branded match for a poor generic one. `rankUsdaFoods` in `src/ingredientLibrary.js` discards every Branded result whenever *any* non-Branded one is present, before scoring. Live, 2026-10-27: "Snow peas" returned mostly Branded *SNOW PEAS* (an exact match) plus one Survey entry, *Snow cone*, which shared the word "snow" and won. The filter exists so Branded noise can't beat a clean generic entry ("Oats, raw"); it should not let a generic one-word partial beat an exact name. Likely fix: drop Branded only when a non-Branded candidate scores at least as well. A regression test, checked to fail with the fix removed. The *search USDA as…* box works around it meanwhile.
+- [ ] **1.** The matcher drops an exact Branded match for a poor generic one. `rankUsdaFoods` in `src/ingredientLibrary.js` discards every Branded result whenever *any* non-Branded one is present, before scoring. Live, 2026-10-27: "Snow peas" returned mostly Branded *SNOW PEAS* (an exact match) plus one Survey entry, *Snow cone*, which shared the word "snow" and won. The filter exists so Branded noise can't beat a clean generic entry ("Oats, raw"); it should not let a generic one-word partial beat an exact name. Likely fix: drop Branded only when a non-Branded candidate scores at least as well. A regression test, checked to fail with the fix removed. The *search USDA as…* box works around it meanwhile.
 
 **Completed Items**
 
-(none)
+- [x] Fiber is computed from matched data. **Worse than the item said:** the cloud board (pushed 2026-08-16) had already lost fiber on all 28 meals, because Save and both Normalize apply paths wrote `macros` with only carbs, protein and fat. All three now go through `mergeComputedMacros` (`src/portionResolver.js`), which never writes an unknown fiber over a stored one. Fiber comes from USDA nutrient 1079 (2033 only as a stand-in) or OFF `fiber_100g`; a missing figure is `null`, never 0, except where the record reports 0 g carbohydrate. Normalize backfills fiber on already-matched rows by refetching their USDA id, so the match itself can't change; pre-fiber cache entries count as misses. The Recompute preview and the Normalize review show fiber, and the review names meals whose fiber is unknown. Checked live on the real board: 23 meals got fiber; 5 breakfasts stay unknown because the Branded *STRAWBERRIES* match has no fiber figure. Tests seen to fail without the fix. 2026-10-27.
 
 
 ## To Do (design) ##
