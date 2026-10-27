@@ -50,13 +50,12 @@ Nothing open.
 Moved up from the v1.0 polish section, which was deliberately outside the
 running order. For v1.1 they are ordinary work.
 
-- [ ] **1.** Display tags and ingredients drift apart. `meal.items` (the card chips) and `meal.ingredients` are maintained independently, so an ingredient added in the editor gets no chip and a renamed one leaves its old chip standing. **Not obviously "link them"**: the hand-written tags are better copy than matcher text. If picked up, *warn on drift* rather than *derive*. (HISTORY, Polish.)
-- [ ] **2.** Decide whether `searchName` stays. It works, but no ingredient in production uses it; the seed's naming convention solved the cases it was built for. Keep it until a case arrives where USDA's wording would be unacceptable in the grocery list, the meal modal or the Cronometer export; retire it if that case never comes. (HISTORY, Polish.)
-- [ ] **3.** Button hierarchy in the ingredient editor. Collapsing `bg-indigo-600` and `bg-slate-800` onto `--accent` put every primary button at the same weight. If that wants a hierarchy, the answer is a secondary *style*, not a second hue, and which buttons demote is a design call. (HISTORY item 2, step 3.)
+- [ ] **1.** Decide whether `searchName` stays. It works, but no ingredient in production uses it; the seed's naming convention solved the cases it was built for. Keep it until a case arrives where USDA's wording would be unacceptable in the grocery list, the meal modal or the Cronometer export; retire it if that case never comes. (HISTORY, Polish.)
+- [ ] **2.** Button hierarchy in the ingredient editor. Collapsing `bg-indigo-600` and `bg-slate-800` onto `--accent` put every primary button at the same weight. If that wants a hierarchy, the answer is a secondary *style*, not a second hue, and which buttons demote is a design call. (HISTORY item 2, step 3.)
 
 **Completed Items**
 
-(none)
+- [x] Display tags follow the ingredients. Renaming broccoli to cauliflower on the live board left the "Broccoli" chip standing. **Kevin's call, 2026-10-27: derive, and no hand editing** - which overrides the earlier *warn on drift* note. That note rested on the tags being "better copy" than the ingredients, a session's inference Kevin corrected the same day. Save now writes `meal.items` from `src/displayTags.js`: a renamed or added ingredient gets a tag generated from its name minus the amount (what tags were always meant to be), an unchanged one keeps its existing tag so the plurals from the 2026-08-09 naming pass survive, and a tag that no longer names its ingredient is repaired. The editor's textarea became a read-only preview. Tests seen to fail without the fix. 2026-10-27.
 
 
 ## Later (not v1.1) ##
@@ -65,6 +64,7 @@ Deliberately **not** v1.1. Nothing here counts toward the release, and none of
 it is the next thing to do until v1.1 ships.
 
 - [ ] **1.** Compound ingredient lines. "Oats cooked in 1 cup 2% milk" matches only the oats; the milk becomes an unmatched `prepNote`. Moved out of v1.0 on 2026-09-28: Kevin's own board no longer has such rows, since he split them long ago. It comes back into scope with v2.0, where the app is meant to take other people's plans, which will arrive unsplit. **No design exists yet:** `docs/ROADMAP.md` records only that the problem exists.
+- [ ] **2.** Codify the singular/plural convention for display tags. Kevin's rule, stated 2026-10-27: **counted foods are plural, weighed or poured foods are singular** (Eggs, Bananas, Navel Oranges; 2% Milk, Peanut Butter, Boneless, Skinless Chicken Breast). Every tag on the board already follows it, from his 2026-08-09 naming pass, but `tagForIngredientName` in `src/displayTags.js` only title-cases the ingredient name, so a new counted food comes out plural only if the ingredient was named that way. **No design yet.** The obvious signal is the amount's unit (a bare count like `1 navel orange` vs `5 oz`, `1 cup`), but whether that's reliable enough, and how to pluralize, are open. Kevin asked for it "somehow later", not for v1.1. Reasoning in `docs/DECISIONS.md`.
 
 **Completed Items**
 

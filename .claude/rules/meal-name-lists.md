@@ -2,6 +2,7 @@
 paths:
   - "src/App.jsx"
   - "src/ingredientParser.js"
+  - "src/displayTags.js"
 ---
 
 # A meal carries two name lists, and they are not interchangeable
@@ -16,11 +17,20 @@ original, not corruption.
 inspecting only `ingredients` concluded the visible board had been corrupted
 with search terms. It had not. The cards never read that field.
 
-**The two lists have no link and never have.** Kevin typed the display tags by
-hand, which is why `"Boneless, Skinless Chicken Breast"` carries a comma the
-ingredient name doesn't. Nothing keeps them in sync, so an ingredient added
-through the editor gets no display tag.
+**Since 2026-10-27 `items` is derived on Save, by `syncDisplayTags` in
+`src/displayTags.js`.** A tag was always meant to be its ingredient without
+the amount (Kevin, 2026-10-27), and the first seed's tags were exactly that
+(`"Orange"`, `"Banana"`). His 2026-08-09 naming pass then pluralised some
+(`"Navel Oranges"`, `"Bananas"`) and added the comma in `"Boneless, Skinless
+Chicken Breast"`. The derivation keeps existing tags so that pass survives: only
+a renamed, added or no-longer-matching ingredient gets a generated tag.
 
-Linking them is a real design question rather than an obvious fix: the
-hand-written tags are better copy than the matcher text, which is why there are
-two fields in the first place.
+`docs/HISTORY.md` says the hand-written tags were kept apart because they are
+"better copy" than matcher text. That was a session's inference, not Kevin's
+reasoning - his only recorded words were *"that's polish, not load bearing."*
+Don't build on it. The link is positional (tag *i* ↔ ingredient *i* when the editor opens),
+carried through edits by ingredient id.
+
+**Tags are not hand-editable, on purpose** - Kevin's call. Don't re-add the
+textarea. Anything else that writes `ingredients` (bulk Normalize, JSON import,
+cloud pull) leaves `items` alone; the next Save of that meal reconciles it.

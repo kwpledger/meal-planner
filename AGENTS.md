@@ -23,6 +23,7 @@ src/
   nutritionApi.js       Raw fetch wrappers for USDA and Open Food Facts.
   cloudSync.js          pushToCloud/pullFromCloud. Two functions, no config.
   boardOperations.js    Pure transforms over the `days` array, + its tests.
+  displayTags.js        Card tags (meal.items) derived from ingredients on Save.
 
 functions/
   api/board.js          The only server-side code: a Pages Function serving
@@ -38,7 +39,7 @@ Two directories outside `src/` matter:
 
 ## Design decisions — the ones that bite
 
-**Full reasoning for all thirteen is in `docs/DECISIONS.md`.** Kept here only
+**Full reasoning for all fourteen is in `docs/DECISIONS.md`.** Kept here only
 where not knowing it in the first four minutes gets something broken:
 
 - **Never silently overwrite a number Kevin is looking at.** Nutrition lookups
