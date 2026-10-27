@@ -13,6 +13,7 @@ item numbers.
 ## To Do (nutrition) ##
 
 - [ ] **1.** The matcher drops an exact Branded match for a poor generic one. `rankUsdaFoods` in `src/ingredientLibrary.js` discards every Branded result whenever *any* non-Branded one is present, before scoring. Live, 2026-10-27: "Snow peas" returned mostly Branded *SNOW PEAS* (an exact match) plus one Survey entry, *Snow cone*, which shared the word "snow" and won. The filter exists so Branded noise can't beat a clean generic entry ("Oats, raw"); it should not let a generic one-word partial beat an exact name. Likely fix: drop Branded only when a non-Branded candidate scores at least as well. A regression test, checked to fail with the fix removed. The *search USDA as…* box works around it meanwhile.
+  **Same function, second case (2026-10-27):** on a relevance tie, prefer a record that has fiber. `strawberries, raw` returns three exact *Strawberries, raw* records (Survey 1.8 g fiber, SR Legacy 2.0 g, Foundation none), and the median-calorie tie-break picks the Foundation one, so the search box can't fix strawberries today.
 
 **Completed Items**
 
