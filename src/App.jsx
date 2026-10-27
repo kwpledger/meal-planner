@@ -6,6 +6,7 @@ import { resolvePortionToGrams, computeNutrientsForIngredient, recomputeMealFrom
 import { loadLibrary, matchIngredient } from './ingredientLibrary';
 import { pushToCloud, pullFromCloud } from './cloudSync';
 import { getMealSortValue, moveMealToDay } from './boardOperations';
+import { syncDisplayTags } from './displayTags';
 import { version } from '../package.json';
 
 // "0.9.0" -> "0.9". The patch digit is a release detail, not something the
@@ -230,7 +231,6 @@ export default function MealPlanBoard() {
     protein: 0,
     fat: 0,
     ingredients: [],
-    items: [],
   });
   const [nutritionQuery, setNutritionQuery] = useState("");
   const [nutritionResults, setNutritionResults] = useState([]);
@@ -2036,27 +2036,25 @@ useEffect(() => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-fg-muted mb-1">
-                Display Tags (one per line)
-              </label>
+              <p className="block text-sm font-medium text-fg-muted mb-1">
+                Display Tags
+              </p>
 
-              <textarea
-                rows={4}
-                value={editForm.items.join("\n")}
-                onChange={(e) =>
-                  handleEditField(
-                    "items",
-                    e.target.value
-                      .split("\n")
-                      .map((line) => line.trim())
-                      .filter((line) => line !== "")
-                  )
-                }
-                className="w-full rounded-xl border border-border p-3"
-              />
+              {/* Read-only on purpose: tags follow the ingredients (src/displayTags.js),
+                  so this previews exactly what Save will put on the card. */}
+              <div className="flex flex-wrap gap-2">
+                {syncDisplayTags(
+                  editingMeal,
+                  editForm.ingredients.filter((ingredient) => ingredient.name.trim() !== '')
+                ).map((tag, index) => (
+                  <span key={`${tag}-${index}`} className="rounded-full border border-border px-2 py-1 text-xs text-fg">
+                    {tag}
+                  </span>
+                ))}
+              </div>
 
               <p className="text-xs text-fg-muted mt-1">
-                These are the short labels shown on the meal card. They do not affect grocery aggregation.
+                The short labels shown on the meal card. They update from the ingredients above: a renamed or added ingredient gets a new label, the rest keep theirs. They do not affect grocery aggregation.
               </p>
             </div>
       
@@ -2168,6 +2166,8 @@ useEffect(() => {
       
               <button
                 onClick={() => {
+                  const savedIngredients = editForm.ingredients.filter((ingredient) => ingredient.name.trim() !== '');
+
                   setDays((currentDays) =>
                     currentDays.map((day) => ({
                       ...day,
@@ -2185,8 +2185,8 @@ useEffect(() => {
                             protein: Number(editForm.protein),
                             fat: Number(editForm.fat),
                           },
-                          ingredients: editForm.ingredients.filter((ingredient) => ingredient.name.trim() !== ''),
-                          items: editForm.items,
+                          ingredients: savedIngredients,
+                          items: syncDisplayTags(editingMeal, savedIngredients),
                         };
                       }),
                     }))
@@ -2426,7 +2426,6 @@ useEffect(() => {
                     protein: selectedMeal.macros.protein,
                     fat: selectedMeal.macros.fat,
                     ingredients: selectedMeal.ingredients.map((ingredient) => ({ ...ingredient })),
-                    items: [...selectedMeal.items],
                   });
 
                   setRecomputePreview(null);

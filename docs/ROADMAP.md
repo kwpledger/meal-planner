@@ -202,17 +202,11 @@ they apply — don't reorder casually.
   already that — but the escape hatch for when the wording USDA needs would be
   unacceptable in the grocery list, the meal detail modal or the Cronometer
   export, which are the three places `name`/`raw` actually surface.
-- **`items` and `ingredients` have no link and never have.** Confirmed by Kevin,
-  who authored the display tags by hand while editing the JSON: `"Boneless,
-  Skinless Chicken Breast"` carries a comma the ingredient name
-  (`"boneless skinless chicken breast"`) does not, because he typed both
-  separately. Nothing derives one from the other and nothing keeps them in sync,
-  so **an ingredient added through the editor will not appear as a display tag**,
-  and a renamed ingredient leaves its old tag standing. This is a real drift
-  hazard rather than a hypothetical one — it is the mechanism behind the
-  misreading above. Whether to link them is a genuine design question and not
-  obviously "yes": the hand-written tags are better copy than the matcher text
-  would be, which is the entire reason two fields exist.
+- **`items` is derived from `ingredients` on Save (2026-10-27).** The two lists
+  used to have no link, so a renamed ingredient left its old tag standing - the
+  mechanism behind the misreading above. `src/displayTags.js` now writes the tags
+  on Save, keeping Kevin's hand-written tag for any ingredient that didn't change.
+  Details in `.claude/rules/meal-name-lists.md`.
 - **`searchName` has never been used on the real board.** It is implemented,
   wired through all three matching entry points, and verified by stripping it
   from a saved board — but zero ingredients in production carry one, including

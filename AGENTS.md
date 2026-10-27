@@ -23,6 +23,7 @@ src/
   nutritionApi.js       Raw fetch wrappers for USDA and Open Food Facts.
   cloudSync.js          pushToCloud/pullFromCloud. Two functions, no config.
   boardOperations.js    Pure transforms over the `days` array, + its tests.
+  displayTags.js        Card tags (meal.items) derived from ingredients on Save.
 
 functions/
   api/board.js          The only server-side code: a Pages Function serving
