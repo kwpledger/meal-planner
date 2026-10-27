@@ -79,7 +79,7 @@ mode.
 ## The pin
 
 ```json
-"@kwpledger/design": "github:kwpledger/kwpledger-design#v0.12.0"
+"@kwpledger/design": "github:kwpledger/kwpledger-design#v0.13.0"
 ```
 
 **Pinned to a tag, never a branch.** A design system that moves under a consumer
@@ -111,10 +111,11 @@ Two things about the install that look wrong and are not:
 
 `public/fonts/` holds `lora-latin.woff2` (variable, 400-700), `lora-latin-italic.woff2`,
 `hanken-grotesk-latin.woff2`, `hanken-grotesk-latin-italic.woff2`,
-`ibm-plex-mono-latin.woff2` and `OFL-NOTICE.txt`, copied from the package as of
-v0.12.0. The italics and the mono face are fetched only on a page that sets text
-in them; this app currently uses none of the three, so they cost nothing at
-runtime.
+`ibm-plex-mono-latin.woff2`, `kwp-handwriting-regular.woff2`,
+`kwp-handwriting-bold.woff2` and `OFL-NOTICE.txt`, copied from the package as of
+v0.13.0. The italics, the mono face and the handwriting face are fetched only on
+a page that sets text in them; this app currently uses none of them, so they
+cost nothing at runtime (the files do add ~230 KB to the deploy).
 
 This is the design system's own instruction: its `fonts.css` declares
 `src: url('/fonts/…')` with **absolute paths**, described there as "a
