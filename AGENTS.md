@@ -39,7 +39,7 @@ Two directories outside `src/` matter:
 
 ## Design decisions — the ones that bite
 
-**Full reasoning for all thirteen is in `docs/DECISIONS.md`.** Kept here only
+**Full reasoning for all fourteen is in `docs/DECISIONS.md`.** Kept here only
 where not knowing it in the first four minutes gets something broken:
 
 - **Never silently overwrite a number Kevin is looking at.** Nutrition lookups

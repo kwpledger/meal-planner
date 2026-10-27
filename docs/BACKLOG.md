@@ -64,6 +64,7 @@ Deliberately **not** v1.1. Nothing here counts toward the release, and none of
 it is the next thing to do until v1.1 ships.
 
 - [ ] **1.** Compound ingredient lines. "Oats cooked in 1 cup 2% milk" matches only the oats; the milk becomes an unmatched `prepNote`. Moved out of v1.0 on 2026-09-28: Kevin's own board no longer has such rows, since he split them long ago. It comes back into scope with v2.0, where the app is meant to take other people's plans, which will arrive unsplit. **No design exists yet:** `docs/ROADMAP.md` records only that the problem exists.
+- [ ] **2.** Codify the singular/plural convention for display tags. Kevin's rule, stated 2026-10-27: **counted foods are plural, weighed or poured foods are singular** (Eggs, Bananas, Navel Oranges; 2% Milk, Peanut Butter, Boneless, Skinless Chicken Breast). Every tag on the board already follows it, from his 2026-08-09 naming pass, but `tagForIngredientName` in `src/displayTags.js` only title-cases the ingredient name, so a new counted food comes out plural only if the ingredient was named that way. **No design yet.** The obvious signal is the amount's unit (a bare count like `1 navel orange` vs `5 oz`, `1 cup`), but whether that's reliable enough, and how to pluralize, are open. Kevin asked for it "somehow later", not for v1.1. Reasoning in `docs/DECISIONS.md`.
 
 **Completed Items**
 
