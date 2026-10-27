@@ -4,10 +4,11 @@ vi.mock('./nutritionApi', () => ({
   searchUsdaFoods: vi.fn(),
   getUsdaFoodDetail: vi.fn(),
   searchOpenFoodFacts: vi.fn(),
+  getOpenFoodFactsProduct: vi.fn(),
 }));
 
-const { searchUsdaFoods, getUsdaFoodDetail, searchOpenFoodFacts } = await import('./nutritionApi');
-const { matchIngredient, fiberPer100g } = await import('./ingredientLibrary');
+const { searchUsdaFoods, getUsdaFoodDetail, searchOpenFoodFacts, getOpenFoodFactsProduct } = await import('./nutritionApi');
+const { matchIngredient, fiberPer100g, fetchOffFiber } = await import('./ingredientLibrary');
 
 const emptyLibrary = () => ({ version: 1, entries: {} });
 
@@ -126,5 +127,19 @@ describe('matchIngredient: cache entries saved before fiber', () => {
 
     expect(result.fromCache).toBe(true);
     expect(searchUsdaFoods).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetchOffFiber', () => {
+  it('reads fiber_100g from an Open Food Facts product', async () => {
+    getOpenFoodFactsProduct.mockResolvedValue({ product: { nutriments: { fiber_100g: 10.7, carbohydrates_100g: 46.4 } } });
+
+    expect(await fetchOffFiber('0013764027237')).toBe(10.7);
+  });
+
+  it('returns null, not 0, when the product lists carbohydrate but no fiber', async () => {
+    getOpenFoodFactsProduct.mockResolvedValue({ product: { nutriments: { carbohydrates_100g: 46.4 } } });
+
+    expect(await fetchOffFiber('0013764027237')).toBeNull();
   });
 });

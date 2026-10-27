@@ -3,7 +3,7 @@ import { SiteHeader, SiteFooter, SkipLink } from './SiteChrome.jsx';
 import { searchUsdaFoods, searchOpenFoodFacts, getUsdaFoodDetail } from './nutritionApi';
 import { migrateDaysToIngredients, mergeIngredientsFromLines, formatIngredientAmount, parseIngredientLine, searchTermFor, SCHEMA_VERSION } from './ingredientParser';
 import { resolvePortionToGrams, computeNutrientsForIngredient, recomputeMealFromIngredients, mergeComputedMacros } from './portionResolver';
-import { loadLibrary, matchIngredient, fetchUsdaFiber } from './ingredientLibrary';
+import { loadLibrary, matchIngredient, fetchUsdaFiber, fetchOffFiber } from './ingredientLibrary';
 import { pushToCloud, pullFromCloud } from './cloudSync';
 import { getMealSortValue, moveMealToDay } from './boardOperations';
 import { syncDisplayTags } from './displayTags';
@@ -517,8 +517,8 @@ export default function MealPlanBoard() {
   //
   // It also backfills fiber. Ingredients matched before fiber was extracted
   // carry nutrientsPer100g with no `fiber` key; those are fetched again by
-  // their matched USDA id (fetchUsdaFiber), which adds the one missing number
-  // and changes nothing else about the match.
+  // their matched USDA id or Open Food Facts barcode, which adds the one
+  // missing number and changes nothing else about the match.
   async function handleNormalizeBoard() {
     const targets = [];
 
@@ -528,7 +528,7 @@ export default function MealPlanBoard() {
           if (ingredient.name && ingredient.gramsConfidence === 'unresolved') {
             targets.push({ dayId: day.id, mealId: meal.id, ingredientId: ingredient.id, kind: 'match' });
           } else if (
-            ingredient.source === 'usda'
+            (ingredient.source === 'usda' || ingredient.source === 'off')
             && ingredient.matchedFoodId
             && ingredient.nutrientsPer100g
             && ingredient.nutrientsPer100g.fiber === undefined
@@ -550,6 +550,7 @@ export default function MealPlanBoard() {
     let library = ingredientLibrary;
     const workingDays = structuredClone(days);
     // One fetch per food, not per row: chicken breast is on the board 7 times.
+    // Keyed by source too, since a USDA id and an OFF barcode could collide.
     const fiberById = new Map();
     let fiberFailures = 0;
 
@@ -564,21 +565,22 @@ export default function MealPlanBoard() {
       const ingredient = meal.ingredients.find((ing) => ing.id === target.ingredientId);
 
       if (target.kind === 'fiber') {
-        const fetched = fiberById.has(ingredient.matchedFoodId);
+        const fiberKey = `${ingredient.source}:${ingredient.matchedFoodId}`;
+        const fetched = fiberById.has(fiberKey);
 
         if (!fetched) {
           try {
-            fiberById.set(ingredient.matchedFoodId, await fetchUsdaFiber(ingredient.matchedFoodId));
+            fiberById.set(fiberKey, await (ingredient.source === 'off' ? fetchOffFiber : fetchUsdaFiber)(ingredient.matchedFoodId));
           } catch (error) {
-            console.error(`Fiber fetch failed for "${ingredient.name}" (fdcId ${ingredient.matchedFoodId}):`, error);
+            console.error(`Fiber fetch failed for "${ingredient.name}" (${fiberKey}):`, error);
             // Leave the key absent, not null: a failed fetch should be retried
             // by the next Normalize, not recorded as "USDA has no fiber".
-            fiberById.set(ingredient.matchedFoodId, undefined);
+            fiberById.set(fiberKey, undefined);
             fiberFailures += 1;
           }
         }
 
-        const fiber = fiberById.get(ingredient.matchedFoodId);
+        const fiber = fiberById.get(fiberKey);
         if (fiber !== undefined) {
           ingredient.nutrientsPer100g = { ...ingredient.nutrientsPer100g, fiber };
         }
@@ -2348,7 +2350,7 @@ useEffect(() => {
                 {normalizeState.fiberUnknownMeals > 0 && (
                   <p className="text-xs text-warning-fg bg-warning-surface border border-warning-border rounded-lg p-2 mb-4">
                     Fiber unknown for {normalizeState.fiberUnknownMeals} meal{normalizeState.fiberUnknownMeals === 1 ? '' : 's'}:
-                    USDA's match for {normalizeState.fiberUnknownNames.join(', ')} has no fiber figure. Their stored fiber is
+                    the match for {normalizeState.fiberUnknownNames.join(', ')} has no fiber figure. Their stored fiber is
                     left alone. Re-match with a different "search USDA as..." term to fix it.
                   </p>
                 )}

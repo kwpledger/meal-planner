@@ -1,4 +1,4 @@
-import { searchUsdaFoods, searchOpenFoodFacts, getUsdaFoodDetail } from './nutritionApi';
+import { searchUsdaFoods, searchOpenFoodFacts, getUsdaFoodDetail, getOpenFoodFactsProduct } from './nutritionApi';
 import { parseIngredientLine, normalizeIngredientName } from './ingredientParser';
 
 const LIBRARY_KEY = 'kevin-meal-planner-ingredient-library-v1';
@@ -168,6 +168,16 @@ function extractUsdaNutrients(food) {
   };
 }
 
+// Same rule as USDA: absent is unknown, not zero.
+function offFiberPer100g(nutriments) {
+  const fiber = nutriments?.fiber_100g;
+  if (typeof fiber === 'number') {
+    return fiber;
+  }
+
+  return nutriments?.carbohydrates_100g === 0 ? 0 : null;
+}
+
 /*
  * Fiber for a food that is already matched, fetched by its id rather than by
  * searching again. Re-searching could land on a different food than the one
@@ -178,6 +188,11 @@ export async function fetchUsdaFiber(fdcId) {
   const detail = await getUsdaFoodDetail(fdcId);
   const carbs = (detail.foodNutrients || []).find((item) => (item.nutrient?.id ?? item.nutrientId) === 1005);
   return fiberPer100g(detail.foodNutrients, carbs ? (carbs.amount ?? carbs.value) : undefined);
+}
+
+export async function fetchOffFiber(code) {
+  const data = await getOpenFoodFactsProduct(code);
+  return offFiberPer100g(data.product?.nutriments);
 }
 
 // A meal-prep recipe line like "1.25 cups brown rice" alongside a protein
@@ -352,9 +367,7 @@ export async function matchIngredient(rawLine, library) {
           protein: bestProduct.nutriments?.proteins_100g ?? 0,
           carbs: bestProduct.nutriments?.carbohydrates_100g ?? 0,
           fat: bestProduct.nutriments?.fat_100g ?? 0,
-          // Same rule as USDA: absent is unknown, not zero.
-          fiber: bestProduct.nutriments?.fiber_100g
-            ?? (bestProduct.nutriments?.carbohydrates_100g === 0 ? 0 : null),
+          fiber: offFiberPer100g(bestProduct.nutriments),
         },
         servingSize: bestProduct.serving_size || null,
         servingQuantity: bestProduct.serving_quantity ?? null,
