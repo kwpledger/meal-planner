@@ -21,6 +21,7 @@ item numbers.
   5. A regression test, checked to fail with the fix removed.
 
   Rendering a fiber row on the macro bars is a separate question, not part of this item.
+- [ ] **2.** The matcher drops an exact Branded match for a poor generic one. `rankUsdaFoods` in `src/ingredientLibrary.js` discards every Branded result whenever *any* non-Branded one is present, before scoring. Live, 2026-10-27: "Snow peas" returned mostly Branded *SNOW PEAS* (an exact match) plus one Survey entry, *Snow cone*, which shared the word "snow" and won. The filter exists so Branded noise can't beat a clean generic entry ("Oats, raw"); it should not let a generic one-word partial beat an exact name. Likely fix: drop Branded only when a non-Branded candidate scores at least as well. A regression test, checked to fail with the fix removed. The *search USDA as…* box works around it meanwhile.
 
 **Completed Items**
 
@@ -50,11 +51,11 @@ Nothing open.
 Moved up from the v1.0 polish section, which was deliberately outside the
 running order. For v1.1 they are ordinary work.
 
-- [ ] **1.** Decide whether `searchName` stays. It works, but no ingredient in production uses it; the seed's naming convention solved the cases it was built for. Keep it until a case arrives where USDA's wording would be unacceptable in the grocery list, the meal modal or the Cronometer export; retire it if that case never comes. (HISTORY, Polish.)
-- [ ] **2.** Button hierarchy in the ingredient editor. Collapsing `bg-indigo-600` and `bg-slate-800` onto `--accent` put every primary button at the same weight. If that wants a hierarchy, the answer is a secondary *style*, not a second hue, and which buttons demote is a design call. (HISTORY item 2, step 3.)
+- [ ] **1.** Button hierarchy in the ingredient editor. Collapsing `bg-indigo-600` and `bg-slate-800` onto `--accent` put every primary button at the same weight. If that wants a hierarchy, the answer is a secondary *style*, not a second hue, and which buttons demote is a design call. (HISTORY item 2, step 3.)
 
 **Completed Items**
 
+- [x] `searchName` stays. **Kevin's call, 2026-10-27**, on its first real use: "Snow peas" matched *Snow cone*, and the wording USDA needs (`peas, edible-podded, raw`) is wrong for a card tag. Now that tags derive from the ingredient name, the convention is **name the ingredient what the tag should say; put USDA's hyper-specific wording in *search USDA as…***. Reasoning in `.claude/rules/search-vs-display-name.md`. 2026-10-27.
 - [x] Display tags follow the ingredients. Renaming broccoli to cauliflower on the live board left the "Broccoli" chip standing. **Kevin's call, 2026-10-27: derive, and no hand editing** - which overrides the earlier *warn on drift* note. That note rested on the tags being "better copy" than the ingredients, a session's inference Kevin corrected the same day. Save now writes `meal.items` from `src/displayTags.js`: a renamed or added ingredient gets a tag generated from its name minus the amount (what tags were always meant to be), an unchanged one keeps its existing tag so the plurals from the 2026-08-09 naming pass survive, and a tag that no longer names its ingredient is repaired. The editor's textarea became a read-only preview. Tests seen to fail without the fix. 2026-10-27.
 
 

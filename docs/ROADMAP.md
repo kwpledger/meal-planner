@@ -207,15 +207,12 @@ they apply — don't reorder casually.
   mechanism behind the misreading above. `src/displayTags.js` now writes the tags
   on Save, keeping the existing tag for any ingredient that didn't change.
   Details in `.claude/rules/meal-name-lists.md`.
-- **`searchName` has never been used on the real board.** It is implemented,
-  wired through all three matching entry points, and verified by stripping it
-  from a saved board — but zero ingredients in production carry one, including
-  the two it was designed for, because the ingredient name turned out to be the
-  right place for those. A shipped feature with no production usage is worth
-  saying out loud rather than assuming it is load-bearing: if a case never
-  arrives where the search wording is unacceptable in the grocery list, the
-  honest conclusion is that the field solved a problem that the seed's naming
-  convention had already solved.
+- **`searchName` has its first real use, and stays (2026-10-27).** Until then it
+  had none: the ingredient name was the right place for the cases it was built
+  for. Then "Snow peas" matched *Snow cone*, and USDA's wording
+  (`peas, edible-podded, raw`) would make a poor card tag now that tags derive
+  from the ingredient name. Kevin's convention since: the name is what the tag
+  says, `searchName` carries USDA's wording.
 - ~~**Open Food Facts will confidently return branded near-homonyms for generic
   whole foods.**~~ **FIXED 2026-09-28.** With USDA unavailable it matched
   "1 medium banana" to *"Banana chips"*, roughly a 6x calorie error landing as a

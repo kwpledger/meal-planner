@@ -3,6 +3,7 @@ paths:
   - "src/ingredientParser.js"
   - "src/ingredientLibrary.js"
   - "src/nutritionApi.js"
+  - "src/displayTags.js"
 ---
 
 # An ingredient's display name and its search term are separate fields
@@ -13,6 +14,12 @@ knowledge the human has and the matcher doesn't.
 
 Before `searchName` existed, the only place to put that wording was the display
 name, so fixing what the matcher saw meant corrupting what the board showed.
+
+**Since 2026-10-27 this is the convention, not an escape hatch** (Kevin's call):
+display tags are derived from the ingredient name (`src/displayTags.js`), so the
+name should be what the card should say ("snow peas") and `searchName` carries
+USDA's hyper-specific wording ("peas, edible-podded, raw"). Don't move search
+wording back into the name to "simplify" - it would leak onto the card.
 
 `searchTermFor(ingredient)` resolves `searchName` → `raw` → `name`, and **all
 three matching entry points go through it.** Don't add a fourth that reads
