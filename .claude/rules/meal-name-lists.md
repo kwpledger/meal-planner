@@ -18,11 +18,17 @@ inspecting only `ingredients` concluded the visible board had been corrupted
 with search terms. It had not. The cards never read that field.
 
 **Since 2026-10-27 `items` is derived on Save, by `syncDisplayTags` in
-`src/displayTags.js`.** Kevin typed the original tags by hand (which is why
-`"Boneless, Skinless Chicken Breast"` carries a comma the ingredient name
-doesn't), and they are better copy than matcher text, so the derivation keeps
-them: only a renamed, added or no-longer-matching ingredient gets a generated
-tag. The link is positional (tag *i* ↔ ingredient *i* when the editor opens),
+`src/displayTags.js`.** A tag was always meant to be its ingredient without
+the amount (Kevin, 2026-10-27), and the first seed's tags were exactly that
+(`"Orange"`, `"Banana"`). His 2026-08-09 naming pass then pluralised some
+(`"Navel Oranges"`, `"Bananas"`) and added the comma in `"Boneless, Skinless
+Chicken Breast"`. The derivation keeps existing tags so that pass survives: only
+a renamed, added or no-longer-matching ingredient gets a generated tag.
+
+`docs/HISTORY.md` says the hand-written tags were kept apart because they are
+"better copy" than matcher text. That was a session's inference, not Kevin's
+reasoning - his only recorded words were *"that's polish, not load bearing."*
+Don't build on it. The link is positional (tag *i* ↔ ingredient *i* when the editor opens),
 carried through edits by ingredient id.
 
 **Tags are not hand-editable, on purpose** - Kevin's call. Don't re-add the

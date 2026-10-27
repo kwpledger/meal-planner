@@ -55,7 +55,7 @@ running order. For v1.1 they are ordinary work.
 
 **Completed Items**
 
-- [x] Display tags follow the ingredients. Renaming broccoli to cauliflower on the live board left the "Broccoli" chip standing. **Kevin's call, 2026-10-27: derive, and no hand editing** - which overrides the earlier *warn on drift* note. Save now writes `meal.items` from `src/displayTags.js`: a renamed or added ingredient gets a generated tag, an unchanged one keeps Kevin's hand-written tag, and a tag that no longer names its ingredient is repaired. The editor's textarea became a read-only preview. Tests seen to fail without the fix. 2026-10-27.
+- [x] Display tags follow the ingredients. Renaming broccoli to cauliflower on the live board left the "Broccoli" chip standing. **Kevin's call, 2026-10-27: derive, and no hand editing** - which overrides the earlier *warn on drift* note. That note rested on the tags being "better copy" than the ingredients, a session's inference Kevin corrected the same day. Save now writes `meal.items` from `src/displayTags.js`: a renamed or added ingredient gets a tag generated from its name minus the amount (what tags were always meant to be), an unchanged one keeps its existing tag so the plurals from the 2026-08-09 naming pass survive, and a tag that no longer names its ingredient is repaired. The editor's textarea became a read-only preview. Tests seen to fail without the fix. 2026-10-27.
 
 
 ## Later (not v1.1) ##

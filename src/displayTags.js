@@ -2,10 +2,11 @@
  * A meal's display tags (`meal.items`, the card chips) and its ingredients were
  * two hand-maintained lists with no link, so renaming broccoli to cauliflower
  * left a "Broccoli" chip standing. Tags are now derived from the ingredients
- * at save time, but only where they have to be: Kevin hand-wrote the original
- * tags ("Boneless, Skinless Chicken Breast", "Bananas") and they read better
- * than anything generated from matcher text, so an unchanged ingredient keeps
- * its tag.
+ * at save time, but only where they have to be: a tag is meant to be its
+ * ingredient minus the amount, yet Kevin's 2026-08-09 naming pass deliberately
+ * pluralised some ("Navel Oranges" for "1 navel orange") and added the comma in
+ * "Boneless, Skinless Chicken Breast". Regenerating every tag would undo that,
+ * so an unchanged ingredient keeps its tag.
  *
  * The link is positional. Every meal on the real board had exactly one tag per
  * ingredient, in the same order (checked against the cloud copy, 2026-10-27),

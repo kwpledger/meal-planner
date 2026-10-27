@@ -205,7 +205,7 @@ they apply — don't reorder casually.
 - **`items` is derived from `ingredients` on Save (2026-10-27).** The two lists
   used to have no link, so a renamed ingredient left its old tag standing - the
   mechanism behind the misreading above. `src/displayTags.js` now writes the tags
-  on Save, keeping Kevin's hand-written tag for any ingredient that didn't change.
+  on Save, keeping the existing tag for any ingredient that didn't change.
   Details in `.claude/rules/meal-name-lists.md`.
 - **`searchName` has never been used on the real board.** It is implemented,
   wired through all three matching entry points, and verified by stripping it
