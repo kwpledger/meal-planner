@@ -41,6 +41,22 @@ export async function getUsdaFoodDetail(fdcId) {
   return response.json();
 }
 
+// By barcode, for refetching a product already matched. Not search: it is a
+// different endpoint, and on 2026-10-27 search was returning an HTML outage
+// page while this one kept answering.
+export async function getOpenFoodFactsProduct(code) {
+  const url = new URL(`${OPEN_FOOD_FACTS_BASE_URL}/api/v2/product/${encodeURIComponent(code)}.json`);
+  url.searchParams.set('fields', 'product_name,nutriments');
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Open Food Facts product lookup failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 export async function searchOpenFoodFacts(query) {
   const url = new URL(`${OPEN_FOOD_FACTS_BASE_URL}/cgi/search.pl`);
   url.searchParams.set('search_terms', query);
