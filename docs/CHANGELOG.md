@@ -33,6 +33,7 @@ than holding the release. Every PR is listed in the
 
 - [x] Pinned `kwpledger-design` v0.7.0, then v0.8.0. Built CSS byte-identical both times. PRs #42, #43.
 - [x] Pinned `kwpledger-design` v0.12.0 (v0.9.0 was skipped upstream). Fonts re-copied: Lora is variable, plus new Lora and Hanken italics and IBM Plex Mono. No color token changed. Unreleased.
+- [x] Pinned `kwpledger-design` v0.13.0 (adds the `kwp Handwriting` face and `--font-hand`). Fonts re-copied; the app sets no text in it. No color token changed. Unreleased.
 
 **Repo and release**
 

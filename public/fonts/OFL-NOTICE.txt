@@ -36,3 +36,14 @@ To replace either typeface, drop in a new .woff2, update the matching
 @font-face block in tokens/fonts.css and the --font-display / --font-body /
 --font-mono tokens in tokens/base.css, and check --fw-display still falls inside the new
 face's weight range.
+
+
+kwp-handwriting-regular.woff2, kwp-handwriting-bold.woff2
+  kwp Handwriting, Regular (400) and Bold (700) — STATIC, not variable.
+  NOT an OFL font. Kevin Pledger's own handwriting, made into a font by Kevin
+  (2026). No third-party licence applies; nothing here needs to travel with it
+  except this note. Internal family name in the files is "Kwp_handwriting"
+  (v001.008 Regular, v001.002 Bold); tokens/fonts.css declares it as
+  'kwp Handwriting'. Full Latin-1 and Latin Extended-A coverage plus arrows
+  U+2190-2195, U+21A8, U+21D2, U+21D4. Not subset: see tokens/fonts.css.
+  Terms of reuse by others have not been stated; do not assume OFL.
