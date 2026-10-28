@@ -12,11 +12,11 @@ item numbers.
 
 ## To Do (nutrition) ##
 
-- [ ] **1.** The matcher drops an exact Branded match for a poor generic one. `rankUsdaFoods` in `src/ingredientLibrary.js` discards every Branded result whenever *any* non-Branded one is present, before scoring. Live, 2026-10-27: "Snow peas" returned mostly Branded *SNOW PEAS* (an exact match) plus one Survey entry, *Snow cone*, which shared the word "snow" and won. The filter exists so Branded noise can't beat a clean generic entry ("Oats, raw"); it should not let a generic one-word partial beat an exact name. Likely fix: drop Branded only when a non-Branded candidate scores at least as well. A regression test, checked to fail with the fix removed. The *search USDA as…* box works around it meanwhile.
-  **Same function, second case (2026-10-27):** on a relevance tie, prefer a record that has fiber. `strawberries, raw` returns three exact *Strawberries, raw* records (Survey 1.8 g fiber, SR Legacy 2.0 g, Foundation none), and the median-calorie tie-break picks the Foundation one, so the search box can't fix strawberries today.
+Nothing open.
 
 **Completed Items**
 
+- [x] The matcher no longer drops exact Branded matches for a poor generic one, and prefers records with fiber on a tie. `rankUsdaFoods` (`src/ingredientLibrary.js`) now drops Branded results only when a generic one scores above a first-word-only match, so "snow peas" gets *SNOW PEAS* instead of *Snow cone*, while "oats" still gets *Oats, raw*. Among equal matches a record with fiber wins, so "strawberries, raw" gets Survey *Strawberries, raw* (1.8 g fiber) instead of the Foundation record with none. Allowing Branded back in exposed a scoring gap, "navel orange" scoring 0 against *Oranges, raw, navels*, so word matching now ignores a trailing "s". Checked against live USDA results for every ingredient on the board: only those three picks change. Existing matches are untouched until re-matched. Tests seen to fail without each part. 2026-10-28.
 - [x] Fiber is computed from matched data. **Worse than the item said:** the cloud board (pushed 2026-08-16) had already lost fiber on all 28 meals, because Save and both Normalize apply paths wrote `macros` with only carbs, protein and fat. All three now go through `mergeComputedMacros` (`src/portionResolver.js`), which never writes an unknown fiber over a stored one. Fiber comes from USDA nutrient 1079 (2033 only as a stand-in) or OFF `fiber_100g`; a missing figure is `null`, never 0, except where the record reports 0 g carbohydrate. Normalize backfills fiber on already-matched rows by refetching their USDA id or Open Food Facts barcode, so the match itself can't change; pre-fiber cache entries count as misses. The Recompute preview and the Normalize review show fiber, and the review names meals whose fiber is unknown. Checked live on the real board: 23 meals got fiber; 5 breakfasts stay unknown because the Branded *STRAWBERRIES* match has no fiber figure. Tests seen to fail without the fix. 2026-10-27.
 
 
@@ -44,6 +44,7 @@ Moved up from the v1.0 polish section, which was deliberately outside the
 running order. For v1.1 they are ordinary work.
 
 - [ ] **1.** Button hierarchy in the ingredient editor. Collapsing `bg-indigo-600` and `bg-slate-800` onto `--accent` put every primary button at the same weight. If that wants a hierarchy, the answer is a secondary *style*, not a second hue, and which buttons demote is a design call. (HISTORY item 2, step 3.)
+- [ ] **2.** After **Apply all to meal cards**, the Normalize window says "No meaningful differences found" - the same text a run with nothing to apply shows - because applying empties the list. Kevin read a successful apply as nothing having happened (2026-10-27). Say what was applied instead ("Applied to 23 meals").
 
 **Completed Items**
 
