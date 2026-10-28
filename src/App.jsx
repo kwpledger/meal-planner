@@ -540,6 +540,17 @@ export default function MealPlanBoard() {
     });
 
     if (targets.length === 0) {
+      // Nothing to fetch doesn't mean nothing to apply. Re-matching a row in
+      // the meal editor (e.g. strawberries gaining fiber) updates its match
+      // but not the meal's stored totals, and stopping here left those
+      // meals with no way to be offered for apply - Kevin hit exactly that.
+      const { comparisons, skippedCount, fiberUnknownMeals, fiberUnknownNames } = buildMealComparisons(days);
+
+      if (comparisons.length > 0) {
+        setNormalizeState({ status: 'review', comparisons, skippedCount, fiberUnknownMeals, fiberUnknownNames, nothingFetched: true });
+        return;
+      }
+
       setNormalizeState({ status: 'no-targets' });
       return;
     }
@@ -2335,7 +2346,9 @@ useEffect(() => {
                   {normalizeState.cancelled && 'Stopped early - '}
                   {normalizeState.reweighed
                     ? `${normalizeState.reweighed} estimated portion${normalizeState.reweighed === 1 ? '' : 's'} re-weighed against the current portion table - no lookups were made. `
-                    : 'Ingredient grams/matches for the board have been saved. '}
+                    : normalizeState.nothingFetched
+                      ? 'Every ingredient already had a match with fiber, so nothing was looked up. '
+                      : 'Ingredient grams/matches for the board have been saved. '}
                   These are the fully-resolved meals where computed calories or fiber differ from the stored value -
                   nothing here has been applied to the visible cards yet.
                 </p>
