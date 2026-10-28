@@ -981,7 +981,7 @@ useEffect(() => {
             .map((ingredient) => `    - ${ingredient.raw}`)
             .join('\n');
 
-          return `  ${meal.type}: ${meal.name}\n${ingredients}\n    Planner estimate: ${meal.calories} cal | C ${meal.macros.carbs}g | P ${meal.macros.protein}g | F ${meal.macros.fat}g`;
+          return `  ${meal.type}: ${meal.name}\n${ingredients}\n    Planner estimate: ${meal.calories} cal | C ${meal.macros.carbs}g | P ${meal.macros.protein}g | F ${meal.macros.fat}g | Fiber ${formatFiber(meal.macros.fiber)}`;
         });
 
         return `${day.day} — ${day.protein}\n${mealLines.join('\n\n')}`;
