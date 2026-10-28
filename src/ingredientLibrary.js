@@ -24,6 +24,11 @@ function tokenize(text) {
     .filter(Boolean);
 }
 
+// Only the first search word matched ("Snow cone" for "snow peas"). Anything
+// above this has every search word; rankUsdaFoods uses it as the line for
+// whether a generic result is good enough to exclude Branded ones.
+const FIRST_WORD_ONLY_SCORE = 40;
+
 function scoreTextRelevance(description, searchName) {
   const desc = description.toLowerCase();
   const name = searchName.toLowerCase();
@@ -36,7 +41,12 @@ function scoreTextRelevance(description, searchName) {
   const descWords = tokenize(desc);
 
   if (nameWords.length > 1) {
-    const matchedWords = nameWords.filter((word) => descWords.includes(word));
+    // A trailing "s" is ignored, the same way normalizeIngredientName does:
+    // "navel orange" has to find "Oranges, raw, navels". Without this it
+    // scored 0 and only won while every Branded result was being dropped.
+    const singular = (word) => word.replace(/s$/, '');
+    const descSingulars = descWords.map(singular);
+    const matchedWords = nameWords.filter((word) => descSingulars.includes(singular(word)));
 
     if (matchedWords.length === nameWords.length) {
       // Pure prefix matching misses cases where USDA reorders into a
@@ -54,7 +64,7 @@ function scoreTextRelevance(description, searchName) {
   }
 
   const firstWord = nameWords[0];
-  if (firstWord && (desc.startsWith(`${firstWord},`) || desc.startsWith(`${firstWord} `))) return 40;
+  if (firstWord && (desc.startsWith(`${firstWord},`) || desc.startsWith(`${firstWord} `))) return FIRST_WORD_ONLY_SCORE;
   if (desc.includes(name)) return 20;
 
   return 0;
@@ -236,15 +246,29 @@ function pickBestOffProduct(products, searchName) {
 // (confirmed live for a "Broccoli, raw" Foundation entry) - matchIngredient
 // tries candidates in this order until one's detail fetch actually
 // succeeds, rather than abandoning USDA entirely after the first failure.
-function rankUsdaFoods(foods, searchName) {
+function hasFiber(food) {
+  const carbs = food.foodNutrients?.find((item) => item.nutrientName === 'Carbohydrate, by difference')?.value;
+  return fiberPer100g(food.foodNutrients, carbs) !== null;
+}
+
+export function rankUsdaFoods(foods, searchName) {
   if (!foods || foods.length === 0) {
     return [];
   }
 
-  const nonBranded = foods.filter((food) => food.dataType !== 'Branded');
-  const candidates = nonBranded.length > 0 ? nonBranded : foods;
-
-  const scored = candidates.map((food) => ({ food, score: scoreTextRelevance(food.description, searchName) }));
+  /*
+   * Branded results are dropped only when a generic one actually names the
+   * food. Dropping them whenever any generic result was present let a poor
+   * generic beat exact Branded matches - confirmed live 2026-10-27: "snow
+   * peas" returned nine Branded "SNOW PEAS" and one Survey "Snow cone", and
+   * Snow cone won on the word "snow". "Names the food" means it scores above
+   * a first-word-only match; "Oats, raw" (80) still beats Branded "OATS".
+   */
+  const allScored = foods.map((food) => ({ food, score: scoreTextRelevance(food.description, searchName) }));
+  const bestGeneric = Math.max(-1, ...allScored.filter((item) => item.food.dataType !== 'Branded').map((item) => item.score));
+  const scored = bestGeneric > FIRST_WORD_ONLY_SCORE
+    ? allScored.filter((item) => item.food.dataType !== 'Branded')
+    : allScored;
   const energies = scored.map((item) => energyOf(item.food)).filter((value) => typeof value === 'number').sort((a, b) => a - b);
   const median = energies.length > 0 ? energies[Math.floor(energies.length / 2)] : null;
 
@@ -252,6 +276,17 @@ function rankUsdaFoods(foods, searchName) {
     .sort((a, b) => {
       if (b.score !== a.score) {
         return b.score - a.score;
+      }
+
+      // Among equally good matches, prefer one that reports fiber. Confirmed
+      // live 2026-10-27: "strawberries, raw" returns three exact
+      // "Strawberries, raw" records (Survey 1.8 g fiber, SR Legacy 2.0 g,
+      // Foundation none), and the calorie tie-break below picked the
+      // Foundation one, leaving fiber unknown for no reason.
+      const fiberA = hasFiber(a.food);
+      const fiberB = hasFiber(b.food);
+      if (fiberA !== fiberB) {
+        return fiberA ? -1 : 1;
       }
 
       // Tied on relevance - common among Branded results, which can include

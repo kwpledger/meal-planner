@@ -8,7 +8,7 @@ vi.mock('./nutritionApi', () => ({
 }));
 
 const { searchUsdaFoods, getUsdaFoodDetail, searchOpenFoodFacts, getOpenFoodFactsProduct } = await import('./nutritionApi');
-const { matchIngredient, fiberPer100g, fetchOffFiber } = await import('./ingredientLibrary');
+const { matchIngredient, fiberPer100g, fetchOffFiber, rankUsdaFoods } = await import('./ingredientLibrary');
 
 const emptyLibrary = () => ({ version: 1, entries: {} });
 
@@ -141,5 +141,54 @@ describe('fetchOffFiber', () => {
     getOpenFoodFactsProduct.mockResolvedValue({ product: { nutriments: { carbohydrates_100g: 46.4 } } });
 
     expect(await fetchOffFiber('0013764027237')).toBeNull();
+  });
+});
+
+/*
+ * Ranking cases from live USDA searches, 2026-10-27, trimmed to the fields the
+ * ranker reads.
+ */
+const food = (dataType, description, kcal, fiber, carbs = 5) => ({
+  dataType,
+  description,
+  foodNutrients: [
+    { nutrientName: 'Energy', unitName: 'KCAL', value: kcal },
+    { nutrientName: 'Carbohydrate, by difference', value: carbs },
+    ...(fiber == null ? [] : [{ nutrientId: 1079, nutrientName: 'Fiber, total dietary', value: fiber }]),
+  ],
+});
+
+describe('rankUsdaFoods', () => {
+  it('keeps an exact Branded match over a generic that shares one word', () => {
+    const foods = [food('Branded', 'SNOW PEAS', 42, 2.4), food('Branded', 'SNOW PEAS', 40, 2.6), food('Survey (FNDDS)', 'Snow cone', 130, 0, 33)];
+
+    expect(rankUsdaFoods(foods, 'snow peas')[0].description).toBe('SNOW PEAS');
+  });
+
+  it('still drops Branded results when a generic one names the food', () => {
+    const foods = [food('Branded', 'OATS', 379, 10), food('Survey (FNDDS)', 'Oats, raw', 382, 10.1, 67)];
+
+    expect(rankUsdaFoods(foods, 'oats').map((f) => f.description)).toEqual(['Oats, raw']);
+  });
+
+  it('prefers a record with fiber among equally good matches', () => {
+    // Without the fiber preference the median-calorie tie-break picks the
+    // Foundation record (36.4 kcal is closest to this search's median).
+    const foods = [
+      food('Survey (FNDDS)', 'Strawberries, raw', 36, 1.8, 8.7),
+      food('SR Legacy', 'Strawberries, raw', 32, 2, 7.7),
+      food('Foundation', 'Strawberries, raw', 36.4, null, 8.4),
+      food('SR Legacy', 'Guavas, strawberry, raw', 69, 5.4, 17),
+      food('Survey (FNDDS)', 'Apple, raw', 61, 2.1, 14),
+      food('SR Legacy', 'Arrowhead, raw', 99, null, 20),
+    ];
+
+    expect(rankUsdaFoods(foods, 'strawberries, raw')[0].dataType).not.toBe('Foundation');
+  });
+
+  it('matches plural words in a generic description', () => {
+    const foods = [food('Branded', 'NAVEL ORANGES, NAVEL', 48, 1.9), food('SR Legacy', 'Oranges, raw, navels', 49, 2.2, 12.5)];
+
+    expect(rankUsdaFoods(foods, 'navel orange')[0].description).toBe('Oranges, raw, navels');
   });
 });
