@@ -12,10 +12,10 @@ Deployed at **meal-planner.kwpledger.com**. Repo: `kwpledger/meal-planner`.
 
 Single-page React 19 + Vite app, no router. The only backend is one Cloudflare Pages Function in this repo that reads and writes a single JSON blob in KV — see `docs/ARCHITECTURE.md`.
 
-**This file lists no source files, on purpose** (2026-11-14). The list it used to carry had gone stale: two modules were missing and a line count was wrong. `ls src/` is the list. What a listing won't tell you:
+**This file lists no source files, on purpose** (2026-11-14): the last list went stale. `ls src/` is the list. What a listing won't tell you:
 
 - **`src/App.jsx` is the whole board in one component** (`MealPlanBoard`), with the seed board (`initialDays`) at the top. It is long; read it by line range.
-- **Logic that isn't rendering lives in its own module beside it**, and tests sit next to what they test as `.test.js`.
+- **Logic that isn't rendering lives in its own module beside it.**
 - **`src/SiteChrome.jsx` is the shared header and footer, not this app's design.** It conforms to `kwpledger-design`; read its opening comment before changing it.
 
 State lives in `App.jsx`'s `days` array (7 days -> meals -> structured `ingredients`), persisted to `localStorage` on every change. There is no server-side source of truth by default - see "Design decisions" below.
