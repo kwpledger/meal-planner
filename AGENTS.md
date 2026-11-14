@@ -8,27 +8,15 @@ A personal, single-user meal planner that turns a dietician's text-based 7-day m
 
 Deployed at **meal-planner.kwpledger.com**. Repo: `kwpledger/meal-planner`.
 
-## Architecture & file layout
+## Architecture
 
 Single-page React 19 + Vite app, no router. The only backend is one Cloudflare Pages Function in this repo that reads and writes a single JSON blob in KV — see `docs/ARCHITECTURE.md`.
 
-```
-src/
-  App.jsx              All UI, ~2,400 lines, one component (MealPlanBoard).
-                        The seed board (`initialDays`) is at the top.
-  ingredientParser.js   Line parsing, searchTermFor(), the old-board
-                        migration, SCHEMA_VERSION.
-  portionResolver.js    amount+unit -> grams -> scaled nutrients.
-  ingredientLibrary.js  USDA/OFF matching orchestrator + localStorage cache.
-  nutritionApi.js       Raw fetch wrappers for USDA and Open Food Facts.
-  cloudSync.js          pushToCloud/pullFromCloud. Two functions, no config.
-  boardOperations.js    Pure transforms over the `days` array, + its tests.
-  displayTags.js        Card tags (meal.items) derived from ingredients on Save.
+**This file lists no source files, on purpose** (2026-11-14): the last list went stale. `ls src/` is the list. What a listing won't tell you:
 
-functions/
-  api/board.js          The only server-side code: a Pages Function serving
-                        GET/PUT on /api/board against KV.
-```
+- **`src/App.jsx` is the whole board in one component** (`MealPlanBoard`), with the seed board (`initialDays`) at the top. It is long; read it by line range.
+- **Logic that isn't rendering lives in its own module beside it.**
+- **`src/SiteChrome.jsx` is the shared header and footer, not this app's design.** It conforms to `kwpledger-design`; read its opening comment before changing it.
 
 State lives in `App.jsx`'s `days` array (7 days -> meals -> structured `ingredients`), persisted to `localStorage` on every change. There is no server-side source of truth by default - see "Design decisions" below.
 
@@ -76,7 +64,7 @@ Also: narrate your reasoning back to him, including routine results like a green
 
 - Functional components + hooks only, no class components, no external state management library (Context/Redux/Zustand) - `useState`/`useMemo`/`useEffect` in `App.jsx` is the whole state model.
 - Tailwind utility classes inline in JSX; no CSS modules or styled-components. `App.css`/`index.css` are minimal/base only.
-- New logic that isn't pure UI rendering goes in its own module under `src/` (see file layout above) and gets imported into `App.jsx`, rather than growing `App.jsx` further where avoidable.
+- New logic that isn't pure UI rendering goes in its own module under `src/` and gets imported into `App.jsx`, rather than growing `App.jsx` further where avoidable.
 - Comments explain *why*, not *what* - especially non-obvious findings from live-testing against the USDA/OFF APIs (several exist already; read them before "fixing" something that looks like a bug but is actually a documented API quirk).
 - Never silently overwrite a number the user is looking at. Any action that changes stored calories/macros/board data should have an explicit trigger and, where practical, a before/after preview.
 - Before touching the `days` data shape, check `migrateDaysToIngredients` in `ingredientParser.js` - it's the app's forward-compatibility mechanism (runs on localStorage load, JSON import, and cloud pull) and needs to keep handling old shapes if the shape changes again.
