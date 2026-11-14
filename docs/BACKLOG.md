@@ -49,6 +49,7 @@ running order. For v1.1 they are ordinary work.
 
 **Completed Items**
 
+- [x] `AGENTS.md` no longer lists the source files. The list had drifted from the code: `SiteChrome.jsx` and `theme.js` were missing, and `App.jsx` was given as about 2,400 lines when it is 2,559. It now keeps only what listing `src/` won't show. 2026-11-14.
 - [x] `searchName` stays. **Kevin's call, 2026-10-27**, on its first real use: "Snow peas" matched *Snow cone*, and the wording USDA needs (`peas, edible-podded, raw`) is wrong for a card tag. Now that tags derive from the ingredient name, the convention is **name the ingredient what the tag should say; put USDA's hyper-specific wording in *search USDA as…***. Reasoning in `.claude/rules/search-vs-display-name.md`. 2026-10-27.
 - [x] Display tags follow the ingredients. Renaming broccoli to cauliflower on the live board left the "Broccoli" chip standing. **Kevin's call, 2026-10-27: derive, and no hand editing** - which overrides the earlier *warn on drift* note. That note rested on the tags being "better copy" than the ingredients, a session's inference Kevin corrected the same day. Save now writes `meal.items` from `src/displayTags.js`: a renamed or added ingredient gets a tag generated from its name minus the amount (what tags were always meant to be), an unchanged one keeps its existing tag so the plurals from the 2026-08-09 naming pass survive, and a tag that no longer names its ingredient is repaired. The editor's textarea became a read-only preview. Tests seen to fail without the fix. 2026-10-27.
 
