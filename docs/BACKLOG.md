@@ -66,6 +66,12 @@ it is the next thing to do until v1.1 ships.
   2. **Pairing.** USDA doesn't link a Foundation record to its SR Legacy counterpart, and the names differ ("Bananas, overripe, raw" vs "Bananas, raw"), so the fallback needs a way to find the twin. Per-nutrient mixing from two records also needs a rule for which wins when both have a value.
   3. **Everyday names.** Kevin shouldn't need USDA's vocabulary: he would never have searched "peas, edible-podded" for snow peas. SR Legacy records carry a `commonNames` field the matcher ignores, and *Peas, edible-podded, raw* lists "Snowpeas, Sugar snap peas" (checked live 2026-10-28; a "snow peas" search limited to Foundation + SR Legacy returns it 4th). Scoring against `commonNames` would find it - but USDA writes "Snowpeas" as one word, so the comparison has to ignore spaces. Records without common names still need nutrition item 1's rule (done, PR #67): a generic record that doesn't name the food must not push out exact Branded matches.
   NCCDB (what Cronometer uses) was the earlier idea for this slot and is parked: it's licensed for a fee with no public API, as far as this session knew. Revisit only if that changes.
+- [ ] **4.** Spike: type-check the logic modules without converting to TypeScript. **Two-hour time box.** Kevin asked on 2026-11-15 whether a full conversion would pay; the triage said no, because `src/App.jsx` is over half the repo and is where types catch least, while the bugs this app has had were shape bugs in the small modules. The evidence for types is the fiber bug (nutrition, 2026-10-27): three paths wrote `macros` without fiber, which a `Macros` type with a required `fiber: number | null` should have flagged. **That "should" is the untested assumption, and testing it is the whole spike:**
+  1. Add `jsconfig.json` with `checkJs` on, scoped to the logic modules, not `App.jsx`. `@types/react` is already installed; nothing uses it yet.
+  2. Write JSDoc types for `Day`, `Meal`, `Ingredient` and `Macros` in one file.
+  3. Run the checker and count what it reports.
+  4. Check out the commit before the fiber fix and see whether the checker flags it.
+  If step 4 flags the bug, keep the setup and add an `npm run typecheck` script. If it reports nothing, or only noise, delete it and the question is closed. Either way, a full conversion stays off the table unless the spike gives a reason.
 
 **Completed Items**
 
