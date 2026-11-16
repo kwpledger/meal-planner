@@ -23,7 +23,7 @@ Nothing open.
 
 ## To Do (design) ##
 
-Nothing open.
+- [ ] **1.** Take `kwpledger-design` v0.14.0; this repo pins v0.13.0. Issue #72 has the steps, and closes itself once the pin catches up.
 
 **Completed Items**
 
