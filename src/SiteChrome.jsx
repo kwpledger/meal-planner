@@ -109,10 +109,32 @@ function Lockup() {
  * Effect"). The inline script in index.html has already set the attribute
  * before React mounts; this just reads the same key to label the control.
  *
- * Labels are text, never colour alone - the system's rule, and here it is also
- * just necessary: three swatches would be unreadable.
+ * Icons, and the words stay (`kwpledger-design` §4.4, 2026-10-19): monitor,
+ * sun, moon. Each icon is aria-hidden; each button keeps its word twice, as
+ * visually hidden text (its accessible name) and as `title` (the tooltip). An
+ * icon with no name is an unlabelled button, and a name only in aria-label
+ * gives a mouse user nothing to hover for. Drawn in currentColor, stroke only,
+ * so the selected fill and the hover colour reach the icon the way they
+ * reached the word. The paths are the reference implementation's
+ * (kwpledger.com, BaseLayout.astro).
  */
 const THEME_LABELS = { system: 'System', light: 'Light', dark: 'Dark' };
+
+const THEME_ICONS = {
+  system: (
+    <>
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M8 20h8M12 16v4" />
+    </>
+  ),
+  light: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" />
+    </>
+  ),
+  dark: <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />,
+};
 
 function ThemeToggle() {
   const [theme, setThemeState] = useState(readTheme);
@@ -171,15 +193,29 @@ function ThemeToggle() {
             role="radio"
             aria-checked={selected}
             tabIndex={selected ? 0 : -1}
+            title={THEME_LABELS[value]}
             onClick={() => choose(value)}
             className={
-              'rounded-[0.9rem] px-3 py-1 font-semibold transition ' +
+              'inline-flex items-center rounded-[0.9rem] px-[0.55em] py-[0.3em] font-semibold transition ' +
               (selected
                 ? 'bg-accent text-accent-fg'
                 : 'text-fg-muted hover:text-fg')
             }
           >
-            {THEME_LABELS[value]}
+            <svg
+              aria-hidden="true"
+              focusable="false"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-[1.15em] w-[1.15em]"
+            >
+              {THEME_ICONS[value]}
+            </svg>
+            <span className="sr-only">{THEME_LABELS[value]}</span>
           </button>
         );
       })}
@@ -203,7 +239,10 @@ function ThemeToggle() {
 export function SiteHeader() {
   return (
     <header className="border-b border-border print:hidden">
-      <div className="flex items-center justify-between gap-[var(--space-s)] px-6 py-[var(--space-s)]">
+      {/* flex-wrap: lockup and toggle share a row at normal text size, and at
+          200% text on a phone the toggle drops under the lockup instead of
+          widening the page. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-[var(--space-s)] gap-y-[var(--space-xs)] px-6 py-[var(--space-s)]">
         <Lockup />
         <ThemeToggle />
       </div>
