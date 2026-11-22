@@ -23,11 +23,11 @@ Nothing open.
 
 ## To Do (design) ##
 
-Nothing open.
+- [ ] **1.** **The board scrolls sideways at 200% text on a phone.** Found 2026-11-22 while doing the toggle (kwpledger.com's KWP-41 found the same on that site). At 320px with root text at 200% the page is 404px wide, and the header is no longer part of it. Not yet traced to its source in `App.jsx`. Method that finds causes: set `html { font-size: 200% }`, compare `documentElement.scrollWidth` with the viewport, then hide regions one at a time, because text spilling out of its box does not show in element rectangles. kwpledger.com's fixes (named grid columns, `minmax(min(Nrem, 100%), 1fr)`, `overflow-wrap`) are the likely shape. Read `.claude/rules/design-tokens-css.md` before touching `App.jsx` or `index.css`.
 
 **Completed Items**
 
-(none)
+- [x] The theme toggle takes the shared rule's icons (`kwpledger-design` §4.4, KWP-42 on kwpledger.com's board): monitor, sun and moon in `currentColor`, each keeping its word as `sr-only` text and as `title`, so the accessible name is unchanged. The header row wraps, so at 200% text on a phone the toggle drops under the lockup instead of widening the page; at normal size it is the same one row, 73px tall at 390 and 1280. Measured at 320px and 200% text: header 561px wide before, 320px after (the page itself is 561 before, 404 after; the rest is item 1). `src/SiteChrome.jsx` only, so no version bump. 2026-11-22.
 
 
 ## To Do (sharing) ##
