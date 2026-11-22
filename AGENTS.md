@@ -27,7 +27,7 @@ Two directories outside `src/` matter:
 
 ## Design decisions — the ones that bite
 
-**Full reasoning for all fourteen is in `docs/DECISIONS.md`.** Kept here only
+**Full reasoning for all fifteen is in `docs/DECISIONS.md`.** Kept here only
 where not knowing it in the first four minutes gets something broken:
 
 - **Never silently overwrite a number Kevin is looking at.** Nutrition lookups
@@ -44,7 +44,8 @@ where not knowing it in the first four minutes gets something broken:
   before any colour work**; the traps there have each already cost a session.
 - **The sync endpoint is unauthenticated on purpose.** A shared-secret header
   *cannot* work in a browser-only SPA — it would ship in the bundle. The 1 MB
-  body cap and shape validation are the real guards. Don't "fix" this.
+  body cap and shape validation are the real guards. Don't "fix" this. **Nor the
+  USDA key in the bundle:** exposed on purpose, because theft costs little.
 - **Sync is manual push/pull, never automatic**, and runs on Cloudflare KV
   rather than Supabase. Both were settled with evidence; don't re-litigate
   either.
