@@ -79,7 +79,7 @@ mode.
 ## The pin
 
 ```json
-"@kwpledger/design": "github:kwpledger/kwpledger-design#v0.13.0"
+"@kwpledger/design": "github:kwpledger/kwpledger-design#v0.15.0"
 ```
 
 **Pinned to a tag, never a branch.** A design system that moves under a consumer
@@ -113,7 +113,7 @@ Two things about the install that look wrong and are not:
 `hanken-grotesk-latin.woff2`, `hanken-grotesk-latin-italic.woff2`,
 `ibm-plex-mono-latin.woff2`, `kwp-handwriting-regular.woff2`,
 `kwp-handwriting-bold.woff2` and `OFL-NOTICE.txt`, copied from the package as of
-v0.13.0. The italics, the mono face and the handwriting face are fetched only on
+v0.13.0 and unchanged through v0.15.0. The italics, the mono face and the handwriting face are fetched only on
 a page that sets text in them; this app currently uses none of them, so they
 cost nothing at runtime (the files do add ~230 KB to the deploy).
 

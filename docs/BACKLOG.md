@@ -27,6 +27,7 @@ Nothing open.
 
 **Completed Items**
 
+- [x] Took `kwpledger-design` v0.15.0 (through v0.14.0), up from v0.13.0. Both are docs and spec releases: `tokens/`, `fonts/` and `logos/` are byte-identical to v0.13.0, and **the built app is byte-identical before and after** (all 16 files in `dist/`, the same hash). The lockfile resolves to `02ba29d`, the tag's commit. `AGENTS.md` and `docs/DESIGN-SYSTEM.md` now say v0.15.0; the font files stay "as of v0.13.0" because they did not change. No version bump: `release.yml` tags on one and this is not a release. The design-drift bot's backlog PR for this (#73) closes itself once this merges. 2026-11-22.
 - [x] The theme toggle takes the shared rule's icons (`kwpledger-design` §4.4, KWP-42 on kwpledger.com's board): monitor, sun and moon in `currentColor`, each keeping its word as `sr-only` text and as `title`, so the accessible name is unchanged. The header row wraps, so at 200% text on a phone the toggle drops under the lockup instead of widening the page; at normal size it is the same one row, 73px tall at 390 and 1280. Measured at 320px and 200% text: header 561px wide before, 320px after (the page itself is 561 before, 404 after; the rest is item 1). `src/SiteChrome.jsx` only, so no version bump. 2026-11-22.
 
 
